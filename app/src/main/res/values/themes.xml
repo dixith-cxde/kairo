@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only the window behind Compose. Dark gray (bg, #0E0E0E) so launch has no white flash;
+         the Android 12+ splash uses the same color and the launcher icon. -->
+    <style name="Theme.Kairo" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/kairo_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/kairo_bg</item>
+    </style>
+</resources>
