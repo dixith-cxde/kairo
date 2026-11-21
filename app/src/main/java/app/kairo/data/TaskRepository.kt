@@ -58,6 +58,17 @@ class TaskRepository(private val db: KairoDatabase) {
             t("Water plants", 1, done = true),
             t("Plan weekend trip", 5, today.plusDays(2)),
         ))
+        // Debug only: a month of past completions so Stats has something to show.
+        val zone = java.time.ZoneId.systemDefault()
+        val rnd = java.util.Random(7)
+        db.tasks().insertAll((1..40).map { n ->
+            val day = today.minusDays(rnd.nextInt(45).toLong() + 1)
+            val late = rnd.nextInt(5) == 0
+            TaskEntity(
+                title = "Past task $n", listId = ids[rnd.nextInt(ids.size)], due = if (late) day.minusDays(1) else day,
+                done = true, completedAt = day.atTime(9 + rnd.nextInt(10), 0).atZone(zone).toInstant().toEpochMilli(),
+            )
+        })
     }
 
     private val defaultLists = listOf(
@@ -71,10 +82,10 @@ class TaskRepository(private val db: KairoDatabase) {
     )
 }
 
-fun TaskEntity.toModel() = Task(id, title, listId, due, time, priority, done, subtasksDone, subtasksTotal, reminder, notes)
+fun TaskEntity.toModel() = Task(id, title, listId, due, time, priority, done, subtasksDone, subtasksTotal, reminder, notes, completedAt)
 fun Task.toEntity() = TaskEntity(
     id = id, title = title, listId = listId, notes = notes, due = due, time = time, priority = priority, done = done,
-    completedAt = if (done) System.currentTimeMillis() else null,
+    completedAt = if (done) (completedAt ?: System.currentTimeMillis()) else null,
     subtasksDone = subtasksDone, subtasksTotal = subtasksTotal, reminder = reminder,
 )
 fun ListEntity.toModel() = TaskList(id, name, shape, color, position)

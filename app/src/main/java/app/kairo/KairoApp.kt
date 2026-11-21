@@ -40,6 +40,7 @@ import app.kairo.navigation.Tab
 import app.kairo.ui.detail.TaskDetailScreen
 import app.kairo.ui.detail.TaskDetailViewModel
 import app.kairo.ui.nav.FloatingNavBar
+import app.kairo.ui.stats.StatsScreen
 import app.kairo.ui.calendar.CalendarScreen
 import app.kairo.ui.lists.ListDetailScreen
 import app.kairo.ui.lists.ListDetailViewModel
@@ -123,6 +124,7 @@ fun KairoApp() {
                                 ListsScreen(vm, onOpenList = { id -> open(Route.ListRoute(id)) })
                             }
                             Tab.Calendar -> CalendarScreen(app.repository, app.phoneCalendar, onOpenTask = { t -> open(Route.TaskRoute(t.id)) })
+                            Tab.Stats -> StatsScreen(app.repository)
                             else -> TabPlaceholder(route.tab, comingIn = route.tab.comingIn())
                         }
                         is Route.TaskRoute -> {

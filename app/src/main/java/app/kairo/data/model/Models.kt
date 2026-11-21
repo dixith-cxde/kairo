@@ -31,4 +31,5 @@ data class Task(
     val subtasksTotal: Int = 0,
     val reminder: Boolean = false,
     val notes: String = "",
+    val completedAt: Long? = null, // epoch millis, for stats
 )
