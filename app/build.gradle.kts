@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application) // AGP 9 compiles Kotlin itself (built-in Kotlin)
     alias(libs.plugins.kotlin.compose)      // the Compose compiler
@@ -7,7 +9,7 @@ plugins {
 
 // Release signing reads ../keystore.properties (git-ignored; see docs/build/release.md).
 // Without it, release builds come out unsigned.
-val keystoreProps = java.util.Properties().apply {
+val keystoreProps = Properties().apply {
     rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
@@ -66,6 +68,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment)
     implementation(libs.androidx.glance.material3)
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
