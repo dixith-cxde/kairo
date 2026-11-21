@@ -15,8 +15,8 @@ Step guides: [docs/build/](build/).
 
 Each step runs on a phone at the end, and introduces at most one or two new Compose ideas, explained as they appear.
 
-1. **Project + theme.** Android Studio project, Kotlin, Compose BOM, Material3 with Expressive APIs. `MaterialExpressiveTheme` with Kairo colors (gray surfaces override), Google Sans Flex, expressive motion. *Ideas: `@Composable`, preview, theme.*
-2. **Floating nav + empty tabs.** Port Stash's floating nav + FAB; navigation between five tabs. *Ideas: `Modifier`, layout (Row/Column/Box), Navigation Compose.*
+1. **Project + theme.** Android Studio project, Kotlin, Compose BOM, Material3 with Expressive APIs. `MaterialExpressiveTheme` with Kairo colors (gray surfaces override), Google Sans Flex, expressive motion. *Ideas: `@Composable`, preview, theme.* **Done 2026-11-20.**
+2. **Floating nav + empty tabs.** Port Stash's floating nav + FAB; navigation between five tabs. *Ideas: `Modifier`, layout (Row/Column/Box), Navigation 3 (the Compose-first successor to Navigation Compose).* **Done 2026-11-21.**
 3. **Today, static.** Large flexible app bar, hero card, segmented task list with fake data. *Ideas: `LazyColumn`, state, `remember`.*
 4. **Room + real tasks.** Entities, DAO, repository, `ViewModel`, `StateFlow`. *Ideas: ViewModel, Flow, coroutines.*
 5. **Complete-a-task hero moment.** Checkbox, burst, strike, collapse, undo snackbar, haptic. *Ideas: `animate*AsState`, springs from `motionScheme`.*
