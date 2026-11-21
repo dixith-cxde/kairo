@@ -4,6 +4,14 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -61,8 +69,10 @@ fun FloatingNavBar(
     onSelect: (Tab) -> Unit,
     onCreate: () -> Unit,
     modifier: Modifier = Modifier,
+    menuOpen: Boolean = false,
 ) {
     val surfaces = KairoTheme.colors
+    val motion = MaterialTheme.motionScheme
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -75,26 +85,42 @@ fun FloatingNavBar(
             topStart = OuterCorner, bottomStart = OuterCorner,
             topEnd = InnerCorner, bottomEnd = InnerCorner,
         )
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
                 .height(BarHeight)
                 .floatShadow(barShape, surfaces.floatShadow)
                 .background(surfaces.navBg, barShape)
-                .selectableGroup()
                 .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            contentAlignment = Alignment.CenterStart,
         ) {
-            Tab.entries.forEach { tab ->
-                NavSlot(
-                    tab = tab,
-                    selected = tab == selected,
-                    onClick = { if (tab != selected) onSelect(tab) },
-                )
+            val gap = 4.dp
+            val count = Tab.entries.size
+            val slot = (maxWidth - gap * (count - 1)) / count
+            // One pill that travels between slots on the expressive spatial spring (it overshoots a
+            // little and settles: the Stash "bouncy" feel), instead of fading in place.
+            val pillX by animateDpAsState(
+                targetValue = (slot + gap) * selected.ordinal,
+                animationSpec = motion.defaultSpatialSpec(),
+                label = "pillX",
+            )
+            Box(
+                Modifier
+                    .offset { IntOffset(pillX.roundToPx(), 0) }
+                    .size(width = slot, height = PillHeight)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(PillHeight / 2)),
+            )
+            Row(
+                Modifier.fillMaxWidth().selectableGroup(),
+                horizontalArrangement = Arrangement.spacedBy(gap),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Tab.entries.forEach { tab ->
+                    NavSlot(tab = tab, selected = tab == selected, onClick = { if (tab != selected) onSelect(tab) })
+                }
             }
         }
-        CreateFab(onClick = onCreate)
+        CreateFab(onClick = onCreate, open = menuOpen)
     }
 }
 
@@ -102,26 +128,21 @@ fun FloatingNavBar(
 private fun RowScope.NavSlot(tab: Tab, selected: Boolean, onClick: () -> Unit) {
     val motion = MaterialTheme.motionScheme
     val colors = MaterialTheme.colorScheme
-
-    // Effects: colors fade, from the expressive motion scheme.
-    val pillColor by animateColorAsState(
-        targetValue = if (selected) colors.secondaryContainer else Color.Transparent,
-        animationSpec = motion.defaultEffectsSpec(),
-        label = "pillColor",
-    )
     val contentColor by animateColorAsState(
         targetValue = if (selected) colors.onSecondaryContainer else colors.onSurfaceVariant,
         animationSpec = motion.defaultEffectsSpec(),
         label = "contentColor",
     )
-
-    val pillShape = RoundedCornerShape(PillHeight / 2)
-    Row(
+    // The icon pops when it becomes selected (fast spatial spring overshoot).
+    val pop = remember { Animatable(1f) }
+    LaunchedEffect(selected) {
+        if (selected) { pop.snapTo(0.8f); pop.animateTo(1f, motion.fastSpatialSpec()) }
+    }
+    Box(
         modifier = Modifier
             .weight(1f)
             .height(PillHeight)
-            .clip(pillShape)
-            .background(pillColor)
+            .clip(RoundedCornerShape(PillHeight / 2))
             .selectable(
                 selected = selected,
                 onClick = onClick,
@@ -129,18 +150,15 @@ private fun RowScope.NavSlot(tab: Tab, selected: Boolean, onClick: () -> Unit) {
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(),
             )
-            .semantics { contentDescription = tab.label }
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+            .semantics { contentDescription = tab.label },
+        contentAlignment = Alignment.Center,
     ) {
-        // Outlined -> filled when selected (Material Symbols FILL axis, as two vectors).
         Crossfade(targetState = selected, animationSpec = motion.defaultEffectsSpec(), label = "icon") { on ->
             Icon(
                 painter = painterResource(if (on) tab.selectedIcon else tab.icon),
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value },
             )
         }
     }
@@ -148,7 +166,7 @@ private fun RowScope.NavSlot(tab: Tab, selected: Boolean, onClick: () -> Unit) {
 
 /** Solid primary, bold plus (rule 4). Outer corners tighten from 32 to 16dp while pressed. */
 @Composable
-private fun CreateFab(onClick: () -> Unit) {
+private fun CreateFab(onClick: () -> Unit, open: Boolean) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val outer by animateDpAsState(
@@ -172,10 +190,12 @@ private fun CreateFab(onClick: () -> Unit) {
             .size(BarHeight)
             .floatShadow(shape, KairoTheme.colors.floatShadow),
     ) {
+        // + turns into × while the create menu is open.
+        val turn by animateFloatAsState(if (open) 45f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "fabTurn")
         Icon(
             painter = painterResource(R.drawable.ic_add_bold),
-            contentDescription = "Create",
-            modifier = Modifier.size(30.dp),
+            contentDescription = if (open) "Close create menu" else "Create",
+            modifier = Modifier.size(30.dp).graphicsLayer { rotationZ = turn },
         )
     }
 }

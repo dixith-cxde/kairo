@@ -70,6 +70,7 @@ fun AddTransactionSheet(
     money: MoneyRepository,
     accounts: List<AccountEntity>,
     categories: List<CategoryEntity>,
+    initialKind: TxKind = TxKind.Expense,
     onDismiss: () -> Unit,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -78,7 +79,7 @@ fun AddTransactionSheet(
     val c = MaterialTheme.colorScheme
     val k = KairoTheme.colors
 
-    var kind by rememberSaveable { mutableStateOf(TxKind.Expense) }
+    var kind by rememberSaveable { mutableStateOf(initialKind) }
     var amount by rememberSaveable { mutableStateOf("") }
     var categoryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var accountId by rememberSaveable { mutableStateOf(accounts.firstOrNull()?.id) }

@@ -16,7 +16,10 @@ import java.time.LocalTime
 /** The one place screens get data from. Screens see domain models, never Room entities. */
 class TaskRepository(private val db: KairoDatabase) {
 
-    val tasks: Flow<List<Task>> = db.tasks().observeAll().map { it.map(TaskEntity::toModel) }
+    private val all: Flow<List<Task>> = db.tasks().observeAll().map { it.map(TaskEntity::toModel) }
+    /** Everything the app shows; archived tasks are hidden except in the Archived smart list. */
+    val tasks: Flow<List<Task>> = all.map { l -> l.filter { !it.archived } }
+    val archived: Flow<List<Task>> = all.map { l -> l.filter { it.archived } }
     val lists: Flow<List<TaskList>> = db.lists().observeAll().map { it.map(ListEntity::toModel) }
 
     fun task(id: Long): Flow<Task?> = db.tasks().observe(id).map { it?.toModel() }
@@ -28,6 +31,16 @@ class TaskRepository(private val db: KairoDatabase) {
     suspend fun update(task: Task) = db.tasks().update(task.toEntity())
     suspend fun delete(task: Task) = db.tasks().delete(task.id)
 
+    // Bulk actions for multi-select.
+    suspend fun setDone(ids: List<Long>, done: Boolean) =
+        db.tasks().setDoneAll(ids, done, if (done) System.currentTimeMillis() else null)
+    suspend fun setArchived(ids: List<Long>, archived: Boolean) = db.tasks().setArchived(ids, archived)
+    suspend fun move(ids: List<Long>, listId: Long) = db.tasks().move(ids, listId)
+    suspend fun duplicate(task: Task): Long = db.tasks().insert(task.toEntity().copy(id = 0, done = false, completedAt = null))
+    /** Deletes and returns the rows, so Undo can put them back exactly. */
+    suspend fun deleteAll(ids: List<Long>): List<TaskEntity> = db.tasks().get(ids).also { db.tasks().deleteAll(ids) }
+    suspend fun restore(rows: List<TaskEntity>) = db.tasks().insertAll(rows)
+
     suspend fun addList(list: TaskList): Long = db.lists().insert(ListEntity(name = list.name, shape = list.shape, color = list.color))
     suspend fun updateList(list: TaskList) = db.lists().update(ListEntity(list.id, list.name, list.shape, list.color, list.position))
     suspend fun reorderLists(lists: List<TaskList>) =
@@ -36,6 +49,7 @@ class TaskRepository(private val db: KairoDatabase) {
 
     /** First launch: the default lists. Debug builds also get the canvas sample tasks. */
     suspend fun seedIfEmpty(sampleTasks: Boolean) {
+        db.lists().migrateShapes()
         if (db.lists().count() > 0) return
         val ids = defaultLists.map { (name, shape, color) -> db.lists().insert(ListEntity(name = name, shape = shape, color = color)) }
         if (!sampleTasks) return
@@ -73,19 +87,19 @@ class TaskRepository(private val db: KairoDatabase) {
 
     private val defaultLists = listOf(
         Triple("Work", ListShape.Cookie9, ListColor.Indigo),
-        Triple("Home", ListShape.Arch, ListColor.Amber),
-        Triple("Groceries", ListShape.Clover, ListColor.Green),
-        Triple("Health", ListShape.Sunny, ListColor.Teal),
+        Triple("Home", ListShape.Hexagon, ListColor.Amber),
+        Triple("Groceries", ListShape.Square, ListColor.Green),
+        Triple("Health", ListShape.Triangle, ListColor.Teal),
         Triple("Family", ListShape.Pentagon, ListColor.Pink),
         Triple("Personal", ListShape.Gem, ListColor.Coral),
         Triple("Reading", ListShape.Cookie6, ListColor.Violet),
     )
 }
 
-fun TaskEntity.toModel() = Task(id, title, listId, due, time, priority, done, subtasksDone, subtasksTotal, reminder, notes, completedAt)
+fun TaskEntity.toModel() = Task(id, title, listId, due, time, priority, done, subtasksDone, subtasksTotal, reminder, notes, completedAt, archived)
 fun Task.toEntity() = TaskEntity(
     id = id, title = title, listId = listId, notes = notes, due = due, time = time, priority = priority, done = done,
     completedAt = if (done) (completedAt ?: System.currentTimeMillis()) else null,
-    subtasksDone = subtasksDone, subtasksTotal = subtasksTotal, reminder = reminder,
+    subtasksDone = subtasksDone, subtasksTotal = subtasksTotal, reminder = reminder, archived = archived,
 )
 fun ListEntity.toModel() = TaskList(id, name, shape, color, position)

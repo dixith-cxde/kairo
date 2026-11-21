@@ -16,6 +16,7 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -67,14 +68,30 @@ fun TransactionEntity.signedPaise(): Long = when (kind) {
     TxKind.Transfer -> amountPaise
 }
 
+fun accountIcon(t: app.kairo.data.db.AccountType) = when (t) {
+    app.kairo.data.db.AccountType.Bank -> R.drawable.ic_account_balance
+    app.kairo.data.db.AccountType.Cash -> R.drawable.ic_payments
+    app.kairo.data.db.AccountType.Card -> R.drawable.ic_receipt_long
+    app.kairo.data.db.AccountType.Wallet -> R.drawable.ic_savings
+}
+
 @Composable
-fun TxRow(tx: TransactionEntity, cat: CategoryEntity?, account: AccountEntity?, index: Int, count: Int, onClick: () -> Unit = {}) {
+fun TxRow(
+    tx: TransactionEntity, cat: CategoryEntity?, account: AccountEntity?, index: Int, count: Int,
+    selected: Boolean = false, onLongClick: (() -> Unit)? = null, onClick: () -> Unit = {},
+) {
     val c = MaterialTheme.colorScheme
     val signed = tx.signedPaise()
+    val base = ListItemDefaults.segmentedShapes(index, count)
+    val rowColor by androidx.compose.animation.animateColorAsState(
+        if (selected) c.primaryContainer else KairoTheme.colors.item, MaterialTheme.motionScheme.defaultEffectsSpec(), label = "tx",
+    )
     SegmentedListItem(
         onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
-        colors = ListItemDefaults.segmentedColors(containerColor = KairoTheme.colors.item),
+        onLongClick = onLongClick,
+        onLongClickLabel = "Select",
+        shapes = if (selected) base.copy(shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) else base,
+        colors = ListItemDefaults.segmentedColors(containerColor = rowColor),
         leadingContent = { CategoryBadge(cat) },
         supportingContent = {
             Text(listOfNotNull(if (tx.kind == TxKind.Transfer) "Transfer" else cat?.name, account?.name).joinToString(" · ") +

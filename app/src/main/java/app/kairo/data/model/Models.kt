@@ -3,8 +3,22 @@ package app.kairo.data.model
 import java.time.LocalDate
 import java.time.LocalTime
 
-/** Each list owns a shape (rule 7). Mapped to MaterialShapes in ui/shapes/ListShapes.kt. */
-enum class ListShape { Cookie4, Cookie6, Cookie9, Arch, Clover, Sunny, Pentagon, Gem }
+/**
+ * Each list owns a shape (rule 7). Mapped in ui/shapes/ListShapes.kt.
+ * Owner, 2026-11-21: hexagon, rounded triangle, rounded square and friends; no arch (semi-circle)
+ * or sunny. Arch/Sunny/Cookie4 stay only so old rows still load; they are migrated at startup.
+ */
+enum class ListShape {
+    Hexagon, Triangle, Square, Pentagon, Gem, Cookie6, Cookie9, Clover,
+    @Deprecated("migrated to Hexagon") Arch,
+    @Deprecated("migrated to Triangle") Sunny,
+    @Deprecated("migrated to Square") Cookie4;
+
+    companion object {
+        /** Shapes offered when creating a list. */
+        val choices = listOf(Hexagon, Triangle, Square, Pentagon, Gem, Cookie6, Cookie9, Clover)
+    }
+}
 
 /** List / category colors, harmonized to the seed (docs/03-design-system.md). */
 enum class ListColor { Indigo, Coral, Amber, Green, Teal, Pink, Violet }
@@ -32,4 +46,5 @@ data class Task(
     val reminder: Boolean = false,
     val notes: String = "",
     val completedAt: Long? = null, // epoch millis, for stats
+    val archived: Boolean = false,
 )

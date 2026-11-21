@@ -20,7 +20,9 @@ enum class SmartList(val id: Long, val label: String, val icon: Int, val matches
     Inbox(-1, "Inbox", R.drawable.ic_inbox, { t, _ -> !t.done && t.due == null }),
     Today(-2, "Today", R.drawable.ic_today, { t, d -> !t.done && t.due != null && !t.due.isAfter(d) }),
     Next7(-3, "Next 7 days", R.drawable.ic_date_range, { t, d -> !t.done && t.due != null && t.due.isAfter(d) && !t.due.isAfter(d.plusDays(7)) }),
-    Completed(-4, "Completed", R.drawable.ic_task_alt, { t, _ -> t.done });
+    Completed(-4, "Completed", R.drawable.ic_task_alt, { t, _ -> t.done }),
+    /** Shows archived tasks (they're hidden everywhere else); actions there unarchive. */
+    Archived(-5, "Archived", R.drawable.ic_archive, { _, _ -> true });
 
     companion object { fun of(id: Long) = entries.firstOrNull { it.id == id } }
 }
@@ -32,10 +34,12 @@ data class ListsState(
 )
 
 class ListsViewModel(private val repo: TaskRepository) : ViewModel() {
-    val state: StateFlow<ListsState?> = combine(repo.tasks, repo.lists) { tasks, lists ->
+    val state: StateFlow<ListsState?> = combine(repo.tasks, repo.lists, repo.archived) { tasks, lists, archived ->
         val today = LocalDate.now()
         ListsState(
-            smartCounts = SmartList.entries.associateWith { s -> tasks.count { s.matches(it, today) } },
+            smartCounts = SmartList.entries.associateWith { s ->
+                if (s == SmartList.Archived) archived.size else tasks.count { s.matches(it, today) }
+            },
             lists = lists,
             openCounts = tasks.filter { !it.done }.groupingBy { it.listId }.eachCount(),
         )
@@ -59,7 +63,9 @@ data class ListDetailState(
 class ListDetailViewModel(private val repo: TaskRepository, private val listId: Long) : ViewModel() {
     val filter = kotlinx.coroutines.flow.MutableStateFlow(ListFilter.Open)
 
-    val state: StateFlow<ListDetailState?> = combine(repo.tasks, repo.lists, filter) { tasks, lists, f ->
+    private val source = if (SmartList.of(listId) == SmartList.Archived) repo.archived else repo.tasks
+
+    val state: StateFlow<ListDetailState?> = combine(source, repo.lists, filter) { tasks, lists, f ->
         val today = LocalDate.now()
         val smart = SmartList.of(listId)
         val list = lists.firstOrNull { it.id == listId }
@@ -72,7 +78,7 @@ class ListDetailViewModel(private val repo: TaskRepository, private val listId: 
             ListFilter.Upcoming -> mine.filter { !it.done && it.due != null && !it.due.isBefore(today) }
             ListFilter.NoDate -> mine.filter { !it.done && it.due == null }
             ListFilter.Done -> mine.filter { it.done }
-        }.let { if (smart == SmartList.Completed) mine else it }
+        }.let { if (smart == SmartList.Completed || smart == SmartList.Archived) mine else it }
         ListDetailState(
             title = smart?.label ?: list?.name ?: "",
             list = list,

@@ -65,6 +65,8 @@ import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.shapes.MorphShape
+import app.kairo.ui.common.countUp
+import app.kairo.ui.common.slowSpin
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -75,12 +77,24 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-enum class Range(val label: String, val badge: RoundedPolygon) {
+enum class Range(val label: String, val badge: RoundedPolygon, val span: String, val previous: String, val unit: String) {
     // docs/03-design-system.md: Stats badge morphs Cookie9 → Clover4Leaf → Sunny.
-    Week("Week", MaterialShapes.Cookie9Sided),
-    Month("Month", MaterialShapes.Clover4Leaf),
-    Year("Year", MaterialShapes.Sunny),
+    Week("Week", MaterialShapes.Cookie9Sided, "last 7 days", "previous 7 days", "day"),
+    Month("Month", MaterialShapes.Clover4Leaf, "last 30 days", "previous 30 days", "week"),
+    Year("Year", MaterialShapes.Sunny, "last 12 months", "previous year", "month"),
 }
+
+@Composable
+private fun CardTitle(title: String, hint: String) {
+    Column {
+        Text(title, style = MaterialTheme.typography.titleSmallEmphasized, color = MaterialTheme.colorScheme.primary)
+        Caption(hint)
+    }
+}
+
+@Composable
+private fun Caption(text: String) =
+    Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
 private data class Stats(
     val total: Int,
@@ -171,36 +185,42 @@ fun StatsScreen(repo: TaskRepository) {
             // Editorial total + morphing badge.
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
                 Column(Modifier.weight(1f)) {
+                    val shown by countUp(s.total)
                     Text(
-                        "${s.total}",
+                        "$shown",
                         style = MaterialTheme.typography.displayLargeEmphasized.copy(fontSize = MaterialTheme.typography.displayLarge.fontSize * 1.5f),
                         color = c.onSurface,
                     )
-                    Text("tasks completed", style = MaterialTheme.typography.titleMedium, color = c.onSurfaceVariant)
+                    Text("tasks done · ${range.span}", style = MaterialTheme.typography.titleMedium, color = c.onSurfaceVariant)
                 }
-                MorphBadge(range, s.change)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    MorphBadge(range, s.change)
+                    Caption("vs ${range.previous}")
+                }
             }
 
             Card {
-                Text("Completed", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
-                Bars(s.bars)
+                CardTitle("Done per ${range.unit}", "Highlighted: your best ${range.unit}")
+                Bars(s.bars, range)
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Card(Modifier.weight(1f)) {
-                    Text("On time", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+                    CardTitle("On time", "Done by the due date")
+                    val ring by androidx.compose.animation.core.animateFloatAsState(
+                        s.onTime, MaterialTheme.motionScheme.slowSpatialSpec(), label = "onTime",
+                    )
+                    val pct by countUp((s.onTime * 100).roundToInt())
                     Box(Modifier.size(96.dp).align(Alignment.CenterHorizontally), contentAlignment = Alignment.Center) {
-                        CircularWavyProgressIndicator(progress = { s.onTime }, modifier = Modifier.fillMaxSize())
-                        Text("${(s.onTime * 100).roundToInt()}%", style = MaterialTheme.typography.titleLargeEmphasized)
+                        CircularWavyProgressIndicator(progress = { ring.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxSize())
+                        Text("$pct%", style = MaterialTheme.typography.titleLargeEmphasized)
                     }
                 }
                 Card(Modifier.weight(1f)) {
-                    Text("Streak", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
-                    Box(
-                        Modifier.size(96.dp).align(Alignment.CenterHorizontally)
-                            .background(c.tertiaryContainer, MaterialShapes.Sunny.toShape()),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    CardTitle("Streak", "Days in a row with a task done")
+                    val spin by slowSpin(30_000)
+                    Box(Modifier.size(96.dp).align(Alignment.CenterHorizontally), contentAlignment = Alignment.Center) {
+                        Box(Modifier.matchParentSize().graphicsLayer { rotationZ = spin }.background(c.tertiaryContainer, MaterialShapes.Sunny.toShape()))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("${s.streak}", style = MaterialTheme.typography.headlineMediumEmphasized, color = c.onTertiaryContainer)
                             Text(if (s.streak == 1) "day" else "days", style = MaterialTheme.typography.labelMedium, color = c.onTertiaryContainer)
@@ -210,7 +230,7 @@ fun StatsScreen(repo: TaskRepository) {
             }
 
             if (s.byList.isNotEmpty()) Card {
-                Text("By list", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+                CardTitle("By list", "Where your done tasks came from")
                 val total = s.byList.sumOf { it.second }.toFloat()
                 Row(Modifier.fillMaxWidth().height(16.dp).clip(CircleShape), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     s.byList.forEach { (l, n) -> Box(Modifier.weight(n / total).fillMaxHeight().background(k.accent(l.color))) }
@@ -225,9 +245,17 @@ fun StatsScreen(repo: TaskRepository) {
             }
 
             Card {
-                Text(YearMonth.from(today).month.getDisplayName(TextStyle.FULL, Locale.getDefault()),
-                    style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+                CardTitle(YearMonth.from(today).month.getDisplayName(TextStyle.FULL, Locale.getDefault()), "Each square is a day · darker = more done")
                 Heatmap(YearMonth.from(today), s.heat)
+                // Legend: less → more.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.align(Alignment.End)) {
+                    Caption("Less")
+                    listOf(0f, 0.35f, 0.65f, 1f).forEach { a ->
+                        Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp))
+                            .background(if (a == 0f) c.surfaceContainerHighest else c.primary.copy(alpha = 0.3f + 0.7f * a)))
+                    }
+                    Caption("More")
+                }
             }
         }
     }
@@ -282,8 +310,12 @@ private fun MorphBadge(range: Range, change: Int?) {
 
 /** Bars, best bar in tertiary (canvas Stats board). */
 @Composable
-private fun Bars(bars: List<Pair<String, Int>>) {
+private fun Bars(bars: List<Pair<String, Int>>, range: Range) {
     val c = MaterialTheme.colorScheme
+    // Bars grow up from zero, one after another, whenever the range changes.
+    val grow = remember(range) { Animatable(0f) }
+    val spec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
+    LaunchedEffect(range) { grow.animateTo(1f, spec) }
     val max = (bars.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
     val best = bars.indexOfFirst { it.second == max && max > 0 }
     Row(Modifier.fillMaxWidth().height(140.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
@@ -291,7 +323,8 @@ private fun Bars(bars: List<Pair<String, Int>>) {
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
                 Text("$n", style = MaterialTheme.typography.labelSmall, color = c.onSurfaceVariant)
                 Box(
-                    Modifier.fillMaxWidth().height((100f * n / max).dp.coerceAtLeast(4.dp))
+                    Modifier.fillMaxWidth()
+                        .height((100f * n / max * (grow.value * bars.size - i * 0.5f).coerceIn(0f, 1f)).dp.coerceAtLeast(4.dp))
                         .clip(RoundedCornerShape(8.dp))
                         .background(if (i == best) c.tertiary else c.primary.copy(alpha = if (n == 0) 0.2f else 1f)),
                 )

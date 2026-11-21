@@ -1,9 +1,14 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package app.kairo
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.navigation3.scene.Scene
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -11,6 +16,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import app.kairo.ui.common.LocalAppSnackbar
+import app.kairo.ui.common.LocalKairoApp
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.FloatingActionButtonMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import app.kairo.data.db.TxKind
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,7 +101,10 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     val motion = MaterialTheme.motionScheme
     val app = LocalContext.current.applicationContext as KairoApplication
     val scope = rememberCoroutineScope()
-    var showQuickAdd by rememberSaveable { mutableStateOf(false) }
+    // Which create sheet is open: "task", "Expense", "Income", "Transfer" (TxKind names), or null.
+    var sheet by rememberSaveable { mutableStateOf<String?>(null) }
+    var createMenu by rememberSaveable { mutableStateOf(false) }
+    var newListSignal by remember { mutableIntStateOf(0) }
     val lists by app.repository.lists.collectAsStateWithLifecycle(initialValue = emptyList())
 
     val top = backStack.last()
@@ -93,8 +121,8 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     // Widget shortcuts.
     LaunchedEffect(action) {
         when (action) {
-            MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today); showQuickAdd = true }
-            MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money); showQuickAdd = true }
+            MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today); sheet = "task" }
+            MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money); sheet = TxKind.Expense.name }
         }
         if (action != null) onActionHandled()
     }
@@ -116,17 +144,25 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         label = "navOffset",
     )
 
-    // Fade through: new screen fades in while growing slightly; old one fades out quickly.
-    val enter = { fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f) }
-    val exit = { fadeOut(motion.fastEffectsSpec()) }
+    // Directional motion: a tab to the right slides in from the right, to the left from the left;
+    // detail screens come in from the right and go back to the right. Spatial spring = slight bounce.
+    fun depth(scene: Scene<Route>): Int = when (val r = Route.decode(scene.entries.last().contentKey as String)) {
+        is Route.TabRoute -> r.tab.ordinal
+        else -> 100 + scene.entries.size
+    }
+    fun slide(dir: Int): ContentTransform =
+        (slideInHorizontally(motion.defaultSpatialSpec()) { w -> dir * w / 4 } + fadeIn(motion.defaultEffectsSpec())) togetherWith
+            (slideOutHorizontally(motion.defaultSpatialSpec()) { w -> -dir * w / 4 } + fadeOut(motion.fastEffectsSpec()))
 
+    val snackbar = remember { SnackbarHostState() }
+    CompositionLocalProvider(LocalKairoApp provides app, LocalAppSnackbar provides snackbar) {
     Box(Modifier.fillMaxSize().background(KairoTheme.colors.bg).nestedScroll(hideOnScroll)) {
         NavDisplay(
             backStack = backStack,
             onBack = ::back,
-            transitionSpec = { enter() togetherWith exit() },
-            popTransitionSpec = { enter() togetherWith exit() },
-            predictivePopTransitionSpec = { enter() togetherWith exit() },
+            transitionSpec = { slide(if (depth(targetState) >= depth(initialState)) 1 else -1) },
+            popTransitionSpec = { slide(if (depth(targetState) > depth(initialState)) 1 else -1) },
+            predictivePopTransitionSpec = { slide(-1) },
             entryProvider = { route ->
                 NavEntry(route, contentKey = route.encode()) {
                     when (route) {
@@ -138,7 +174,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                             }
                             Tab.Lists -> {
                                 val vm: ListsViewModel = viewModel(factory = viewModelFactory { initializer { ListsViewModel(app.repository) } })
-                                ListsScreen(vm, onOpenList = { id -> open(Route.ListRoute(id)) })
+                                ListsScreen(vm, onOpenList = { id -> open(Route.ListRoute(id)) }, newListSignal = newListSignal)
                             }
                             Tab.Calendar -> CalendarScreen(app.repository, app.phoneCalendar, onOpenTask = { t -> open(Route.TaskRoute(t.id)) })
                             Tab.Stats -> StatsScreen(app.repository)
@@ -174,25 +210,61 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                 }
             },
         )
+        // Dim the screen under the nav and the menu (the × stays bright).
+        val scrim by animateFloatAsState(if (createMenu) 0.32f else 0f, motion.defaultEffectsSpec(), label = "scrim")
+        if (scrim > 0f) Box(
+            Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrim))
+                .clickable(interactionSource = null, indication = null) { createMenu = false },
+        )
         FloatingNavBar(
             selected = currentTab,
             onSelect = { navVisible = true; select(it) },
-            onCreate = { showQuickAdd = true },
+            onCreate = { createMenu = !createMenu },
+            menuOpen = createMenu,
             modifier = Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, navOffset.roundToPx()) },
         )
-        if (showQuickAdd && currentTab == Tab.Money) {
-            // On the Money tab, + adds a transaction (FAB menu with both comes later).
-            val accounts by app.money.accounts.collectAsStateWithLifecycle(initialValue = emptyList())
-            val categories by app.money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
-            if (accounts.isNotEmpty()) AddTransactionSheet(app.money, accounts, categories, onDismiss = { showQuickAdd = false })
-        } else if (showQuickAdd) {
-            QuickAddSheet(
+        // Create menu (M3 Expressive FAB menu). Our + lives in the nav group, so the menu's own
+        // button slot is an empty spacer sitting exactly over it; the items rise above it.
+        FloatingActionButtonMenu(
+            expanded = createMenu,
+            button = { Spacer(Modifier.size(64.dp)) },
+            modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(bottom = 20.dp),
+        ) {
+            listOf(
+                Triple("Task", R.drawable.ic_task_alt) { sheet = "task" },
+                Triple("Expense", R.drawable.ic_payments) { select(Tab.Money); sheet = TxKind.Expense.name },
+                Triple("Income", R.drawable.ic_savings) { select(Tab.Money); sheet = TxKind.Income.name },
+                Triple("Transfer", R.drawable.ic_swap_vert) { select(Tab.Money); sheet = TxKind.Transfer.name },
+                Triple("List", R.drawable.ic_checklist) { select(Tab.Lists); newListSignal++ },
+            ).forEach { (label, icon, act) ->
+                FloatingActionButtonMenuItem(
+                    onClick = { createMenu = false; act() },
+                    text = { Text(label) },
+                    icon = { Icon(painterResource(icon), null) },
+                )
+            }
+        }
+
+        // One snackbar for the app, above the floating nav (64dp + 20dp + gap).
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 92.dp))
+
+        when (val sh = sheet) {
+            null -> {}
+            "task" -> QuickAddSheet(
                 lists = lists,
                 defaultDue = if (currentTab == Tab.Today) LocalDate.now() else null,
                 onAdd = { task -> scope.launch { app.repository.add(task) } },
-                onDismiss = { showQuickAdd = false },
+                onDismiss = { sheet = null },
             )
+            else -> {
+                val accounts by app.money.accounts.collectAsStateWithLifecycle(initialValue = emptyList())
+                val categories by app.money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
+                if (accounts.isNotEmpty()) AddTransactionSheet(
+                    app.money, accounts, categories, initialKind = TxKind.valueOf(sh), onDismiss = { sheet = null },
+                )
+            }
         }
+    }
     }
 }
 

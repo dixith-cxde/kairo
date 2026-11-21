@@ -16,6 +16,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.launch
+import app.kairo.ui.common.Entrance
+import app.kairo.ui.common.LocalAppSnackbar
+import app.kairo.ui.common.Selection
+import app.kairo.ui.common.TaskSelectionBar
+import app.kairo.ui.common.countUp
+import app.kairo.ui.common.rememberEntrance
+import app.kairo.ui.common.rememberSelection
+import app.kairo.ui.common.slowSpin
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -103,7 +112,9 @@ fun TodayScreen(
     val k = KairoTheme.colors
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showCompleted by rememberSaveable { mutableStateOf(false) }
-    val snackbar = remember { SnackbarHostState() }
+    val snackbar = LocalAppSnackbar.current
+    val selection = rememberSelection()
+    val entrance = rememberEntrance()
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
@@ -123,9 +134,8 @@ fun TodayScreen(
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = k.bg,
-        // Above the floating nav (64dp + 20dp + gap).
-        snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding().padding(bottom = 92.dp)) },
         topBar = {
+          Box {
             LargeFlexibleTopAppBar(
                 title = { Text("Today") },
                 subtitle = { Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))) },
@@ -140,6 +150,10 @@ fun TodayScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scrollBehavior,
             )
+            TaskSelectionBar(
+                selection, state.overdue + state.today + state.completed, state.lists.values.toList(), onOpen,
+            )
+          }
         },
     ) { padding ->
         LazyColumn(
@@ -150,7 +164,7 @@ fun TodayScreen(
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
-            item(key = "hero") { HeroCard(state) }
+            item(key = "hero") { with(entrance) { HeroCard(state, Modifier.enter("hero", 0)) } }
 
             if (state.overdue.isNotEmpty()) {
                 item(key = "h-overdue") {
@@ -158,7 +172,7 @@ fun TodayScreen(
                         TextButton(onClick = { /* Reschedule: step 7 */ }) { Text("Reschedule") }
                     }
                 }
-                taskGroup(state.overdue, state.lists, toggle, onOpen, overdue = true)
+                taskGroup(state.overdue, state.lists, toggle, onOpen, overdue = true, selection = selection, entrance = entrance)
             }
 
             item(key = "h-today") {
@@ -166,24 +180,30 @@ fun TodayScreen(
                     Text("Sorted by time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            taskGroup(state.today, state.lists, toggle, onOpen)
+            taskGroup(state.today, state.lists, toggle, onOpen, selection = selection, entrance = entrance)
 
             item(key = "completed-toggle") {
                 CompletedToggle(count = state.completed.size, open = showCompleted) { showCompleted = !showCompleted }
             }
-            if (showCompleted) taskGroup(state.completed, state.lists, toggle, onOpen, keyPrefix = "c")
+            if (showCompleted) taskGroup(state.completed, state.lists, toggle, onOpen, keyPrefix = "c", selection = selection, entrance = entrance)
         }
     }
 }
 
 /** Hero moment #2 (rule 10): progress ring on primaryContainer, a slow Cookie12 shape behind it. */
 @Composable
-private fun HeroCard(state: TodayState) {
+private fun HeroCard(state: TodayState, modifier: Modifier = Modifier) {
     val c = MaterialTheme.colorScheme
     val left = state.today.size
-    val progress = if (state.total == 0) 0f else state.done / state.total.toFloat()
+    val target = if (state.total == 0) 0f else state.done / state.total.toFloat()
+    // Ring fills from empty on first show and glides on every change (slow spatial spring).
+    val ring = remember { Animatable(0f) }
+    val ringSpec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
+    LaunchedEffect(target) { ring.animateTo(target, ringSpec) }
+    val doneShown by countUp(state.done)
+    val spin by slowSpin()
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
             .background(c.primaryContainer),
@@ -196,7 +216,7 @@ private fun HeroCard(state: TodayState) {
                 .wrapContentSize(align = Alignment.TopEnd, unbounded = true)
                 .offset(x = 56.dp, y = (-64).dp)
                 .size(210.dp)
-                .rotate(12f)
+                .rotate(12f + spin)
                 .alpha(0.10f)
                 .background(c.onPrimaryContainer, MaterialShapes.Cookie12Sided.toShape()),
           )
@@ -213,13 +233,13 @@ private fun HeroCard(state: TodayState) {
                 contentAlignment = Alignment.Center,
             ) {
                 CircularWavyProgressIndicator(
-                    progress = { progress },
+                    progress = { ring.value.coerceIn(0f, 1f) },
                     color = c.primary,
                     trackColor = c.onPrimaryContainer.copy(alpha = 0.18f),
                     modifier = Modifier.fillMaxSize(),
                 )
                 Text(
-                    "${state.done}/${state.total}",
+                    "$doneShown/${state.total}",
                     style = MaterialTheme.typography.headlineMediumEmphasized,
                     color = c.onPrimaryContainer,
                 )
@@ -265,6 +285,8 @@ private fun LazyListScope.taskGroup(
     onOpen: (Task) -> Unit,
     overdue: Boolean = false,
     keyPrefix: String = "t",
+    selection: Selection? = null,
+    entrance: Entrance? = null,
 ) {
     itemsIndexed(tasks, key = { _, t -> "$keyPrefix${t.id}" }) { i, task ->
         val motion = MaterialTheme.motionScheme
@@ -274,9 +296,9 @@ private fun LazyListScope.taskGroup(
                 fadeInSpec = motion.defaultEffectsSpec(),
                 placementSpec = motion.defaultSpatialSpec(),
                 fadeOutSpec = motion.fastEffectsSpec(),
-            ),
+            ).then(entrance?.run { Modifier.enter("$keyPrefix${task.id}", i + 1) } ?: Modifier),
         ) {
-            TaskRow(task, lists.getValue(task.listId), i, tasks.size, onToggle, onOpen, overdue)
+            TaskRow(task, lists.getValue(task.listId), i, tasks.size, onToggle, onOpen, overdue, selection)
             if (i < tasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
         }
     }
@@ -291,9 +313,13 @@ fun TaskRow(
     onToggle: (Task) -> Unit,
     onOpen: (Task) -> Unit,
     overdue: Boolean = false,
+    selection: Selection? = null,
 ) {
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
+    val selected = selection != null && task.id in selection
+    // Selected rows take primaryContainer and round to 16dp (canvas .seg-item.sel).
+    val rowColor by animateColorAsState(if (selected) c.primaryContainer else k.item, MaterialTheme.motionScheme.defaultEffectsSpec(), label = "rowColor")
     val prio = when (task.priority) {
         Priority.High -> k.prioHigh
         Priority.Medium -> k.prioMed
@@ -309,10 +335,13 @@ fun TaskRow(
     val titleColor by animateColorAsState(
         if (shownDone) c.onSurfaceVariant else c.onSurface, motion.defaultEffectsSpec(), label = "title",
     )
+    val baseShapes = ListItemDefaults.segmentedShapes(index, count)
     SegmentedListItem(
-        onClick = { onOpen(task) },
-        shapes = ListItemDefaults.segmentedShapes(index, count),
-        colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+        onClick = { if (selection?.active == true) selection.toggle(task.id) else onOpen(task) },
+        onLongClick = selection?.let { { it.toggle(task.id) } },
+        onLongClickLabel = "Select",
+        shapes = if (selected) baseShapes.copy(shape = RoundedCornerShape(16.dp)) else baseShapes,
+        colors = ListItemDefaults.segmentedColors(containerColor = rowColor),
         leadingContent = {
           Box(contentAlignment = Alignment.Center) {
             Box(

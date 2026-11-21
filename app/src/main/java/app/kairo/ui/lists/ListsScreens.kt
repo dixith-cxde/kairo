@@ -62,17 +62,24 @@ import app.kairo.data.model.TaskList
 import app.kairo.ui.shapes.polygon
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.today.TaskRow
+import app.kairo.ui.common.TaskSelectionBar
+import app.kairo.ui.common.countUp
+import app.kairo.ui.common.rememberEntrance
+import app.kairo.ui.common.rememberSelection
 
 // ───────────────────────── Lists tab ─────────────────────────
 
 @Composable
-fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit) {
+fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: Int = 0) {
     val state by vm.state.collectAsStateWithLifecycle()
     val s = state ?: return
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var creating by rememberSaveable { mutableStateOf(false) }
+    val entrance = rememberEntrance()
+    // The create menu's "List" item opens the dialog here.
+    androidx.compose.runtime.LaunchedEffect(newListSignal) { if (newListSignal > 0) creating = true }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -92,11 +99,11 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit) {
             // Smart lists: 2×2 tiles, Cookie4 icons, big tabular counts.
             item(key = "smart") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SmartList.entries.chunked(2).forEach { row ->
+                    SmartList.entries.chunked(2).forEachIndexed { r, row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { sl ->
+                            row.forEachIndexed { ci, sl ->
                                 Column(
-                                    Modifier
+                                    with(entrance) { Modifier.enter("tile-$sl", r * 2 + ci) }
                                         .weight(1f)
                                         .clip(RoundedCornerShape(28.dp))
                                         .background(k.item)
@@ -110,7 +117,8 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit) {
                                             contentAlignment = Alignment.Center,
                                         ) { Icon(painterResource(sl.icon), null, tint = c.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
                                         Spacer(Modifier.weight(1f))
-                                        Text("${s.smartCounts[sl] ?: 0}", style = MaterialTheme.typography.headlineMediumEmphasized)
+                                        val n by countUp(s.smartCounts[sl] ?: 0)
+                                        Text("$n", style = MaterialTheme.typography.headlineMediumEmphasized)
                                     }
                                     Text(sl.label, style = MaterialTheme.typography.titleSmallEmphasized, color = c.onSurfaceVariant)
                                 }
@@ -119,15 +127,20 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit) {
                     }
                 }
             }
+            // "My lists" header with the New list action right beside it (owner, 2026-11-21).
             item(key = "h-mine") {
-                Text(
-                    "My lists", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary,
-                    modifier = Modifier.padding(start = 4.dp, top = 24.dp, bottom = 8.dp),
-                )
+                Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 16.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("My lists", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.FilledTonalButton(onClick = { creating = true }) {
+                        Icon(painterResource(R.drawable.ic_add), null, Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("New list")
+                    }
+                }
             }
-            val count = s.lists.size + 1
+            val count = s.lists.size
             itemsIndexed(s.lists, key = { _, l -> l.id }) { i, l ->
-                Column {
+                Column(with(entrance) { Modifier.enter("list-${l.id}", i + 5) }) {
                     SegmentedListItem(
                         onClick = { onOpenList(l.id) },
                         shapes = ListItemDefaults.segmentedShapes(i, count),
@@ -139,18 +152,6 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit) {
                     ) { Text(l.name, style = MaterialTheme.typography.bodyLarge) }
                     Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                 }
-            }
-            item(key = "new") {
-                SegmentedListItem(
-                    onClick = { creating = true },
-                    shapes = ListItemDefaults.segmentedShapes(count - 1, count),
-                    colors = ListItemDefaults.segmentedColors(containerColor = k.item),
-                    leadingContent = {
-                        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                            Icon(painterResource(R.drawable.ic_add), null, tint = c.primary)
-                        }
-                    },
-                ) { Text("New list", style = MaterialTheme.typography.bodyLarge, color = c.primary) }
             }
         }
     }
@@ -170,7 +171,7 @@ fun ListBadge(l: TaskList, size: Int = 40) {
 private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String, ListShape, ListColor) -> Unit) {
     val k = KairoTheme.colors
     var name by rememberSaveable { mutableStateOf("") }
-    var shape by rememberSaveable { mutableStateOf(ListShape.Cookie9) }
+    var shape by rememberSaveable { mutableStateOf(ListShape.Hexagon) }
     var color by rememberSaveable { mutableStateOf(ListColor.Indigo) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -179,7 +180,7 @@ private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String, ListShape, L
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ListShape.entries.forEach { sh ->
+                    ListShape.choices.forEach { sh ->
                         val sel = sh == shape
                         Box(
                             Modifier
@@ -217,10 +218,13 @@ fun ListDetailScreen(vm: ListDetailViewModel, onBack: () -> Unit, onOpenTask: (T
     val s = state ?: return
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
+    val selection = rememberSelection()
+    val entrance = rememberEntrance()
 
     Scaffold(
         containerColor = k.bg,
         topBar = {
+          Box {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -231,13 +235,18 @@ fun ListDetailScreen(vm: ListDetailViewModel, onBack: () -> Unit, onOpenTask: (T
                 navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg),
             )
+            TaskSelectionBar(
+                selection, s.sections.flatMap { it.second }, s.lists.values.toList(), onOpenTask,
+                archivedView = s.smart == SmartList.Archived,
+            )
+          }
         },
     ) { padding ->
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
-            if (s.smart != SmartList.Completed) item(key = "filters") {
+            if (s.smart != SmartList.Completed && s.smart != SmartList.Archived) item(key = "filters") {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ListFilter.entries.forEach { f ->
                         FilterChip(selected = f == filter, onClick = { vm.filter.value = f }, label = { Text(f.label) })
@@ -263,8 +272,8 @@ fun ListDetailScreen(vm: ListDetailViewModel, onBack: () -> Unit, onOpenTask: (T
                         fadeInSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
                         fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
-                    )) {
-                        TaskRow(t, s.lists.getValue(t.listId), i, tasks.size, vm::toggle, onOpenTask, overdue = title == "Overdue")
+                    ).then(with(entrance) { Modifier.enter("$title-${t.id}", i) })) {
+                        TaskRow(t, s.lists.getValue(t.listId), i, tasks.size, vm::toggle, onOpenTask, overdue = title == "Overdue", selection = selection)
                         if (i < tasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                     }
                 }

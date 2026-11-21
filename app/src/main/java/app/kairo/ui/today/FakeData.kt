@@ -12,9 +12,9 @@ import java.time.LocalTime
 object FakeData {
     val lists = listOf(
         TaskList(1, "Work", ListShape.Cookie9, ListColor.Indigo),
-        TaskList(2, "Home", ListShape.Arch, ListColor.Amber),
+        TaskList(2, "Home", ListShape.Hexagon, ListColor.Amber),
         TaskList(3, "Groceries", ListShape.Clover, ListColor.Green),
-        TaskList(4, "Health", ListShape.Sunny, ListColor.Teal),
+        TaskList(4, "Health", ListShape.Triangle, ListColor.Teal),
         TaskList(5, "Family", ListShape.Pentagon, ListColor.Pink),
         TaskList(6, "Personal", ListShape.Gem, ListColor.Coral),
         TaskList(7, "Reading", ListShape.Cookie6, ListColor.Violet),

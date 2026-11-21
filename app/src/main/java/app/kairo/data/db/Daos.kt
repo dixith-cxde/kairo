@@ -23,6 +23,12 @@ interface TaskDao {
 
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM tasks WHERE id IN (:ids)") suspend fun get(ids: List<Long>): List<TaskEntity>
+    @Query("DELETE FROM tasks WHERE id IN (:ids)") suspend fun deleteAll(ids: List<Long>)
+    @Query("UPDATE tasks SET archived = :archived WHERE id IN (:ids)") suspend fun setArchived(ids: List<Long>, archived: Boolean)
+    @Query("UPDATE tasks SET listId = :listId WHERE id IN (:ids)") suspend fun move(ids: List<Long>, listId: Long)
+    @Query("UPDATE tasks SET done = :done, completedAt = :at WHERE id IN (:ids)") suspend fun setDoneAll(ids: List<Long>, done: Boolean, at: Long?)
 }
 
 @Dao
@@ -37,6 +43,10 @@ interface ListDao {
 
     @Query("DELETE FROM lists WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /** Owner retired these shapes (2026-11-21); move old rows to their replacements. */
+    @Query("UPDATE lists SET shape = CASE shape WHEN 'Arch' THEN 'Hexagon' WHEN 'Sunny' THEN 'Triangle' WHEN 'Cookie4' THEN 'Square' ELSE shape END")
+    suspend fun migrateShapes()
 
     @Query("SELECT COUNT(*) FROM lists")
     suspend fun count(): Int

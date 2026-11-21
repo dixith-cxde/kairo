@@ -52,6 +52,10 @@ class MoneyRepository(db: KairoDatabase) {
     }
 
     suspend fun delete(tx: TransactionEntity) = dao.deleteTx(tx.id)
+    /** Deletes (with transfer peers) and returns the rows for Undo. */
+    suspend fun deleteAll(ids: List<Long>): List<TransactionEntity> = dao.txWithPeers(ids).also { dao.deleteTxs(ids) }
+    suspend fun restore(rows: List<TransactionEntity>) = dao.insertTxs(rows)
+    suspend fun duplicate(tx: TransactionEntity) = dao.insertTx(tx.copy(id = 0, date = LocalDate.now(), transferPeerId = null))
 
     /** Mark a bill paid: record the expense and move the next due date a month on. */
     suspend fun pay(r: RecurringEntity) {
@@ -62,6 +66,7 @@ class MoneyRepository(db: KairoDatabase) {
     }
 
     suspend fun seedIfEmpty(sample: Boolean) {
+        dao.migrateShapes()
         if (dao.accountCount() > 0) return
         val acc = if (sample) listOf(
             AccountEntity(name = "Personal", type = AccountType.Bank, color = ListColor.Indigo, openingPaise = 85_000_00),
@@ -78,12 +83,12 @@ class MoneyRepository(db: KairoDatabase) {
             CategoryEntity(name = "Groceries", icon = "shopping_cart", color = ListColor.Green, shape = ListShape.Clover),
             CategoryEntity(name = "Transport", icon = "directions_car", color = ListColor.Indigo, shape = ListShape.Pentagon),
             CategoryEntity(name = "Shopping", icon = "shopping_bag", color = ListColor.Pink, shape = ListShape.Gem),
-            CategoryEntity(name = "Bills", icon = "receipt_long", color = ListColor.Amber, shape = ListShape.Arch),
-            CategoryEntity(name = "Health", icon = "medical_services", color = ListColor.Teal, shape = ListShape.Sunny),
+            CategoryEntity(name = "Bills", icon = "receipt_long", color = ListColor.Amber, shape = ListShape.Hexagon),
+            CategoryEntity(name = "Health", icon = "medical_services", color = ListColor.Teal, shape = ListShape.Triangle),
             CategoryEntity(name = "Fun", icon = "sports_esports", color = ListColor.Violet, shape = ListShape.Cookie9),
-            CategoryEntity(name = "Other", icon = "category", color = ListColor.Indigo, shape = ListShape.Cookie4),
+            CategoryEntity(name = "Other", icon = "category", color = ListColor.Indigo, shape = ListShape.Square),
             CategoryEntity(name = "Salary", icon = "payments", color = ListColor.Green, shape = ListShape.Cookie9, income = true),
-            CategoryEntity(name = "Other income", icon = "savings", color = ListColor.Teal, shape = ListShape.Cookie4, income = true),
+            CategoryEntity(name = "Other income", icon = "savings", color = ListColor.Teal, shape = ListShape.Square, income = true),
         )
         val catIds = cats.map { dao.insertCategory(it) }
         if (!sample) return

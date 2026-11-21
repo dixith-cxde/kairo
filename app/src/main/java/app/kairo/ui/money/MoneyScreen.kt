@@ -43,6 +43,16 @@ import app.kairo.data.db.TxKind
 import app.kairo.data.money.Money
 import app.kairo.data.money.MoneyRepository
 import app.kairo.ui.theme.KairoTheme
+import app.kairo.ui.common.MoneySelectionBar
+import app.kairo.ui.common.countUp
+import app.kairo.ui.common.rememberEntrance
+import app.kairo.ui.common.rememberSelection
+import app.kairo.ui.common.slowSpin
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
 import java.time.YearMonth
 
 @Composable
@@ -68,17 +78,23 @@ fun MoneyScreen(
     val accMap = remember(balances) { balances.associate { it.account.id to it.account } }
     val recent = remember(txs) { txs.filter { !(it.kind == TxKind.Transfer && it.amountPaise > 0) }.take(20).groupBy { it.date } }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val selection = rememberSelection()
+    val entrance = rememberEntrance()
+    val spin by slowSpin(50_000)
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         containerColor = k.bg,
         topBar = {
+          Box {
             LargeFlexibleTopAppBar(
                 title = { Text("Money") },
                 subtitle = { Text("Total ${Money.format(balances.sumOf { it.balancePaise })}") },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,
             )
+            MoneySelectionBar(selection, txs)
+          }
         },
     ) { padding ->
         LazyColumn(
@@ -98,28 +114,55 @@ fun MoneyScreen(
                     modifier = Modifier.fillMaxWidth().height(150.dp),
                 ) { i ->
                     val b = balances[i]
-                    Column(
+                    val acc = b.account
+                    val info = carouselItemDrawInfo
+                    // How "open" this card is (small edge card = 0, full card = 1). Text fades with it
+                    // instead of being cut off; content follows the visible mask's left edge.
+                    val open = ((info.size - info.minSize) / (info.maxSize - info.minSize).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                    val on = k.onContainer(acc.color)
+                    Box(
                         Modifier
                             .fillMaxSize()
                             .maskClip(RoundedCornerShape(28.dp))
-                            .background(k.container(b.account.color))
-                            .clickable(role = Role.Button) { onAccount(b.account.id) }
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.SpaceBetween,
+                            .background(k.container(acc.color))
+                            .clickable(role = Role.Button) { onAccount(acc.id) },
                     ) {
-                        Text(b.account.name, style = MaterialTheme.typography.titleMediumEmphasized, color = k.onContainer(b.account.color), maxLines = 1)
-                        Text(
-                            Money.format(b.balancePaise),
-                            style = MaterialTheme.typography.headlineSmallEmphasized,
-                            color = k.onContainer(b.account.color), maxLines = 1, overflow = TextOverflow.Clip,
+                        // Big soft shape in the corner, turning slowly: the account's "mark".
+                        Box(
+                            Modifier.align(Alignment.BottomEnd)
+                                .graphicsLayer { translationX = 40.dp.toPx() + info.maskRect.left; translationY = 50.dp.toPx(); rotationZ = spin }
+                                .size(150.dp)
+                                .background(on.copy(alpha = 0.08f), MaterialShapes.Cookie9Sided.toShape()),
                         )
+                        Column(
+                            Modifier.fillMaxSize().graphicsLayer { translationX = info.maskRect.left }.padding(16.dp),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Box(
+                                Modifier.size(40.dp).background(on.copy(alpha = 0.14f), MaterialShapes.Cookie4Sided.toShape()),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(painterResource(accountIcon(acc.type)), null, tint = on, modifier = Modifier.size(22.dp))
+                            }
+                            Column(Modifier.graphicsLayer { alpha = ((open - 0.5f) * 2f).coerceIn(0f, 1f) }) {
+                                Text(acc.name, style = MaterialTheme.typography.labelLarge, color = on.copy(alpha = 0.8f), maxLines = 1)
+                                Text(
+                                    Money.format(b.balancePaise),
+                                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                                    color = on, maxLines = 1, softWrap = false,
+                                )
+                            }
+                        }
                     }
                 }
             }
             item(key = "tiles") {
                 Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tile("Income", Money.format(income), c.tertiary, Modifier.weight(1f))
-                    Tile("Spent", Money.format(spent), c.onSurface, Modifier.weight(1f))
+                    // Amounts count up to their value (in whole rupees, so the digits roll smoothly).
+                    val inc by countUp((income / 100).toInt())
+                    val sp by countUp((spent / 100).toInt())
+                    Tile("Income", Money.format(inc * 100L), c.tertiary, with(entrance) { Modifier.enter("income", 1) }.weight(1f))
+                    Tile("Spent", Money.format(sp * 100L), c.onSurface, with(entrance) { Modifier.enter("spent", 2) }.weight(1f))
                 }
             }
             overall?.let { b ->
@@ -161,8 +204,12 @@ fun MoneyScreen(
                 }
                 list.forEachIndexed { i, tx ->
                     item(key = "t${tx.id}") {
-                        Column(Modifier.padding(horizontal = 16.dp)) {
-                            TxRow(tx, tx.categoryId?.let(catMap::get), accMap[tx.accountId], i, list.size) { onAccount(tx.accountId) }
+                        Column(with(entrance) { Modifier.enter("t${tx.id}", i + 4) }.animateItem().padding(horizontal = 16.dp)) {
+                            TxRow(
+                                tx, tx.categoryId?.let(catMap::get), accMap[tx.accountId], i, list.size,
+                                selected = tx.id in selection,
+                                onLongClick = { selection.toggle(tx.id) },
+                            ) { if (selection.active) selection.toggle(tx.id) else onAccount(tx.accountId) }
                             if (i < list.lastIndex) SegGap()
                         }
                     }

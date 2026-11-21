@@ -1,5 +1,6 @@
 package app.kairo.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -38,4 +39,5 @@ data class TaskEntity(
     val subtasksTotal: Int = 0,
     val reminder: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "0") val archived: Boolean = false, // v3
 )

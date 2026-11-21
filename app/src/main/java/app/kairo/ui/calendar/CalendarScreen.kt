@@ -64,6 +64,18 @@ import app.kairo.data.calendar.PhoneCalendar
 import app.kairo.data.model.Task
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.today.TaskRow
+import app.kairo.ui.common.TaskSelectionBar
+import app.kairo.ui.common.rememberEntrance
+import app.kairo.ui.common.rememberSelection
+import app.kairo.ui.common.slowSpin
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import java.time.DayOfWeek
@@ -103,10 +115,13 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
     val dayEvents = events.filter { e -> !day.isBefore(e.start.toLocalDate()) && (day.isBefore(e.end.toLocalDate()) || (!e.allDay && day == e.end.toLocalDate())) }
 
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val selection = rememberSelection()
+    val entrance = rememberEntrance()
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         containerColor = k.bg,
         topBar = {
+          Box {
             LargeFlexibleTopAppBar(
                 title = { Text(ym.format(DateTimeFormatter.ofPattern("MMMM yyyy"))) },
                 actions = {
@@ -116,6 +131,8 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,
             )
+            TaskSelectionBar(selection, dayTasks, lists, onOpenTask)
+          }
         },
     ) { padding ->
         LazyColumn(
@@ -123,7 +140,17 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "grid") {
-                MonthGrid(ym, today, day, tasksByDay.keys, eventDays) { d -> selected = d.toString() }
+                // Months slide in the direction you move (spatial spring), like turning a page.
+                val motion = MaterialTheme.motionScheme
+                AnimatedContent(
+                    targetState = ym,
+                    transitionSpec = {
+                        val dir = if (targetState > initialState) 1 else -1
+                        (slideInHorizontally(motion.defaultSpatialSpec()) { w -> dir * w / 3 } + fadeIn(motion.defaultEffectsSpec())) togetherWith
+                            (slideOutHorizontally(motion.defaultSpatialSpec()) { w -> -dir * w / 3 } + fadeOut(motion.fastEffectsSpec()))
+                    },
+                    label = "month",
+                ) { m -> MonthGrid(m, today, day, tasksByDay.keys, eventDays) { d -> selected = d.toString() } }
             }
             if (!granted) item(key = "perm") {
                 Column(
@@ -140,7 +167,7 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
             }
             item(key = "hero") { DayHero(day, today, dayTasks.count { !it.done }, dayEvents.size) }
             itemsIndexed(dayEvents, key = { _, e -> "e${e.eventId}-${e.start}" }) { i, e ->
-                Column {
+                Column(with(entrance) { Modifier.enter("e${e.eventId}-${e.start}", i) }) {
                     SegmentedListItem(
                         shapes = ListItemDefaults.segmentedShapes(i, dayEvents.size + dayTasks.size),
                         colors = ListItemDefaults.segmentedColors(containerColor = k.item),
@@ -160,10 +187,10 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
                 }
             }
             itemsIndexed(dayTasks, key = { _, t -> "t${t.id}" }) { i, t ->
-                Column {
+                Column(with(entrance) { Modifier.enter("$day-t${t.id}", dayEvents.size + i) }) {
                     listMap[t.listId]?.let { l ->
                         TaskRow(t, l, dayEvents.size + i, dayEvents.size + dayTasks.size,
-                            onToggle = { scope.launch { repo.setDone(it, !it.done) } }, onOpen = onOpenTask)
+                            onToggle = { scope.launch { repo.setDone(it, !it.done) } }, onOpen = onOpenTask, selection = selection)
                     }
                     Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                 }
@@ -247,7 +274,12 @@ private fun DayHero(day: LocalDate, today: LocalDate, tasks: Int, events: Int) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Box(Modifier.size(64.dp).background(c.tertiaryContainer, MaterialShapes.Sunny.toShape()), contentAlignment = Alignment.Center) {
+        val spin by slowSpin(40_000)
+        val pop = remember { Animatable(1f) }
+        val popSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+        LaunchedEffect(day) { pop.snapTo(0.7f); pop.animateTo(1f, popSpec) }
+        Box(Modifier.size(64.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value }, contentAlignment = Alignment.Center) {
+          Box(Modifier.matchParentSize().graphicsLayer { rotationZ = spin }.background(c.tertiaryContainer, MaterialShapes.Sunny.toShape()))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase(),
                     style = MaterialTheme.typography.labelSmallEmphasized, color = c.onTertiaryContainer)

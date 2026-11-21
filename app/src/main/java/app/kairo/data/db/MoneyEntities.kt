@@ -92,4 +92,9 @@ interface MoneyDao {
     @Insert suspend fun insertRecurring(r: RecurringEntity): Long
     @Update suspend fun updateRecurring(r: RecurringEntity)
     @Query("SELECT COUNT(*) FROM accounts") suspend fun accountCount(): Int
+    @Query("SELECT * FROM transactions WHERE id IN (:ids) OR transferPeerId IN (:ids)") suspend fun txWithPeers(ids: List<Long>): List<TransactionEntity>
+    @Query("DELETE FROM transactions WHERE id IN (:ids) OR transferPeerId IN (:ids)") suspend fun deleteTxs(ids: List<Long>)
+    @Insert suspend fun insertTxs(t: List<TransactionEntity>)
+    @Query("UPDATE categories SET shape = CASE shape WHEN 'Arch' THEN 'Hexagon' WHEN 'Sunny' THEN 'Triangle' WHEN 'Cookie4' THEN 'Square' ELSE shape END")
+    suspend fun migrateShapes()
 }
