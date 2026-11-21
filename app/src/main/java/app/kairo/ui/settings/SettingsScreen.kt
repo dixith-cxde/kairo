@@ -44,6 +44,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -223,6 +225,32 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                     { Icon(painterResource(R.drawable.ic_task_alt), null, tint = c.tertiary) }
                 } else null,
             ) { Text("Exact alarms") }
+
+            Header("Data")
+            val app = context.applicationContext as app.kairo.KairoApplication
+            var importing by remember { mutableStateOf<String?>(null) }
+            val pick = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                importing = "Importing…"
+                scope.launch {
+                    importing = runCatching {
+                        val text = context.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+                        val r = app.kairo.data.money.IvyImport.import(app.money, text)
+                        "Added ${r.added} · skipped ${r.skipped}" +
+                            (if (r.accountsCreated > 0) " · ${r.accountsCreated} new accounts" else "") +
+                            (if (r.categoriesCreated > 0) " · ${r.categoriesCreated} new categories" else "")
+                    }.getOrElse { "Couldn't import: ${it.message}" }
+                }
+            }
+            SegmentedListItem(
+                onClick = { pick.launch(arrayOf("text/*", "text/csv", "text/comma-separated-values", "application/octet-stream")) },
+                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+                leadingContent = { RoundIcon(R.drawable.ic_account_balance_wallet) },
+                supportingContent = { Text(importing ?: "CSV from Ivy Wallet (Settings → Export to CSV). Safe to run twice.") },
+            ) { Text("Import from Ivy Wallet") }
 
             Header("Calendar")
             SegmentedListItem(
