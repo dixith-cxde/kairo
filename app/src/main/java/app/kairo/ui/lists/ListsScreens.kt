@@ -103,21 +103,27 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
             item(key = "header") {
                 TabHeader("Lists", Modifier.fullBleed(), actions = { SearchPill(LocalOpenSearch.current) })
             }
-            // Smart lists in two connected groups (owner, 2026-11-21): Inbox · Today · Next 7 days,
-            // then Completed · Archived. Outer corners large, inner corners small, 2dp gaps, so
-            // each group reads as one piece, like the M3 Expressive segmented list.
+            // Smart lists (owner, 2026-11-21): 2×2 tiles with Archived full width under them, cut as one
+            // piece. Only the block's four outer corners are large; every inner corner is small, 2dp gaps.
             item(key = "smart") {
-                Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    listOf(
-                        listOf(SmartList.Inbox, SmartList.Today, SmartList.Next7),
-                        listOf(SmartList.Completed, SmartList.Archived),
-                    ).forEachIndexed { g, group ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                            group.forEachIndexed { i, sl ->
-                                SmartTile(
-                                    sl, s.smartCounts[sl] ?: 0, connectedRowShape(i, group.size),
-                                    with(entrance) { Modifier.enter("tile-$sl", g * 3 + i) }.weight(1f),
-                                ) { onOpenList(sl.id) }
+                val big = 28.dp
+                val small = 6.dp
+                val gap = ListItemDefaults.SegmentedGap
+                fun corners(tl: Boolean = false, tr: Boolean = false, bl: Boolean = false, br: Boolean = false) = RoundedCornerShape(
+                    topStart = if (tl) big else small, topEnd = if (tr) big else small,
+                    bottomStart = if (bl) big else small, bottomEnd = if (br) big else small,
+                )
+                val rows = listOf(
+                    listOf(SmartList.Inbox to corners(tl = true), SmartList.Today to corners(tr = true)),
+                    listOf(SmartList.Next7 to corners(), SmartList.Completed to corners()),
+                    listOf(SmartList.Archived to corners(bl = true, br = true)),
+                )
+                Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
+                    var n = 0
+                    rows.forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                            row.forEach { (sl, shape) ->
+                                SmartTile(sl, s.smartCounts[sl] ?: 0, shape, with(entrance) { Modifier.enter("tile-$sl", n++) }.weight(1f)) { onOpenList(sl.id) }
                             }
                         }
                     }
@@ -154,13 +160,6 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
     if (creating) NewListDialog(onDismiss = { creating = false }, onCreate = { n, sh, co -> vm.create(n, sh, co); creating = false })
 }
 
-/** Outer corners large, inner corners small: one piece of a horizontal connected group. */
-internal fun connectedRowShape(i: Int, n: Int, outer: androidx.compose.ui.unit.Dp = 28.dp, inner: androidx.compose.ui.unit.Dp = 8.dp) =
-    RoundedCornerShape(
-        topStart = if (i == 0) outer else inner, bottomStart = if (i == 0) outer else inner,
-        topEnd = if (i == n - 1) outer else inner, bottomEnd = if (i == n - 1) outer else inner,
-    )
-
 /** One smart-list tile: Cookie4 icon, big tabular count, label. */
 @Composable
 private fun SmartTile(sl: SmartList, count: Int, shape: androidx.compose.ui.graphics.Shape, modifier: Modifier, onClick: () -> Unit) {
@@ -168,20 +167,20 @@ private fun SmartTile(sl: SmartList, count: Int, shape: androidx.compose.ui.grap
     val c = MaterialTheme.colorScheme
     Column(
         modifier.clip(shape).background(k.item).clickable(role = Role.Button, onClickLabel = "Open ${sl.label}", onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 16.dp),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(36.dp).background(c.secondaryContainer, MaterialShapes.Cookie4Sided.toShape()),
+                Modifier.size(40.dp).background(c.secondaryContainer, MaterialShapes.Cookie4Sided.toShape()),
                 contentAlignment = Alignment.Center,
-            ) { Icon(painterResource(sl.icon), null, tint = c.onSecondaryContainer, modifier = Modifier.size(18.dp)) }
+            ) { Icon(painterResource(sl.icon), null, tint = c.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
             Spacer(Modifier.weight(1f))
             val n by countUp(count)
-            Text("$n", style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1)
+            Text("$n", style = MaterialTheme.typography.headlineMediumEmphasized, maxLines = 1)
         }
         Text(sl.label, style = MaterialTheme.typography.titleSmallEmphasized, color = c.onSurfaceVariant, maxLines = 1, softWrap = false,
-            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(10.sp, 14.sp))
+            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(12.sp, 14.sp))
     }
 }
 

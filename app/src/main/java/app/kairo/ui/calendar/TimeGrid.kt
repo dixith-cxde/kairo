@@ -2,6 +2,7 @@
 
 package app.kairo.ui.calendar
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
@@ -164,7 +165,9 @@ private fun androidx.compose.foundation.layout.ColumnScope.HourScroll(scroll: Sc
     Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
         Spacer(Modifier.height(8.dp))
         content()
-        Spacer(Modifier.height(140.dp)) // clear the floating nav
+        // Just past midnight, then only the system bar: the nav tucks away while you scroll, so a big
+        // nav-sized gap read as empty space (owner, 2026-11-21).
+        Spacer(Modifier.height(24.dp).navigationBarsPadding())
     }
 }
 

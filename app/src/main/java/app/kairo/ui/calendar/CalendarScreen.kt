@@ -236,8 +236,9 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
             title = shownMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()),
             subtitle = "${shownMonth.year}",
             modifier = mod,
-            actions = { SearchPill(LocalOpenSearch.current) },
             below = {
+                // Search: full width above the view controls (owner, 2026-11-21).
+                SearchPill(LocalOpenSearch.current, Modifier.fillMaxWidth().height(48.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ViewMenu(
                         view = view,
