@@ -16,6 +16,7 @@ data class TaskList(
     val name: String,
     val shape: ListShape,
     val color: ListColor,
+    val position: Int = 0,
 )
 
 data class Task(
@@ -29,4 +30,5 @@ data class Task(
     val subtasksDone: Int = 0,
     val subtasksTotal: Int = 0,
     val reminder: Boolean = false,
+    val notes: String = "",
 )

@@ -14,7 +14,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.getValue
@@ -27,11 +26,13 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import app.kairo.data.model.Task
 import app.kairo.ui.today.TodayScreen
-import app.kairo.ui.today.TodayState
-import app.kairo.ui.today.fakeTodayState
-import java.time.LocalDate
+import app.kairo.ui.today.TodayViewModel
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.kairo.navigation.Tab
@@ -62,7 +63,7 @@ fun KairoApp() {
         }
     }
 
-    var todayState by remember { mutableStateOf(fakeTodayState()) }
+    val app = LocalContext.current.applicationContext as KairoApplication
 
     // The floating nav hides while content scrolls down and returns on scroll up (canvas AppBars board).
     var navVisible by remember { mutableStateOf(true) }
@@ -91,10 +92,11 @@ fun KairoApp() {
             entryProvider = { tab ->
                 NavEntry(tab) {
                     when (tab) {
-                        Tab.Today -> TodayScreen(todayState, onToggle = { t ->
-                            // Fake toggle until Room (step 4).
-                            todayState = fakeToggle(todayState, t)
-                        })
+                        Tab.Today -> {
+                            val vm: TodayViewModel = viewModel(factory = viewModelFactory { initializer { TodayViewModel(app.repository) } })
+                            val state by vm.state.collectAsStateWithLifecycle()
+                            state?.let { TodayScreen(it, onToggle = vm::toggle) }
+                        }
                         else -> TabPlaceholder(tab, comingIn = tab.comingIn())
                     }
                 }
@@ -107,17 +109,6 @@ fun KairoApp() {
             modifier = Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, navOffset.roundToPx()) },
         )
     }
-}
-
-private fun fakeToggle(s: TodayState, t: Task): TodayState {
-    val flipped = t.copy(done = !t.done)
-    val all = (s.overdue + s.today + s.completed).map { if (it.id == t.id) flipped else it }
-    val today = LocalDate.now()
-    return s.copy(
-        overdue = all.filter { !it.done && it.due != null && it.due < today },
-        today = all.filter { !it.done && it.due == today }.sortedWith(compareBy(nullsLast()) { it.time }),
-        completed = all.filter { it.done },
-    )
 }
 
 private fun Tab.comingIn() = when (this) {
@@ -133,14 +124,3 @@ private val TabStackSaver = listSaver<SnapshotStateList<Tab>, String>(
     restore = { names -> names.map(Tab::valueOf).toMutableStateList() },
 )
 
-@Preview(name = "Dark", showSystemUi = true)
-@Composable
-private fun KairoAppDark() {
-    KairoTheme(darkTheme = true) { KairoApp() }
-}
-
-@Preview(name = "Light", showSystemUi = true)
-@Composable
-private fun KairoAppLight() {
-    KairoTheme(darkTheme = false) { KairoApp() }
-}

@@ -341,16 +341,8 @@ private fun CompletedToggle(count: Int, open: Boolean, onClick: () -> Unit) {
 
 private val TimeFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
-fun fakeTodayState(): TodayState {
-    val today = LocalDate.now()
-    val t = FakeData.tasks
-    return TodayState(
-        overdue = t.filter { !it.done && it.due != null && it.due < today },
-        today = t.filter { !it.done && it.due == today }.sortedWith(compareBy(nullsLast()) { it.time }),
-        completed = t.filter { it.done },
-        lists = FakeData.lists.associateBy { it.id },
-    )
-}
+fun fakeTodayState(): TodayState =
+    buildTodayState(FakeData.tasks, FakeData.lists.associateBy { it.id }, LocalDate.now())
 
 @Preview(name = "Dark", showSystemUi = true)
 @Composable

@@ -1,0 +1,43 @@
+package app.kairo.data.db
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface TaskDao {
+    @Query("SELECT * FROM tasks ORDER BY due IS NULL, due, time IS NULL, time, createdAt")
+    fun observeAll(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE id = :id")
+    fun observe(id: Long): Flow<TaskEntity?>
+
+    @Insert suspend fun insert(task: TaskEntity): Long
+    @Insert suspend fun insertAll(tasks: List<TaskEntity>)
+    @Update suspend fun update(task: TaskEntity)
+
+    @Query("UPDATE tasks SET done = :done, completedAt = :at WHERE id = :id")
+    suspend fun setDone(id: Long, done: Boolean, at: Long?)
+
+    @Query("DELETE FROM tasks WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Dao
+interface ListDao {
+    @Query("SELECT * FROM lists ORDER BY position, id")
+    fun observeAll(): Flow<List<ListEntity>>
+
+    @Insert suspend fun insert(list: ListEntity): Long
+    @Insert suspend fun insertAll(lists: List<ListEntity>)
+    @Update suspend fun update(list: ListEntity)
+    @Update suspend fun updateAll(lists: List<ListEntity>)
+
+    @Query("DELETE FROM lists WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT COUNT(*) FROM lists")
+    suspend fun count(): Int
+}

@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application) // AGP 9 compiles Kotlin itself (built-in Kotlin)
     alias(libs.plugins.kotlin.compose)      // the Compose compiler
+    alias(libs.plugins.ksp)                 // code generation (Room)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -32,6 +34,10 @@ android {
     }
 }
 
+room {
+    schemaDirectory("$projectDir/schemas") // exported schemas, for future migrations
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material3)
@@ -40,5 +46,9 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
