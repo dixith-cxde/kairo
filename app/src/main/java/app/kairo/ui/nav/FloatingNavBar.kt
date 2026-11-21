@@ -63,6 +63,8 @@ private val OuterCorner = 32.dp        // fully round outer ends
 private val InnerCorner = 8.dp         // where bar and FAB meet (connected button group inner corner)
 private val FabPressedCorner = 16.dp   // FAB outer corners while pressed
 private val PillHeight = 48.dp
+private val MediumFab = 80.dp          // M3 Expressive medium FAB container
+private val MediumFabCorner = 20.dp    // and its corner
 
 /**
  * Kairo's floating nav: a pill bar and the create FAB as one connected group,
@@ -78,9 +80,13 @@ fun FloatingNavBar(
     onCreate: () -> Unit,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
+    collapsed: Boolean = false,
 ) {
     val surfaces = KairoTheme.colors
     val motion = MaterialTheme.motionScheme
+    // Scrolling down tucks the bar away but never the + (owner, 2026-11-21): the bar slides down
+    // and fades while the FAB stays and morphs into the M3 Expressive medium FAB (80dp, 20dp corners).
+    val hide by animateFloatAsState(if (collapsed) 1f else 0f, motion.defaultSpatialSpec(), label = "barHide")
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -96,6 +102,7 @@ fun FloatingNavBar(
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
+                .graphicsLayer { translationY = hide * 120.dp.toPx(); alpha = (1f - hide * 1.4f).coerceIn(0f, 1f) }
                 .height(BarHeight)
                 .floatShadow(barShape, surfaces.floatShadow)
                 .background(surfaces.navBg, barShape)
@@ -126,11 +133,11 @@ fun FloatingNavBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Tab.entries.forEach { tab ->
-                    NavSlot(tab = tab, selected = tab == selected, onClick = { if (tab != selected) onSelect(tab) })
+                    NavSlot(tab = tab, selected = tab == selected, onClick = { onSelect(tab) }) // on a detail screen, the current tab pops back to it
                 }
             }
         }
-        CreateFab(onClick = onCreate, open = menuOpen)
+        CreateFab(onClick = onCreate, open = menuOpen, collapsed = hide)
     }
 }
 
@@ -176,7 +183,7 @@ private fun RowScope.NavSlot(tab: Tab, selected: Boolean, onClick: () -> Unit) {
 
 /** Solid primary, bold plus (rule 4). Outer corners tighten from 32 to 16dp while pressed. */
 @Composable
-private fun CreateFab(onClick: () -> Unit, open: Boolean) {
+private fun CreateFab(onClick: () -> Unit, open: Boolean, collapsed: Float) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val outer by animateDpAsState(
@@ -184,10 +191,14 @@ private fun CreateFab(onClick: () -> Unit, open: Boolean) {
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "fabCorner",
     )
+    // Joined to the bar: 8dp inner / 32dp outer. Alone: 20dp all round (medium FAB), 80dp square.
+    val inner = InnerCorner + (MediumFabCorner - InnerCorner) * collapsed
+    val outerNow = outer + (MediumFabCorner - outer) * collapsed
     val shape = RoundedCornerShape(
-        topStart = InnerCorner, bottomStart = InnerCorner,
-        topEnd = outer, bottomEnd = outer,
+        topStart = inner, bottomStart = inner,
+        topEnd = outerNow, bottomEnd = outerNow,
     )
+    val side = BarHeight + (MediumFab - BarHeight) * collapsed
     FloatingActionButton(
         onClick = onClick,
         shape = shape,
@@ -197,7 +208,7 @@ private fun CreateFab(onClick: () -> Unit, open: Boolean) {
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
         interactionSource = interaction,
         modifier = Modifier
-            .size(BarHeight)
+            .size(side)
             .floatShadow(shape, KairoTheme.colors.floatShadow),
     ) {
         // + turns into × while the create menu is open.

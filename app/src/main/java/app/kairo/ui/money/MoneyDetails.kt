@@ -315,7 +315,7 @@ fun BudgetsScreen(money: MoneyRepository, onBack: () -> Unit) {
     DetailScaffold("Budgets", onBack, actions = {
         IconButton(shapes = IconButtonDefaults.shapes(), onClick = { editingId = 0L }) { Icon(painterResource(R.drawable.ic_add), "Add budget") }
     }) { padding ->
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 48.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp)) {
             item(key = "jar") {
                 if (overall != null) {
                     val left = overall.limitPaise - spent
@@ -454,7 +454,7 @@ fun InsightsScreen(money: MoneyRepository, onBack: () -> Unit) {
     }
     var picked by rememberSaveable { mutableStateOf<Long?>(null) }
     DetailScaffold("Insights", onBack) { padding ->
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 48.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp)) {
             item(key = "donut") {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Box(Modifier.size(240.dp), contentAlignment = Alignment.Center) {
@@ -560,7 +560,7 @@ fun RecurringScreen(money: MoneyRepository, onBack: () -> Unit) {
     DetailScaffold("Bills & subscriptions", onBack, actions = {
         IconButton(shapes = IconButtonDefaults.shapes(), onClick = { editing = 0L }) { Icon(painterResource(R.drawable.ic_add), "Add recurring") }
     }) { padding ->
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 48.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp)) {
             if (items.isEmpty()) item(key = "empty") {
                 app.kairo.ui.common.EmptyState(
                     icon = R.drawable.ic_receipt_long, title = "No bills yet",

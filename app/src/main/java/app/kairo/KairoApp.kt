@@ -168,7 +168,9 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     // Screens in selection mode show their own floating toolbar; the nav steps aside.
     val selecting = remember { mutableStateOf(0) }
     val navOffset by animateDpAsState(
-        targetValue = if (navVisible && onTab && selecting.value == 0) 0.dp else 160.dp,
+        // Only selection mode moves the whole group away; scrolling tucks the bar but keeps the +,
+        // and detail screens keep the nav (owner, 2026-11-21).
+        targetValue = if (selecting.value == 0 && top != Route.FocusRoute) 0.dp else 160.dp, // Focus is full-screen
         animationSpec = motion.defaultSpatialSpec(),
         label = "navOffset",
     )
@@ -188,8 +190,8 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                 scaleOut(motion.slowSpatialSpec(), targetScale = 0.92f))
 
     BackHandler(enabled = backStack.size == 1 && pager.currentPage != 0) { select(Tab.Today) }
-    // The nav comes back whenever the tab changes.
-    LaunchedEffect(pager.currentPage) { navVisible = true }
+    // The nav comes back whenever the tab or screen changes.
+    LaunchedEffect(pager.currentPage, backStack.size) { navVisible = true }
 
     val snackbar = remember { SnackbarHostState() }
     CompositionLocalProvider(
@@ -255,8 +257,9 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
             selected = currentTab,
             position = { pager.currentPage + pager.currentPageOffsetFraction },
             onSelect = { navVisible = true; select(it) },
-            onCreate = { createMenu = !createMenu },
+            onCreate = { navVisible = true; createMenu = !createMenu },
             menuOpen = createMenu,
+            collapsed = !navVisible,
             modifier = Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, navOffset.roundToPx()) },
         )
         // Create menu (M3 Expressive FAB menu). Our + lives in the nav group, so the menu's own

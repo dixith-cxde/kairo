@@ -94,7 +94,7 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
         },
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(horizontal = 16.dp).padding(bottom = 104.dp),
         ) {
             // Top card: the cat mark, local-only promise.
             Row(

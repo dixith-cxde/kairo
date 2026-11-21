@@ -215,7 +215,7 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = 20.dp),
+                    .padding(bottom = 96.dp), // sits above the floating nav
             ) {
                 IconButton(shapes = IconButtonDefaults.shapes(), onClick = { pickDate = true }) { Icon(painterResource(R.drawable.ic_event), "Date") }
                 IconButton(shapes = IconButtonDefaults.shapes(), onClick = { if (!t.reminder) askNotifications(); vm.edit { it.copy(reminder = !it.reminder) } }) {
