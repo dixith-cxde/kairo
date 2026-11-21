@@ -96,6 +96,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.kairo.R
+import app.kairo.ui.common.EmptyState
 import app.kairo.data.model.Priority
 import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
@@ -190,6 +191,19 @@ fun TodayScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "chips") { FilterChips(state, filter) { filter = it } }
+            // A blank day (nothing due, nothing done, nothing overdue): one calm empty page instead of
+            // a 0/0 ring and empty headers (owner, 2026-11-21).
+            val blank = state.total == 0 && state.overdue.isEmpty() && state.completed.isEmpty()
+            if (blank && (filter == TodayFilter.All || filter == TodayFilter.Today)) {
+                item(key = "blank") {
+                    EmptyState(
+                        icon = R.drawable.ic_wb_sunny, title = "A clear day",
+                        body = "Nothing planned for today. Add a task with + or say it to the Quick add widget.",
+                        shape = MaterialShapes.Sunny, size = 220.dp,
+                    )
+                }
+                return@LazyColumn
+            }
             item(key = "hero") { with(entrance) { HeroCard(state, Modifier.enter("hero", 0)) } }
 
             val all = filter == TodayFilter.All
@@ -245,8 +259,14 @@ fun TodayScreen(
                 TodayFilter.Done -> "Nothing done yet today".takeIf { state.completed.isEmpty() }
             }
             if (empty != null) item(key = "empty") {
-                Text(empty, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp, top = 24.dp))
+                EmptyState(
+                    icon = when (filter) { TodayFilter.Overdue -> R.drawable.ic_event_available; TodayFilter.Upcoming -> R.drawable.ic_date_range
+                        else -> R.drawable.ic_task_alt },
+                    title = empty,
+                    body = when (filter) { TodayFilter.Overdue -> "You're caught up."; TodayFilter.Upcoming -> "The week ahead is open."
+                        else -> "Tick something off and it shows here." },
+                    shape = MaterialShapes.Clover8Leaf, size = 160.dp,
+                )
             }
         }
     }
@@ -309,7 +329,17 @@ private fun HeroCard(state: TodayState, modifier: Modifier = Modifier) {
                     trackColor = c.onPrimaryContainer.copy(alpha = 0.18f),
                     modifier = Modifier.fillMaxSize(),
                 )
-                Text(
+                if (left == 0 && state.total > 0) {
+                    // All done: the ring closes around a check on a Cookie shape that pops in.
+                    val pop = remember { Animatable(0.4f) }
+                    val popSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+                    LaunchedEffect(Unit) { pop.animateTo(1f, popSpec) }
+                    Box(
+                        Modifier.size(56.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value; rotationZ = spin }
+                            .background(c.primary, MaterialShapes.Cookie7Sided.toShape()),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(painterResource(R.drawable.ic_check), null, tint = c.onPrimary, modifier = Modifier.size(28.dp).graphicsLayer { rotationZ = -spin }) }
+                } else Text(
                     "$doneShown/${state.total}",
                     style = MaterialTheme.typography.headlineMediumEmphasized,
                     color = c.onPrimaryContainer,
@@ -320,6 +350,10 @@ private fun HeroCard(state: TodayState, modifier: Modifier = Modifier) {
                     if (left == 0) "All done for today" else "$left to go today",
                     style = MaterialTheme.typography.titleLargeEmphasized,
                     color = c.onPrimaryContainer,
+                )
+                if (left == 0 && state.total > 0) Text(
+                    "${state.done} of ${state.total} finished. The rest of the day is yours.",
+                    style = MaterialTheme.typography.bodyMedium, color = c.onPrimaryContainer.copy(alpha = 0.85f),
                 )
                 state.next?.let { n ->
                     Text(

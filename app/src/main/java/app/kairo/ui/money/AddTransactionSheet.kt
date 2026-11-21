@@ -85,6 +85,9 @@ import app.kairo.R
 import app.kairo.data.db.AccountEntity
 import app.kairo.data.db.CategoryEntity
 import app.kairo.data.db.TxKind
+import app.kairo.data.db.RecurringKind
+import androidx.compose.material3.FilterChip
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairo.data.money.Money
 import app.kairo.data.money.MoneyRepository
 import app.kairo.ui.shapes.MorphShape
@@ -100,6 +103,7 @@ fun AddTransactionSheet(
     accounts: List<AccountEntity>,
     categories: List<CategoryEntity>,
     initialKind: TxKind = TxKind.Expense,
+    initialAccount: Long? = null,
     onDismiss: () -> Unit,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -110,10 +114,17 @@ fun AddTransactionSheet(
     var kind by rememberSaveable { mutableStateOf(initialKind) }
     var amount by rememberSaveable { mutableStateOf("") }
     var categoryId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var accountId by rememberSaveable { mutableStateOf(accounts.firstOrNull()?.id) }
-    var toAccountId by rememberSaveable { mutableStateOf(accounts.getOrNull(1)?.id) }
+    var accountId by rememberSaveable { mutableStateOf(initialAccount ?: accounts.firstOrNull()?.id) }
+    var toAccountId by rememberSaveable { mutableStateOf(accounts.firstOrNull { it.id != accountId }?.id) }
     var note by rememberSaveable { mutableStateOf("") }   // title (optional)
-    var tags by rememberSaveable { mutableStateOf("") }
+    var tags by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var repeat by rememberSaveable { mutableStateOf(false) } // also make it a monthly bill / income
+    val history by money.transactions.collectAsStateWithLifecycle(initialValue = emptyList())
+    val usage = remember(history) { history.mapNotNull { it.categoryId }.groupingBy { it }.eachCount() }
+    val recentTags = remember(history) {
+        history.flatMap { t -> t.tags.split(' ').map(::normalizeTag).filter(String::isNotEmpty) }
+            .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key }.take(10)
+    }
     var newCategory by rememberSaveable { mutableStateOf(false) }
     var newAccountFor by rememberSaveable { mutableStateOf<String?>(null) } // "from" | "to" | null
     val amountFocus = remember { FocusRequester() }
@@ -140,10 +151,17 @@ fun AddTransactionSheet(
         if (!canSave) return
         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
         scope.launch {
-            val tagText = Regex("""\w+""").findAll(tags).joinToString(" ") { "#" + it.value }
+            val tagText = tags.joinToString(" ") { "#$it" }
             val title = note.trim()
             if (kind == TxKind.Transfer) money.transfer(paise, accountId!!, toAccountId!!, LocalDate.now(), title)
             else money.add(kind, paise, accountId!!, categoryId, LocalDate.now(), title, tagText)
+            // "Repeats monthly": a bill (or income) due again on this day next month.
+            if (repeat && kind != TxKind.Transfer) money.addRecurring(
+                name = title.ifBlank { categories.firstOrNull { it.id == categoryId }?.name ?: kind.name },
+                kind = if (kind == TxKind.Income) RecurringKind.Income else RecurringKind.Bill,
+                amountPaise = paise, accountId = accountId!!, categoryId = categoryId,
+                nextDue = LocalDate.now().plusMonths(1),
+            )
             // Scalloped success (Cookie12) blooms, then the drawer closes.
             success.snapTo(0f)
             success.animateTo(1f, fastSpatial)
@@ -199,17 +217,25 @@ fun AddTransactionSheet(
                     }
                     AccountSelect("To", accounts, toAccountId, onNew = { newAccountFor = "to" }) { toAccountId = it }
                 } else {
-                    // Category: a compact dropdown card (same pattern as Account, one size down).
-                    CategorySelect(
+                    // Category, Stash style: likely ones in a connected group, New inline, All in a drawer.
+                    CategoryPicker(
                         if (kind == TxKind.Income) "Category (optional)" else "Category",
-                        cats, categoryId, optional = kind == TxKind.Income,
-                        onNew = { newCategory = true },
+                        cats, categoryId, usage, optional = kind == TxKind.Income,
+                        onCreate = { name -> scope.launch { categoryId = money.addCategory(name, "category", autoColor(name), kind == TxKind.Income) } },
+                        onFullCreate = { newCategory = true },
                     ) { categoryId = it }
                     AccountSelect("Account", accounts, accountId, onNew = { newAccountFor = "from" }) { accountId = it }
                 }
                 // Normal keyboard for text. The keyboard's ✓ on the last field saves.
-                KairoField(note, { note = it }, "Title (optional)", KeyboardCapitalization.Sentences, ImeAction.Next) {}
-                KairoField(tags, { tags = it }, "Tags (optional) · e.g. trip food", KeyboardCapitalization.None, ImeAction.Done) { save() }
+                KairoField(note, { note = it }, "Title (optional)", KeyboardCapitalization.Sentences, ImeAction.Done) { save() }
+                if (kind != TxKind.Transfer) {
+                    TagPicker(tags, recentTags) { tags = it }
+                    FilterChip(
+                        selected = repeat, onClick = { repeat = !repeat },
+                        label = { Text(if (kind == TxKind.Income) "Repeats monthly" else "Repeats monthly · add as a bill") },
+                        leadingIcon = { Icon(painterResource(R.drawable.ic_repeat), null, Modifier.size(18.dp)) },
+                    )
+                }
 
                 Button(
                     onClick = ::save,
@@ -236,66 +262,6 @@ fun AddTransactionSheet(
     }
 }
 
-/**
- * Category as a compact card (one size down from the Account card: 28dp badge, 8dp padding) that
- * opens the Expressive grouped menu: categories with their own shapes, then "New category".
- */
-@Composable
-private fun CategorySelect(
-    label: String, cats: List<CategoryEntity>, selected: Long?, optional: Boolean,
-    onNew: () -> Unit, onPick: (Long?) -> Unit,
-) {
-    val k = KairoTheme.colors
-    val c = MaterialTheme.colorScheme
-    var open by remember { mutableStateOf(false) }
-    val cat = cats.firstOrNull { it.id == selected }
-    Box {
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.itemHigh)
-                .clickable(role = Role.Button) { open = true }.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (cat != null) CategoryBadge(cat, size = 28)
-            else Box(Modifier.size(28.dp).background(c.surfaceContainerHighest, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_category), null, tint = c.onSurfaceVariant, modifier = Modifier.size(16.dp))
-            }
-            Text(label, style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
-            Text(cat?.name ?: "Choose", style = MaterialTheme.typography.titleSmallEmphasized,
-                color = if (cat != null) c.onSurface else c.onSurfaceVariant, modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 1)
-            Icon(painterResource(R.drawable.ic_expand_more), null, tint = c.onSurfaceVariant, modifier = Modifier.size(20.dp))
-        }
-        DropdownMenuPopup(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 2)) {
-                if (optional) SelectableDropdownMenuItem(
-                    selected = selected == null,
-                    onClick = { onPick(null); open = false },
-                    text = { Text("None") },
-                    shapes = MenuDefaults.itemShapes(),
-                )
-                cats.forEach { ct ->
-                    SelectableDropdownMenuItem(
-                        selected = ct.id == selected,
-                        onClick = { onPick(ct.id); open = false },
-                        text = { Text(ct.name) },
-                        shapes = MenuDefaults.itemShapes(),
-                        leadingIcon = {
-                            Box(Modifier.size(24.dp).background(k.container(ct.color), ct.shape.polygon.toShape()), contentAlignment = Alignment.Center) {
-                                Icon(painterResource(categoryIcon(ct.icon)), null, tint = k.onContainer(ct.color), modifier = Modifier.size(14.dp))
-                            }
-                        },
-                    )
-                }
-            }
-            Spacer(Modifier.height(MenuDefaults.GroupSpacing))
-            DropdownMenuGroup(shapes = MenuDefaults.groupShape(1, 2)) {
-                NewItem("New category") { open = false; onNew() }
-            }
-        }
-    }
-}
-
 /** The "+ New …" item at the bottom of a grouped menu. */
 @Composable
 private fun NewItem(label: String, onClick: () -> Unit) {
@@ -309,7 +275,7 @@ private fun NewItem(label: String, onClick: () -> Unit) {
 
 /** Account as a card-like field that opens an Expressive grouped menu (name + balance). */
 @Composable
-private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected: Long?, onNew: () -> Unit, onPick: (Long) -> Unit) {
+internal fun AccountSelect(label: String, accounts: List<AccountEntity>, selected: Long?, onNew: () -> Unit, onPick: (Long) -> Unit) {
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     var open by remember { mutableStateOf(false) }
@@ -330,7 +296,7 @@ private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected
             }
             Icon(painterResource(R.drawable.ic_expand_more), null, tint = c.onSurfaceVariant)
         }
-        DropdownMenuPopup(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenuPopup(expanded = open, onDismissRequest = { open = false }, properties = app.kairo.ui.common.KeepKeyboard) {
             DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 2)) {
                 accounts.forEach { a ->
                     SelectableDropdownMenuItem(
@@ -352,7 +318,7 @@ private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected
 
 /** Make a category: name, icon, color. Becomes a chip you can pick from then on. */
 @Composable
-private fun NewCategorySheet(income: Boolean, onDismiss: () -> Unit, onCreate: (String, String, ListColor) -> Unit) {
+internal fun NewCategorySheet(income: Boolean, onDismiss: () -> Unit, onCreate: (String, String, ListColor) -> Unit) {
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     var name by rememberSaveable { mutableStateOf("") }
@@ -453,3 +419,6 @@ internal object RupeeGrouping : VisualTransformation {
         return TransformedText(AnnotatedString(out), mapping)
     }
 }
+
+/** A color for a category made inline (no picker shown): stable per name. */
+internal fun autoColor(name: String) = ListColor.entries[(name.lowercase().hashCode() and 0x7fffffff) % ListColor.entries.size]

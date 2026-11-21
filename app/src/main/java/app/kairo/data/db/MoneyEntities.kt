@@ -109,6 +109,7 @@ interface MoneyDao {
     @Query("DELETE FROM budgets WHERE accountId = :id") suspend fun deleteAccountBudgets(id: Long)
     @Insert suspend fun insertRecurring(r: RecurringEntity): Long
     @Update suspend fun updateRecurring(r: RecurringEntity)
+    @Query("DELETE FROM recurring WHERE id = :id") suspend fun deleteRecurring(id: Long)
     @Query("SELECT COUNT(*) FROM accounts") suspend fun accountCount(): Int
     @Query("SELECT COUNT(*) FROM categories") suspend fun categoryCount(): Int
     @Query("SELECT id FROM categories ORDER BY income, id") suspend fun categoryIds(): List<Long>

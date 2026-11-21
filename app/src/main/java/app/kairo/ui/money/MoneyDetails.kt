@@ -54,6 +54,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -100,28 +105,116 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
     val balances by money.balances.collectAsStateWithLifecycle(initialValue = emptyList())
     val txs by money.transactions.collectAsStateWithLifecycle(initialValue = emptyList())
     val cats by money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
+    val bills by money.recurring.collectAsStateWithLifecycle(initialValue = emptyList())
+    val accounts by money.accounts.collectAsStateWithLifecycle(initialValue = emptyList())
     var editing by rememberSaveable { mutableStateOf(false) }
+    var adding by rememberSaveable { mutableStateOf<String?>(null) }
     val b = balances.firstOrNull { it.account.id == accountId } ?: return
     val k = KairoTheme.colors
+    val c = MaterialTheme.colorScheme
     val catMap = remember(cats) { cats.associateBy { it.id } }
-    val mine = remember(txs) { txs.filter { it.accountId == accountId }.groupBy { it.date } }
-    if (editing) AccountSheet(money, b.account, canDelete = balances.size > 1, onDismiss = { editing = false }, onDeleted = onBack)
+    val all = remember(txs) { txs.filter { it.accountId == accountId } }
+    val mine = remember(all) { all.groupBy { it.date } }
+    val ym = YearMonth.now()
+    val month = all.filter { YearMonth.from(it.date) == ym }
+    val moneyIn = month.filter { it.kind == TxKind.Income || (it.kind == TxKind.Transfer && it.amountPaise > 0) }.sumOf { it.amountPaise }
+    val moneyOut = month.filter { it.kind == TxKind.Expense }.sumOf { it.amountPaise } -
+        month.filter { it.kind == TxKind.Transfer && it.amountPaise < 0 }.sumOf { it.amountPaise }
+    val myBills = bills.filter { it.accountId == accountId }
+    // Balance at the end of each of the last 30 days, for the sparkline.
+    val trend = remember(all, b.balancePaise) {
+        val today = LocalDate.now()
+        fun signed(t: app.kairo.data.db.TransactionEntity) = when (t.kind) { TxKind.Income -> t.amountPaise; TxKind.Expense -> -t.amountPaise; TxKind.Transfer -> t.amountPaise }
+        (29 downTo 0).map { d -> val day = today.minusDays(d.toLong()); b.balancePaise - all.filter { it.date.isAfter(day) }.sumOf(::signed) }
+    }
+    if (editing) AccountSheet(money, b.account, canDelete = true, onDismiss = { editing = false }, onDeleted = onBack)
+    adding?.let { kind ->
+        AddTransactionSheet(money, accounts, cats, initialKind = TxKind.valueOf(kind), initialAccount = accountId, onDismiss = { adding = null })
+    }
     DetailScaffold(b.account.name, onBack, actions = {
         IconButton(shapes = IconButtonDefaults.shapes(), onClick = { editing = true }) { Icon(painterResource(R.drawable.ic_edit), "Edit account") }
     }) { padding ->
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 48.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp)) {
             item(key = "hero") {
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(k.container(b.account.color)).padding(20.dp),
-                ) {
-                    Text("Balance", style = MaterialTheme.typography.labelLarge, color = k.onContainer(b.account.color))
-                    Text(Money.format(b.balancePaise), style = MaterialTheme.typography.displaySmallEmphasized, color = k.onContainer(b.account.color))
-                    Text(b.account.type.name, style = MaterialTheme.typography.bodyMedium, color = k.onContainer(b.account.color))
+                val on = k.onContainer(b.account.color)
+                val spin by app.kairo.ui.common.slowSpin(60_000)
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(k.container(b.account.color))) {
+                    // The account's Cookie4 mark, large and faint, turning behind the numbers.
+                    Box(Modifier.matchParentSize()) {
+                        Box(
+                            Modifier.align(Alignment.TopEnd).wrapContentSize(Alignment.TopEnd, unbounded = true).offset(x = 48.dp, y = (-48).dp)
+                                .size(200.dp).graphicsLayer { rotationZ = spin; alpha = 0.12f }
+                                .background(on, MaterialShapes.Cookie4Sided.toShape()),
+                        )
+                    }
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            AccountBadge(b.account, size = 36)
+                            Text("${b.account.type.name} · balance", style = MaterialTheme.typography.labelLarge, color = on)
+                        }
+                        Text(Money.format(b.balancePaise), style = MaterialTheme.typography.displaySmallEmphasized, color = on,
+                            modifier = Modifier.padding(top = 8.dp))
+                        Sparkline(trend, on, Modifier.fillMaxWidth().height(56.dp).padding(top = 8.dp))
+                        Text("Last 30 days", style = MaterialTheme.typography.labelSmall, color = on.copy(alpha = 0.7f))
+                    }
                 }
+            }
+            item(key = "stats") {
+                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatTile("In · ${ym.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())}",
+                        Money.format(moneyIn), R.drawable.ic_arrow_upward, k.container(app.kairo.data.model.ListColor.Green), Modifier.weight(1f), flip = true)
+                    StatTile("Out · ${ym.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())}",
+                        Money.format(moneyOut), R.drawable.ic_arrow_upward, k.container(app.kairo.data.model.ListColor.Coral), Modifier.weight(1f))
+                }
+            }
+            item(key = "actions") {
+                // Add to this account: connected button group (Expense is the solid one).
+                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.ButtonGroupDefaults.ConnectedSpaceBetween)) {
+                    listOf(TxKind.Expense to R.drawable.ic_payments, TxKind.Income to R.drawable.ic_savings, TxKind.Transfer to R.drawable.ic_swap_vert)
+                        .forEachIndexed { i, (kd, icon) ->
+                            val shapes = when (i) {
+                                0 -> androidx.compose.material3.ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                2 -> androidx.compose.material3.ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> androidx.compose.material3.ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            }
+                            androidx.compose.material3.ToggleButton(
+                                checked = i == 0, onCheckedChange = { adding = kd.name }, shapes = shapes,
+                                modifier = Modifier.weight(1f).height(56.dp),
+                            ) {
+                                Icon(painterResource(icon), null, Modifier.size(20.dp))
+                                androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
+                                Text(kd.name)
+                            }
+                        }
+                }
+            }
+            if (myBills.isNotEmpty()) {
+                item(key = "h-bills") { SectionTitle("Bills from this account") }
+                myBills.forEachIndexed { i, r ->
+                    item(key = "bill${r.id}") {
+                        Column {
+                            SegmentedListItem(
+                                shapes = ListItemDefaults.segmentedShapes(i, myBills.size),
+                                colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+                                leadingContent = { CategoryBadge(catMap[r.categoryId]) },
+                                supportingContent = { Text("due ${r.nextDue.format(DateTimeFormatter.ofPattern("d MMM"))}") },
+                                trailingContent = { Text(Money.format(r.amountPaise), style = MaterialTheme.typography.titleSmallEmphasized) },
+                            ) { Text(r.name) }
+                            if (i < myBills.lastIndex) SegGap()
+                        }
+                    }
+                }
+            }
+            if (all.isEmpty()) item(key = "empty") {
+                app.kairo.ui.common.EmptyState(
+                    icon = accountIcon(b.account.type), title = "No transactions yet",
+                    body = "Expenses, income and transfers for ${b.account.name} show up here.",
+                    shape = MaterialShapes.Cookie4Sided, size = 160.dp,
+                )
             }
             mine.forEach { (date, list) ->
                 item(key = "d$date") {
-                    Text(dayLabel(date), style = MaterialTheme.typography.titleSmallEmphasized, color = MaterialTheme.colorScheme.primary,
+                    Text(dayLabel(date), style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary,
                         modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 8.dp))
                 }
                 list.forEachIndexed { i, tx ->
@@ -133,6 +226,44 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StatTile(label: String, value: String, icon: Int, tile: Color, modifier: Modifier, flip: Boolean = false) {
+    val k = KairoTheme.colors
+    Row(
+        modifier.clip(RoundedCornerShape(24.dp)).background(k.item).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(36.dp).background(tile, MaterialShapes.Cookie6Sided.toShape()), contentAlignment = Alignment.Center) {
+            Icon(painterResource(icon), null, Modifier.size(18.dp).graphicsLayer { rotationZ = if (flip) 180f else 0f })
+        }
+        Column {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1)
+        }
+    }
+}
+
+/** Balance over time as a smooth line with a soft fill. */
+@Composable
+private fun Sparkline(points: List<Long>, color: Color, modifier: Modifier) {
+    val grow by animateFloatAsState(1f, MaterialTheme.motionScheme.slowEffectsSpec(), label = "spark")
+    Canvas(modifier) {
+        if (points.size < 2) return@Canvas
+        val min = points.min().toFloat(); val max = points.max().toFloat()
+        val span = (max - min).takeIf { it > 0f } ?: 1f
+        val stepX = size.width / (points.size - 1)
+        fun y(v: Long) = if (max == min) size.height / 2 else size.height - (v - min) / span * size.height * 0.9f - size.height * 0.05f
+        val line = Path().apply {
+            points.forEachIndexed { i, v -> if (i == 0) moveTo(0f, y(v)) else lineTo(i * stepX, y(v)) }
+        }
+        val fill = Path().apply { addPath(line); lineTo(size.width, size.height); lineTo(0f, size.height); close() }
+        clipRect(right = size.width * grow) {
+            drawPath(fill, color.copy(alpha = 0.12f))
+            drawPath(line, color, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
         }
     }
 }
@@ -404,12 +535,39 @@ fun RecurringScreen(money: MoneyRepository, onBack: () -> Unit) {
     val items by money.recurring.collectAsStateWithLifecycle(initialValue = emptyList())
     val cats by money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
+    val snackbar = app.kairo.ui.common.LocalAppSnackbar.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     val fmt = DateTimeFormatter.ofPattern("d MMM")
-    DetailScaffold("Bills & subscriptions", onBack) { padding ->
+    // The drawer: null = closed, 0 = new, else the bill being edited.
+    var editing by rememberSaveable { mutableStateOf<Long?>(null) }
+    editing?.let { id ->
+        BillSheet(money, items.firstOrNull { it.id == id }, onDismiss = { editing = null }, onDelete = { r ->
+            editing = null
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm) // rule 9: delete
+            scope.launch {
+                money.deleteRecurring(r.id)
+                snackbar.currentSnackbarData?.dismiss()
+                val res = snackbar.showSnackbar("${r.name} deleted", actionLabel = "Undo", duration = androidx.compose.material3.SnackbarDuration.Short)
+                if (res == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm) // rule 9: undo
+                    money.restoreRecurring(r)
+                }
+            }
+        })
+    }
+    DetailScaffold("Bills & subscriptions", onBack, actions = {
+        IconButton(shapes = IconButtonDefaults.shapes(), onClick = { editing = 0L }) { Icon(painterResource(R.drawable.ic_add), "Add recurring") }
+    }) { padding ->
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 48.dp)) {
-            item(key = "total") {
+            if (items.isEmpty()) item(key = "empty") {
+                app.kairo.ui.common.EmptyState(
+                    icon = R.drawable.ic_receipt_long, title = "No bills yet",
+                    body = "Add rent, subscriptions or salary once and Kairo shows what's due each month.",
+                    shape = MaterialShapes.Clover4Leaf,
+                ) { FilledTonalButton(onClick = { editing = 0L }, shapes = ButtonDefaults.shapes()) { Text("Add a bill") } }
+            } else item(key = "total") {
                 Column(Modifier.padding(bottom = 16.dp, start = 4.dp)) {
                     Text(Money.format(items.filter { it.kind != RecurringKind.Income }.sumOf { it.amountPaise }),
                         style = MaterialTheme.typography.displaySmallEmphasized)
@@ -419,14 +577,19 @@ fun RecurringScreen(money: MoneyRepository, onBack: () -> Unit) {
             }
             items.forEachIndexed { i, r ->
                 item(key = "r${r.id}") {
+                    val late = r.nextDue.isBefore(LocalDate.now())
                     Column {
                         SegmentedListItem(
+                            onClick = { editing = r.id },
                             shapes = ListItemDefaults.segmentedShapes(i, items.size),
                             colors = ListItemDefaults.segmentedColors(containerColor = k.item),
                             leadingContent = { CategoryBadge(cats.firstOrNull { it.id == r.categoryId }) },
-                            supportingContent = { Text("${r.kind.name} · due ${r.nextDue.format(fmt)}") },
+                            supportingContent = { Text("${r.kind.name} · ${if (late) "overdue since" else "due"} ${r.nextDue.format(fmt)}",
+                                color = if (late) c.error else c.onSurfaceVariant) },
                             trailingContent = {
-                                FilledTonalButton(shapes = ButtonDefaults.shapes(), onClick = { scope.launch { money.pay(r) } }) { Text("Pay ${Money.format(r.amountPaise)}") }
+                                FilledTonalButton(shapes = ButtonDefaults.shapes(), onClick = { scope.launch { money.pay(r) } }) {
+                                    Text("${if (r.kind == RecurringKind.Income) "Got" else "Pay"} ${Money.format(r.amountPaise)}")
+                                }
                             },
                         ) { Text(r.name) }
                         if (i < items.lastIndex) SegGap()
@@ -436,4 +599,3 @@ fun RecurringScreen(money: MoneyRepository, onBack: () -> Unit) {
         }
     }
 }
-

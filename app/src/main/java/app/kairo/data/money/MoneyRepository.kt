@@ -81,6 +81,13 @@ class MoneyRepository(db: KairoDatabase) {
     suspend fun restore(rows: List<TransactionEntity>) = dao.insertTxs(rows)
     suspend fun duplicate(tx: TransactionEntity) = dao.insertTx(tx.copy(id = 0, date = LocalDate.now(), transferPeerId = null))
 
+    suspend fun addRecurring(name: String, kind: RecurringKind, amountPaise: Long, accountId: Long, categoryId: Long?, nextDue: LocalDate, reminder: Boolean = true) =
+        dao.insertRecurring(RecurringEntity(name = name.trim(), kind = kind, amountPaise = amountPaise, accountId = accountId,
+            categoryId = categoryId, monthlyDay = nextDue.dayOfMonth, nextDue = nextDue, reminder = reminder))
+    suspend fun updateRecurring(r: RecurringEntity) = dao.updateRecurring(r.copy(name = r.name.trim(), monthlyDay = r.nextDue.dayOfMonth))
+    suspend fun deleteRecurring(id: Long) = dao.deleteRecurring(id)
+    suspend fun restoreRecurring(r: RecurringEntity) = dao.insertRecurring(r)
+
     /** Mark a bill paid: record the expense and move the next due date a month on. */
     suspend fun pay(r: RecurringEntity) {
         dao.insertTx(TransactionEntity(accountId = r.accountId,

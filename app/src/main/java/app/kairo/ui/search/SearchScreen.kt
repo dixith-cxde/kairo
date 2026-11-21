@@ -116,7 +116,7 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
                 item { Header("Tasks") }
                 itemsIndexed(foundTasks, key = { _, t -> "t${t.id}" }) { i, t ->
                     Column(with(entrance) { Modifier.enter("t${t.id}", i) }) {
-                        listMap[t.listId]?.let { l ->
+                        (listMap[t.listId] ?: app.kairo.data.model.TaskList.None).let { l ->
                             TaskRow(t, l, i, foundTasks.size, onToggle = { scope.launch { app.repository.setDone(it, !it.done) } }, onOpen = onOpenTask)
                         }
                         if (i < foundTasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))

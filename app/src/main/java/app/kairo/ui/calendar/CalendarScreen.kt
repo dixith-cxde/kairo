@@ -80,11 +80,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.drop
 import androidx.compose.runtime.rememberCoroutineScope
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -93,16 +92,70 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.semantics.role
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
+
+private enum class CalView(val label: String, val icon: Int) {
+    Month("Month", R.drawable.ic_calendar_month), Week("Week", R.drawable.ic_date_range), Day("Day", R.drawable.ic_today)
+}
+
+/** Pagers are "infinite": a big page count centred on the day the screen opened. */
+private const val Center = 1200
+private const val PageCount = Center * 2 + 1
 
 @Composable
 fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (Task) -> Unit) {
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     val today = LocalDate.now()
-    var month by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
-    val ym = YearMonth.parse(month)
+    // Page 'Center' of every pager is this date (saved, so pages keep their meaning after process death).
+    val base = LocalDate.parse(rememberSaveable { LocalDate.now().toString() })
+    val baseWeek = remember(base) { base.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)) }
+    val monthAt: (Int) -> YearMonth = { YearMonth.from(base).plusMonths((it - Center).toLong()) }
+    val weekAt: (Int) -> LocalDate = { baseWeek.plusWeeks((it - Center).toLong()) }
+    val dayAt: (Int) -> LocalDate = { base.plusDays((it - Center).toLong()) }
+    fun pageFor(v: CalView, d: LocalDate): Int = Center + when (v) {
+        CalView.Month -> ChronoUnit.MONTHS.between(YearMonth.from(base), YearMonth.from(d))
+        CalView.Week -> ChronoUnit.WEEKS.between(baseWeek, d.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))
+        CalView.Day -> ChronoUnit.DAYS.between(base, d)
+    }.toInt().coerceIn(-Center, Center)
+
+    var viewName by rememberSaveable { mutableStateOf(CalView.Month.name) }
+    val view = CalView.valueOf(viewName)
     var selected by rememberSaveable { mutableStateOf(today.toString()) }
     val day = LocalDate.parse(selected)
+    val monthPager = rememberPagerState(initialPage = pageFor(CalView.Month, day)) { PageCount }
+    val weekPager = rememberPagerState(initialPage = pageFor(CalView.Week, day)) { PageCount }
+    val dayPager = rememberPagerState(initialPage = pageFor(CalView.Day, day)) { PageCount }
+    fun pagerFor(v: CalView) = when (v) { CalView.Month -> monthPager; CalView.Week -> weekPager; CalView.Day -> dayPager }
+    val pager = pagerFor(view)
+    fun show(v: CalView, d: LocalDate = LocalDate.parse(selected)) {
+        selected = d.toString()
+        pagerFor(v).requestScrollToPage(pageFor(v, d))
+        viewName = v.name
+    }
+
+    // Keep the selected day inside whatever page you swipe to.
+    LaunchedEffect(view) {
+        val p = pagerFor(view)
+        // drop(1): the first value is the page show() just asked for (or a stale one before layout).
+        snapshotFlow { p.settledPage }.drop(1).collect { page ->
+            val cur = LocalDate.parse(selected)
+            when (view) {
+                CalView.Month -> { val m = monthAt(page); if (YearMonth.from(cur) != m) selected = (if (m == YearMonth.now()) LocalDate.now() else m.atDay(1)).toString() }
+                CalView.Week -> { val s = weekAt(page); if (cur.isBefore(s) || cur.isAfter(s.plusDays(6))) selected = s.plusDays(cur.dayOfWeek.value - 1L).toString() }
+                CalView.Day -> selected = dayAt(page).toString()
+            }
+        }
+    }
+
     var granted by remember { mutableStateOf(calendar.hasPermission()) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     val scope = rememberCoroutineScope()
@@ -110,12 +163,15 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
     val tasks by repo.tasks.collectAsStateWithLifecycle(initialValue = emptyList())
     val lists by repo.lists.collectAsStateWithLifecycle(initialValue = emptyList())
     val listMap = remember(lists) { lists.associateBy { it.id } }
-    // Reload when the month changes, permission is granted, or the phone's calendar changes.
+    // Reload when the visible month changes, permission is granted, or the phone's calendar changes.
+    val settled = pager.settledPage
+    val anchor = when (view) { CalView.Month -> monthAt(settled); CalView.Week -> YearMonth.from(weekAt(settled).plusDays(3)); CalView.Day -> YearMonth.from(dayAt(settled)) }
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(granted) { if (granted) calendar.changes().collect { tick++ } }
     var refreshing by remember { mutableStateOf(false) }
-    val events by produceState(emptyList<CalEvent>(), ym, granted, tick) {
-        value = calendar.events(ym.atDay(1).minusDays(7), ym.atEndOfMonth().plusDays(8))
+    // Covers the month either side too, so neighbouring pages already have their events mid-swipe.
+    val events by produceState(emptyList<CalEvent>(), anchor, granted, tick) {
+        value = calendar.events(anchor.minusMonths(1).atDay(1).minusDays(7), anchor.plusMonths(1).atEndOfMonth().plusDays(8))
         refreshing = false
     }
     val pull = rememberPullToRefreshState()
@@ -123,10 +179,47 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
     val tasksByDay = remember(tasks) { tasks.filter { it.due != null }.groupBy { it.due!! } }
     val eventDays = remember(events) {
         events.flatMap { e -> generateSequence(e.start.toLocalDate()) { it.plusDays(1) }
-            .takeWhile { !it.isAfter(if (e.allDay) e.end.toLocalDate().minusDays(1) else e.end.toLocalDate()) }.map { it } }.toSet()
+            .takeWhile { !it.isAfter(e.end.toLocalDate()) }.filter { occursOn(e, it) }.toList() }.toSet()
     }
+    fun eventsOn(d: LocalDate) = events.filter { e -> occursOn(e, d) }
     val dayTasks = tasksByDay[day].orEmpty().sortedWith(compareBy(nullsLast()) { it.time })
-    val dayEvents = events.filter { e -> !day.isBefore(e.start.toLocalDate()) && (day.isBefore(e.end.toLocalDate()) || (!e.allDay && day == e.end.toLocalDate())) }
+    val dayEvents = eventsOn(day)
+
+    // Blocks for the week/day time grid: events in tertiary, tasks in their list's colour.
+    fun taskSlot(t: Task, startMin: Int, endMin: Int): Slot {
+        val l = listMap[t.listId]
+        return Slot("t${t.id}", t.title, startMin, endMin,
+            l?.let { k.container(it.color) } ?: c.secondaryContainer, l?.let { k.onContainer(it.color) } ?: c.onSecondaryContainer,
+            t, t.done, t.time?.format(TimeFmt))
+    }
+    val data = DayData(
+        timed = { d ->
+            eventsOn(d).filter { !it.allDay }.map { e ->
+                val s = if (e.start.toLocalDate().isBefore(d)) 0 else e.start.toLocalTime().toSecondOfDay() / 60
+                val en = if (e.end.toLocalDate().isAfter(d)) 24 * 60 else e.end.toLocalTime().toSecondOfDay() / 60
+                Slot("e${e.eventId}-${e.start}", e.title, s, maxOf(s, en), c.tertiaryContainer, c.onTertiaryContainer, null, false,
+                    "${e.start.toLocalTime().format(TimeFmt)} – ${e.end.toLocalTime().format(TimeFmt)}")
+            } + tasksByDay[d].orEmpty().mapNotNull { t ->
+                t.time?.let { tm -> val s = tm.toSecondOfDay() / 60; taskSlot(t, s, minOf(s + 30, 24 * 60)) }
+            }
+        },
+        allDay = { d ->
+            eventsOn(d).filter { it.allDay }.map { e ->
+                Slot("e${e.eventId}-${e.start}", e.title, 0, 0, c.tertiaryContainer, c.onTertiaryContainer, null, false, null)
+            } + tasksByDay[d].orEmpty().filter { it.time == null }.map { taskSlot(it, 0, 0) }
+        },
+        taskCount = { d -> tasksByDay[d].orEmpty().count { !it.done } },
+        eventCount = { d -> eventsOn(d).size },
+    )
+
+    val title = when (view) {
+        CalView.Month -> monthAt(settled).format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+        CalView.Week -> weekTitle(weekAt(settled))
+        CalView.Day -> dayAt(settled).format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+    }
+    val unit = view.label.lowercase()
+    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
 
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val selection = rememberSelection()
@@ -138,11 +231,15 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
         topBar = {
           Box {
             LargeFlexibleTopAppBar(
-                title = { Text(ym.format(DateTimeFormatter.ofPattern("MMMM yyyy"))) },
+                title = { Text(title) },
                 actions = {
                     SearchPill(LocalOpenSearch.current)
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { month = ym.minusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_left), "Previous month") }
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { month = ym.plusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_right), "Next month") }
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
+                        scope.launch { pager.animateScrollToPage(pager.currentPage - 1, animationSpec = spatial) }
+                    }) { Icon(painterResource(R.drawable.ic_chevron_left), "Previous $unit") }
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
+                        scope.launch { pager.animateScrollToPage(pager.currentPage + 1, animationSpec = spatial) }
+                    }) { Icon(painterResource(R.drawable.ic_chevron_right), "Next $unit") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,
@@ -151,81 +248,163 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
           }
         },
     ) { padding ->
-      // Pull down to sync: M3 Expressive pull-to-refresh with the morphing LoadingIndicator.
-      PullToRefreshBox(
-        isRefreshing = refreshing,
-        onRefresh = {
-            refreshing = true
-            scope.launch { calendar.requestSync(); tick++ }
-        },
-        state = pull,
-        modifier = Modifier.padding(top = padding.calculateTopPadding()),
-        indicator = {
-            PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter))
-        },
-      ) {
-        LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
-            modifier = Modifier.fillMaxSize(),
+      Column(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
+        // Month / Week / Day: M3 Expressive connected button group.
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
         ) {
-            item(key = "grid") {
-                // Months slide in the direction you move (spatial spring), like turning a page.
-                val motion = MaterialTheme.motionScheme
-                AnimatedContent(
-                    targetState = ym,
-                    transitionSpec = {
-                        val dir = if (targetState > initialState) 1 else -1
-                        (slideInHorizontally(motion.defaultSpatialSpec()) { w -> dir * w / 3 } + fadeIn(motion.defaultEffectsSpec())) togetherWith
-                            (slideOutHorizontally(motion.defaultSpatialSpec()) { w -> -dir * w / 3 } + fadeOut(motion.fastEffectsSpec()))
+            CalView.entries.forEachIndexed { i, v ->
+                ToggleButton(
+                    checked = v == view,
+                    onCheckedChange = { if (v != view) show(v) },
+                    shapes = when (i) {
+                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                        CalView.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                     },
-                    label = "month",
-                ) { m -> MonthGrid(m, today, day, tasksByDay.keys, eventDays) { d -> selected = d.toString() } }
-            }
-            if (!granted) item(key = "perm") {
-                Column(
-                    Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(k.item).padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
                 ) {
-                    Text("See your calendar here", style = MaterialTheme.typography.titleMediumEmphasized)
-                    Text(
-                        "Kairo can show events from the calendars on this phone, including Google Calendar. Nothing is uploaded; there's no sign-in.",
-                        style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant,
-                    )
-                    Button(onClick = { ask.launch(Manifest.permission.READ_CALENDAR) }) { Text("Allow calendar access") }
-                }
-            }
-            item(key = "hero") { DayHero(day, today, dayTasks.count { !it.done }, dayEvents.size) }
-            itemsIndexed(dayEvents, key = { _, e -> "e${e.eventId}-${e.start}" }) { i, e ->
-                Column(with(entrance) { Modifier.enter("e${e.eventId}-${e.start}", i) }) {
-                    SegmentedListItem(
-                        shapes = ListItemDefaults.segmentedShapes(i, dayEvents.size + dayTasks.size),
-                        colors = ListItemDefaults.segmentedColors(containerColor = k.item),
-                        leadingContent = {
-                            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                                Icon(painterResource(R.drawable.ic_event), null, tint = c.tertiary)
-                            }
-                        },
-                        supportingContent = {
-                            Text(
-                                (if (e.allDay) "All day" else "${e.start.toLocalTime().format(TimeFmt)} – ${e.end.toLocalTime().format(TimeFmt)}") + " · ${e.calendar}",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        },
-                    ) { Text(e.title, style = MaterialTheme.typography.bodyLarge) }
-                    Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
-                }
-            }
-            itemsIndexed(dayTasks, key = { _, t -> "t${t.id}" }) { i, t ->
-                Column(with(entrance) { Modifier.enter("$day-t${t.id}", dayEvents.size + i) }) {
-                    listMap[t.listId]?.let { l ->
-                        TaskRow(t, l, dayEvents.size + i, dayEvents.size + dayTasks.size,
-                            onToggle = { scope.launch { repo.setDone(it, !it.done) } }, onOpen = onOpenTask, selection = selection)
-                    }
-                    Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+                    Icon(painterResource(v.icon), null, Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text(v.label, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
+        // Pull down to sync: M3 Expressive pull-to-refresh with the morphing LoadingIndicator.
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                refreshing = true
+                scope.launch { calendar.requestSync(); tick++ }
+            },
+            state = pull,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            indicator = {
+                PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter))
+            },
+        ) {
+          AnimatedContent(
+              targetState = view,
+              transitionSpec = { fadeIn(effects) togetherWith fadeOut(effects) },
+              label = "calView",
+          ) { v ->
+            when (v) {
+              CalView.Week -> Column(Modifier.fillMaxSize()) {
+                  if (!granted) PermissionCard(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+                  WeekView(weekPager, weekAt, today, day, data, onPickDay = { show(CalView.Day, it) }, onOpenTask, Modifier.weight(1f))
+              }
+              CalView.Day -> Column(Modifier.fillMaxSize()) {
+                  if (!granted) PermissionCard(Modifier.padding(horizontal = 16.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+                  DayView(dayPager, dayAt, today, data, onOpenTask, Modifier.weight(1f))
+              }
+              CalView.Month -> LazyColumn(
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
+                modifier = Modifier.fillMaxSize(),
+              ) {
+                item(key = "grid") {
+                    // Swipe for months. Every month draws six weeks, so the height never jumps.
+                    HorizontalPager(monthPager, Modifier.fillMaxWidth(), pageSpacing = 16.dp, verticalAlignment = Alignment.Top) { page ->
+                        MonthGrid(monthAt(page), today, day, tasksByDay.keys, eventDays) { d -> selected = d.toString() }
+                    }
+                }
+                if (!granted) item(key = "perm") {
+                    PermissionCard(Modifier.padding(top = 16.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+                }
+                item(key = "hero") { DayHero(day, today, dayTasks.count { !it.done }, dayEvents.size) }
+                if (dayEvents.isEmpty() && dayTasks.isEmpty()) item(key = "empty") { EmptyDay() }
+                itemsIndexed(dayEvents, key = { _, e -> "e${e.eventId}-${e.start}" }) { i, e ->
+                    Column(with(entrance) { Modifier.enter("e${e.eventId}-${e.start}", i) }) {
+                        SegmentedListItem(
+                            shapes = ListItemDefaults.segmentedShapes(i, dayEvents.size + dayTasks.size),
+                            colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+                            leadingContent = {
+                                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                                    Icon(painterResource(R.drawable.ic_event), null, tint = c.tertiary)
+                                }
+                            },
+                            supportingContent = {
+                                Text(
+                                    (if (e.allDay) "All day" else "${e.start.toLocalTime().format(TimeFmt)} – ${e.end.toLocalTime().format(TimeFmt)}") + " · ${e.calendar}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            },
+                        ) { Text(e.title, style = MaterialTheme.typography.bodyLarge) }
+                        Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+                    }
+                }
+                itemsIndexed(dayTasks, key = { _, t -> "t${t.id}" }) { i, t ->
+                    Column(with(entrance) { Modifier.enter("$day-t${t.id}", dayEvents.size + i) }) {
+                        (listMap[t.listId] ?: app.kairo.data.model.TaskList.None).let { l ->
+                            TaskRow(t, l, dayEvents.size + i, dayEvents.size + dayTasks.size,
+                                onToggle = { scope.launch { repo.setDone(it, !it.done) } }, onOpen = onOpenTask, selection = selection)
+                        }
+                        Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+                    }
+                }
+              }
+            }
+          }
+        }
       }
+    }
+}
+
+/** Whether an event shows on [d]. All-day ends are exclusive; a timed event ending at midnight doesn't spill over. */
+private fun occursOn(e: CalEvent, d: LocalDate): Boolean {
+    val s = e.start.toLocalDate()
+    val en = e.end.toLocalDate()
+    if (d.isBefore(s)) return false
+    if (e.allDay) return d.isBefore(en) || (s == en && d == s)
+    return d.isBefore(en) || (d == en && (e.end.toLocalTime() > LocalTime.MIDNIGHT || e.start == e.end))
+}
+
+private fun weekTitle(start: LocalDate): String {
+    val end = start.plusDays(6)
+    return when {
+        start.month == end.month -> start.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+        start.year == end.year -> "${start.format(DateTimeFormatter.ofPattern("MMM"))} – ${end.format(DateTimeFormatter.ofPattern("MMM yyyy"))}"
+        else -> "${start.format(DateTimeFormatter.ofPattern("MMM yyyy"))} – ${end.format(DateTimeFormatter.ofPattern("MMM yyyy"))}"
+    }
+}
+
+@Composable
+private fun PermissionCard(modifier: Modifier = Modifier, onAllow: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    Column(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(KairoTheme.colors.item).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("See your calendar here", style = MaterialTheme.typography.titleMediumEmphasized)
+        Text(
+            "Kairo can show events from the calendars on this phone, including Google Calendar. Nothing is uploaded; there's no sign-in.",
+            style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant,
+        )
+        Button(onClick = onAllow, shapes = ButtonDefaults.shapes()) { Text("Allow calendar access") }
+    }
+}
+
+/** A free day: a big, soft Clover slowly turning behind the icon. */
+@Composable
+private fun EmptyDay() {
+    val c = MaterialTheme.colorScheme
+    val spin by slowSpin()
+    Column(
+        Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.size(176.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.matchParentSize().graphicsLayer { rotationZ = spin }
+                .background(c.secondaryContainer.copy(alpha = 0.55f), MaterialShapes.Clover8Leaf.toShape()))
+            Icon(painterResource(R.drawable.ic_event_available), null, tint = c.onSecondaryContainer, modifier = Modifier.size(48.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("Nothing planned", style = MaterialTheme.typography.titleMediumEmphasized)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "No tasks or events on this day. Tap + to add one.",
+            style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant, textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -240,7 +419,7 @@ private fun MonthGrid(
     val first = DayOfWeek.MONDAY
     val lead = (ym.atDay(1).dayOfWeek.value - first.value + 7) % 7
     val cells = (0 until 42).map { ym.atDay(1).minusDays(lead.toLong()).plusDays(it.toLong()) }
-        .chunked(7).filter { week -> week.any { it.month == ym.month } }
+        .chunked(7) // always six weeks, so swiping between months never changes the height
     Column(
         Modifier.clip(RoundedCornerShape(28.dp)).background(k.item).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -297,7 +476,7 @@ private fun MonthGrid(
 
 /** Sunny badge "SAT 21" + summary (canvas Calendar day hero). */
 @Composable
-private fun DayHero(day: LocalDate, today: LocalDate, tasks: Int, events: Int) {
+internal fun DayHero(day: LocalDate, today: LocalDate, tasks: Int, events: Int) {
     val c = MaterialTheme.colorScheme
     Row(
         Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 12.dp),
