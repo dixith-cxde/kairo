@@ -80,6 +80,7 @@ import java.time.format.FormatStyle
 fun QuickAddSheet(
     lists: List<TaskList>,
     defaultDue: LocalDate?,
+    defaultListId: Long? = null,
     initialText: String = "",
     onAdd: (Task) -> Unit,
     onDismiss: () -> Unit,
@@ -102,7 +103,7 @@ fun QuickAddSheet(
     val parsed = remember(text) { QuickAddParser.parse(text) }
     val tokenList = parsed.listName?.let { n -> lists.firstOrNull { it.name.equals(n, ignoreCase = true) } }
     // No list picked = Inbox (no default lists, owner 2026-11-21).
-    val list = (pickedList ?: tokenList)?.takeIf { it.id > 0 }
+    val list = (pickedList ?: tokenList ?: lists.firstOrNull { it.id == defaultListId })?.takeIf { it.id > 0 }
     val due = dateOverride?.let { it.date } ?: parsed.due ?: defaultDue
     val time = dateOverride?.let { it.time } ?: parsed.time
     val priority = priorityOverride ?: parsed.priority ?: Priority.None

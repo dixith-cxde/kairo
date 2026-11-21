@@ -63,6 +63,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairo.R
 import app.kairo.data.model.ListColor
@@ -98,37 +99,25 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 140.dp),
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item(key = "header") {
                 TabHeader("Lists", Modifier.fullBleed(), actions = { SearchPill(LocalOpenSearch.current) })
             }
-            // Smart lists: 2×2 tiles, Cookie4 icons, big tabular counts.
+            // Smart lists in two connected groups (owner, 2026-11-21): Inbox · Today · Next 7 days,
+            // then Completed · Archived. Outer corners large, inner corners small, 2dp gaps, so
+            // each group reads as one piece, like the M3 Expressive segmented list.
             item(key = "smart") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SmartList.entries.chunked(2).forEachIndexed { r, row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEachIndexed { ci, sl ->
-                                Column(
-                                    with(entrance) { Modifier.enter("tile-$sl", r * 2 + ci) }
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(28.dp))
-                                        .background(k.item)
-                                        .clickable(role = Role.Button) { onOpenList(sl.id) }
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            Modifier.size(40.dp).background(c.secondaryContainer, MaterialShapes.Cookie4Sided.toShape()),
-                                            contentAlignment = Alignment.Center,
-                                        ) { Icon(painterResource(sl.icon), null, tint = c.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
-                                        Spacer(Modifier.weight(1f))
-                                        val n by countUp(s.smartCounts[sl] ?: 0)
-                                        Text("$n", style = MaterialTheme.typography.headlineMediumEmphasized)
-                                    }
-                                    Text(sl.label, style = MaterialTheme.typography.titleSmallEmphasized, color = c.onSurfaceVariant)
-                                }
+                Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    listOf(
+                        listOf(SmartList.Inbox, SmartList.Today, SmartList.Next7),
+                        listOf(SmartList.Completed, SmartList.Archived),
+                    ).forEachIndexed { g, group ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                            group.forEachIndexed { i, sl ->
+                                SmartTile(
+                                    sl, s.smartCounts[sl] ?: 0, connectedRowShape(i, group.size),
+                                    with(entrance) { Modifier.enter("tile-$sl", g * 3 + i) }.weight(1f),
+                                ) { onOpenList(sl.id) }
                             }
                         }
                     }
@@ -163,6 +152,37 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
         }
     }
     if (creating) NewListDialog(onDismiss = { creating = false }, onCreate = { n, sh, co -> vm.create(n, sh, co); creating = false })
+}
+
+/** Outer corners large, inner corners small: one piece of a horizontal connected group. */
+internal fun connectedRowShape(i: Int, n: Int, outer: androidx.compose.ui.unit.Dp = 28.dp, inner: androidx.compose.ui.unit.Dp = 8.dp) =
+    RoundedCornerShape(
+        topStart = if (i == 0) outer else inner, bottomStart = if (i == 0) outer else inner,
+        topEnd = if (i == n - 1) outer else inner, bottomEnd = if (i == n - 1) outer else inner,
+    )
+
+/** One smart-list tile: Cookie4 icon, big tabular count, label. */
+@Composable
+private fun SmartTile(sl: SmartList, count: Int, shape: androidx.compose.ui.graphics.Shape, modifier: Modifier, onClick: () -> Unit) {
+    val k = KairoTheme.colors
+    val c = MaterialTheme.colorScheme
+    Column(
+        modifier.clip(shape).background(k.item).clickable(role = Role.Button, onClickLabel = "Open ${sl.label}", onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(36.dp).background(c.secondaryContainer, MaterialShapes.Cookie4Sided.toShape()),
+                contentAlignment = Alignment.Center,
+            ) { Icon(painterResource(sl.icon), null, tint = c.onSecondaryContainer, modifier = Modifier.size(18.dp)) }
+            Spacer(Modifier.weight(1f))
+            val n by countUp(count)
+            Text("$n", style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1)
+        }
+        Text(sl.label, style = MaterialTheme.typography.titleSmallEmphasized, color = c.onSurfaceVariant, maxLines = 1, softWrap = false,
+            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(10.sp, 14.sp))
+    }
 }
 
 /** The list's own shape in its container color — "each list owns a shape" (rule 7). */
@@ -293,18 +313,20 @@ fun ListDetailScreen(vm: ListDetailViewModel, onBack: () -> Unit, onOpenTask: (T
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
+            // Same Expressive connected group as Stats and Money (owner, 2026-11-21).
             if (s.smart != SmartList.Completed && s.smart != SmartList.Archived) item(key = "filters") {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ListFilter.entries.forEach { f ->
-                        FilterChip(selected = f == filter, onClick = { vm.filter.value = f }, label = { Text(f.label) })
-                    }
-                }
+                app.kairo.ui.common.ConnectedGroup(ListFilter.entries, filter, { it.label }, Modifier.padding(top = 4.dp)) { vm.filter.value = it }
             }
             if (s.sections.isEmpty()) item(key = "empty") {
-                Text(
-                    "Nothing here.", style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp, top = 24.dp),
-                )
+                val (title, body) = when {
+                    s.smart == SmartList.Completed -> "Nothing finished yet" to "Tasks you tick off land here."
+                    s.smart == SmartList.Archived -> "Nothing archived" to "Archive a task from its ⋮ menu to tuck it away here."
+                    filter == ListFilter.Done -> "Nothing done yet" to "Tick something off and it shows here."
+                    filter == ListFilter.Upcoming -> "Nothing coming up" to "Tasks with a date ahead show here."
+                    filter == ListFilter.NoDate -> "Everything has a date" to "Tasks without a date show here."
+                    else -> "All clear" to "Add a task with + and it lands in ${s.title}."
+                }
+                app.kairo.ui.common.EmptyState(title, body, Modifier.padding(top = 24.dp), size = 180.dp)
             }
             s.sections.forEach { (title, tasks) ->
                 item(key = "h-$title") {

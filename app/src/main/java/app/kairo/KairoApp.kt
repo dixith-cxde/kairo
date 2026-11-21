@@ -91,6 +91,10 @@ import app.kairo.ui.lists.ListDetailViewModel
 import app.kairo.ui.lists.ListsScreen
 import app.kairo.ui.lists.ListsViewModel
 import app.kairo.ui.quickadd.QuickAddSheet
+import app.kairo.ui.common.LocalTabVisit
+import app.kairo.ui.lists.SmartList
+import app.kairo.ui.calendar.CalendarFocus
+import app.kairo.ui.calendar.NewEventSheet
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.today.TodayScreen
 import app.kairo.ui.today.TodayViewModel
@@ -196,9 +200,13 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     LaunchedEffect(pager.currentPage, backStack.size) { navVisible = true }
 
     val snackbar = remember { SnackbarHostState() }
+    // Each time a tab is shown (switch, or back from a detail screen), empty states re-pick shapes.
+    var tabVisit by remember { mutableIntStateOf(0) }
+    LaunchedEffect(pager.settledPage, backStack.size) { tabVisit++ }
     CompositionLocalProvider(
         LocalKairoApp provides app, LocalAppSnackbar provides snackbar, LocalSelecting provides selecting,
         LocalOpenSearch provides { open(Route.SearchRoute) },
+        LocalTabVisit provides tabVisit,
     ) {
     Box(Modifier.fillMaxSize().background(KairoTheme.colors.bg).nestedScroll(hideOnScroll)) {
         NavDisplay(
@@ -274,6 +282,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         ) {
             listOf(
                 Triple("Task", R.drawable.ic_task_alt) { sheet = "task" },
+                Triple("Event", R.drawable.ic_event) { sheet = "event" },
                 Triple("Expense", R.drawable.ic_payments) { select(Tab.Money); sheet = TxKind.Expense.name },
                 Triple("Income", R.drawable.ic_savings) { select(Tab.Money); sheet = TxKind.Income.name },
                 Triple("Transfer", R.drawable.ic_swap_vert) { select(Tab.Money); sheet = TxKind.Transfer.name },
@@ -300,11 +309,30 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
 
         when (val sh = sheet) {
             null -> {}
-            "task" -> QuickAddSheet(
+            "task" -> {
+              // + adds where you are (owner, 2026-11-21): Today → today, Calendar → the day you're
+              // looking at, inside a list → that list (smart Today → today).
+              val inList = (top as? Route.ListRoute)?.listId
+              val smart = inList?.let { SmartList.of(it) }
+              QuickAddSheet(
                 lists = lists,
-                defaultDue = if (currentTab == Tab.Today) LocalDate.now() else null,
+                defaultDue = when {
+                    smart == SmartList.Today -> LocalDate.now()
+                    inList != null -> null
+                    !onTab -> null
+                    currentTab == Tab.Today -> LocalDate.now()
+                    currentTab == Tab.Calendar -> CalendarFocus.day
+                    else -> null
+                },
+                defaultListId = inList?.takeIf { it > 0 },
                 initialText = quickAddText,
                 onAdd = { task -> scope.launch { app.repository.add(task) } },
+                onDismiss = { sheet = null },
+              )
+            }
+            "event" -> NewEventSheet(
+                calendar = app.phoneCalendar,
+                initialDay = if (onTab && currentTab == Tab.Calendar) CalendarFocus.day ?: LocalDate.now() else LocalDate.now(),
                 onDismiss = { sheet = null },
             )
             else -> {

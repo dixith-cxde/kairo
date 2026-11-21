@@ -2,6 +2,13 @@
 
 package app.kairo.ui.calendar
 
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import kotlin.math.roundToInt
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.draw.clipToBounds
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -220,6 +227,8 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
 
     val selection = rememberSelection()
     val entrance = rememberEntrance()
+    // + → Task / Event lands on the day you're looking at.
+    LaunchedEffect(selected) { CalendarFocus.day = LocalDate.parse(selected) }
 
     // Big month title, search, then one row: the view menu on the left and the chevrons on the right.
     val header: @Composable (Modifier) -> Unit = { mod ->
@@ -265,14 +274,18 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
         ) { v ->
             when (v) {
               // Week and Day: the header stays put; swipe on the dates to change week/day, the hours only scroll.
-              CalView.Week -> Column(Modifier.fillMaxSize()) {
+              // The header collapses as the hours scroll up and comes back at the top (owner, 2026-11-21:
+              // "can't scroll past the calendar view").
+              CalView.Week -> CollapsingHeader(header = {
                   header(Modifier)
                   if (!granted) PermissionCard(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+              }) {
                   WeekView(weekPager, weekAt, today, day, data, onPickDay = { show(CalView.Day, it) }, onOpenTask, Modifier.weight(1f).padding(top = 8.dp))
               }
-              CalView.Day -> Column(Modifier.fillMaxSize()) {
+              CalView.Day -> CollapsingHeader(header = {
                   header(Modifier)
                   if (!granted) PermissionCard(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+              }) {
                   DayView(dayPager, dayAt, today, data, onOpenTask, Modifier.weight(1f))
               }
               CalView.Month -> LazyColumn(
@@ -390,6 +403,45 @@ private fun ViewMenu(view: CalView, onPick: (CalView) -> Unit, onToday: () -> Un
     }
 }
 
+/**
+ * A header that scrolls away first: scrolling the content up eats the header's height before the
+ * content moves; scrolling down past the content's top brings it back. Clipped, never overlapping.
+ */
+@Composable
+private fun CollapsingHeader(header: @Composable () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    var headerH by remember { mutableStateOf(0) }
+    var off by remember { mutableStateOf(0f) } // 0 (shown) .. -headerH (gone)
+    val conn = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            fun take(dy: Float): androidx.compose.ui.geometry.Offset {
+                val next = (off + dy).coerceIn(-headerH.toFloat(), 0f)
+                val used = next - off
+                off = next
+                return androidx.compose.ui.geometry.Offset(0f, used)
+            }
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource) =
+                if (available.y < 0) take(available.y) else androidx.compose.ui.geometry.Offset.Zero
+            override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource) =
+                if (available.y > 0) take(available.y) else androidx.compose.ui.geometry.Offset.Zero
+        }
+    }
+    Column(Modifier.fillMaxSize().clipToBounds().nestedScroll(conn)) {
+        Column(
+            Modifier
+                .layout { m, cs ->
+                    val p = m.measure(cs.copy(maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+                    val y = off.roundToInt()
+                    layout(p.width, (p.height + y).coerceAtLeast(0)) { p.place(0, y) }
+                }
+                .onSizeChanged { headerH = it.height },
+        ) { header() }
+        // Once the header is gone, keep the content clear of the status bar.
+        val bar = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        Spacer(Modifier.height(bar * (if (headerH == 0) 0f else (-off / headerH).coerceIn(0f, 1f))))
+        content()
+    }
+}
+
 /** Whether an event shows on [d]. All-day ends are exclusive; a timed event ending at midnight doesn't spill over. */
 private fun occursOn(e: CalEvent, d: LocalDate): Boolean {
     val s = e.start.toLocalDate()
@@ -416,28 +468,14 @@ private fun PermissionCard(modifier: Modifier = Modifier, onAllow: () -> Unit) {
     }
 }
 
-/** A free day: a big, soft Clover slowly turning behind the icon. */
+/** A free day: the shared empty state (random nested shapes, no icon). */
 @Composable
 private fun EmptyDay() {
-    val c = MaterialTheme.colorScheme
-    val spin by slowSpin()
-    Column(
-        Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(Modifier.size(176.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.matchParentSize().graphicsLayer { rotationZ = spin }
-                .background(c.secondaryContainer.copy(alpha = 0.55f), MaterialShapes.Clover8Leaf.toShape()))
-            Icon(painterResource(R.drawable.ic_event_available), null, tint = c.onSecondaryContainer, modifier = Modifier.size(48.dp))
-        }
-        Spacer(Modifier.height(16.dp))
-        Text("Nothing planned", style = MaterialTheme.typography.titleMediumEmphasized)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "No tasks or events on this day. Tap + to add one.",
-            style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant, textAlign = TextAlign.Center,
-        )
-    }
+    app.kairo.ui.common.EmptyState(
+        title = "Nothing planned",
+        body = "No tasks or events on this day. Tap + to add one.",
+        size = 176.dp,
+    )
 }
 
 /** Rounded, gapped day cells; today is a Cookie9 number; dots = tasks (primary), events (tertiary). */

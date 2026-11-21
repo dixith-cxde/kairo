@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,45 +23,58 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.RoundedPolygon
+import kotlin.random.Random
+
+/** Bumped by the app each time a tab is shown, so empty states pick new shapes on every visit. */
+val LocalTabVisit = androidx.compose.runtime.compositionLocalOf { 0 }
 
 /**
- * Empty screens (owner, 2026-11-21): a large soft library shape turning slowly behind a smaller
- * one with the icon, a title and one line of help, and an optional action. The pair pops in on a
- * fast spatial spring. Never Puffy / Heart (rule 6).
+ * Shapes for empty states (owner, 2026-11-21): mostly the chubby Triangle, Pill and Oval, now and
+ * then a Bun, Arch or Cookie4. Never Puffy / Puffy Diamond / Heart (rule 6).
+ */
+private val Mostly = listOf(MaterialShapes.Triangle, MaterialShapes.Pill, MaterialShapes.Oval)
+private val Sometimes = listOf(MaterialShapes.Bun, MaterialShapes.Arch, MaterialShapes.Cookie4Sided)
+
+private fun pickShape(avoid: RoundedPolygon? = null): RoundedPolygon {
+    val pool = if (Random.nextFloat() < 0.8f) Mostly else Sometimes
+    return pool.filter { it !== avoid }.random()
+}
+
+/**
+ * Empty screens: two nested library shapes, no icon (owner, 2026-11-21). A big soft one turns
+ * slowly; a smaller one in front turns the other way. Both are picked at random each time the tab
+ * is shown, then the pair pops in on the slow spatial spring.
  */
 @Composable
 fun EmptyState(
-    icon: Int,
     title: String,
     body: String,
     modifier: Modifier = Modifier,
-    shape: RoundedPolygon = MaterialShapes.Cookie9Sided,
     size: Dp = 200.dp,
     back: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     front: Color = MaterialTheme.colorScheme.secondaryContainer,
-    onFront: Color = MaterialTheme.colorScheme.onSecondaryContainer,
     action: (@Composable () -> Unit)? = null,
 ) {
+    val visit = LocalTabVisit.current
+    val (backShape, frontShape) = remember(visit) { pickShape().let { b -> b to pickShape(avoid = b) } }
     val spin by slowSpin(48_000)
-    val pop = remember { Animatable(0.6f) }
+    val pop = remember(visit) { Animatable(0.6f) }
     val spec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
-    LaunchedEffect(Unit) { pop.animateTo(1f, spec) }
+    LaunchedEffect(visit) { pop.animateTo(1f, spec) }
     Column(
         modifier.fillMaxWidth().padding(vertical = 32.dp, horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(size).graphicsLayer { scaleX = pop.value; scaleY = pop.value }, contentAlignment = Alignment.Center) {
-            Box(Modifier.size(size).graphicsLayer { rotationZ = spin }.background(back, shape.toShape()))
+            Box(Modifier.size(size).graphicsLayer { rotationZ = spin }.background(back, backShape.toShape()))
             Box(
-                Modifier.size(size * 0.46f).graphicsLayer { rotationZ = -spin * 2 }.background(front, MaterialShapes.Cookie6Sided.toShape()),
+                Modifier.size(size * 0.5f).graphicsLayer { rotationZ = -spin * 2 + 20f }.background(front, frontShape.toShape()),
             )
-            Icon(painterResource(icon), null, tint = onFront, modifier = Modifier.size(size * 0.2f))
         }
         Text(title, style = MaterialTheme.typography.headlineSmallEmphasized, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)

@@ -58,39 +58,49 @@ internal fun LazyItemScope.springItem(): Modifier {
     )
 }
 
-@Composable
-private fun connectedShape(i: Int, n: Int) = when (i) {
-    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-    n - 1 -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-}
-
-/** One segment of the month summary: label over amount, in a connected-group shape. */
-internal data class Summary(val label: String, val value: String, val color: Color, val onClick: (() -> Unit)? = null)
+/** One tile of the month summary. [progress] (0..1) draws a wavy bar under the value (budget). */
+internal data class Summary(
+    val label: String, val value: String, val color: Color,
+    val onClick: (() -> Unit)? = null, val progress: Float? = null,
+)
 
 /**
- * Month summary as one M3 Expressive connected group: outer corners full, inner corners small,
- * ConnectedSpaceBetween gaps (same geometry as a connected button group).
+ * Month summary (owner, 2026-11-21): Income and Spent side by side, the budget full width under
+ * them, and the three cut as one piece: only the block's four outer corners are large, every
+ * inner corner is small, 2dp gaps (the M3 Expressive connected-group geometry).
  */
 @Composable
-internal fun SummaryGroup(items: List<Summary>, modifier: Modifier = Modifier) {
-    val k = KairoTheme.colors
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-        items.forEachIndexed { i, s ->
-            val shape: Shape = connectedShape(i, items.size).shape
-            Column(
-                Modifier.weight(1f).heightIn(min = 72.dp).clip(shape).background(k.item)
-                    .then(if (s.onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = "Open ${s.label}", onClick = s.onClick) else Modifier)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(s.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                Text(
-                    s.value, style = MaterialTheme.typography.titleMediumEmphasized, color = s.color,
-                    maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(11.sp, 16.sp),
-                )
-            }
+internal fun SummaryGroup(income: Summary, spent: Summary, budget: Summary, modifier: Modifier = Modifier) {
+    val big = 28.dp
+    val small = 6.dp
+    val gap = ButtonGroupDefaults.ConnectedSpaceBetween
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+            SummaryTile(income, RoundedCornerShape(topStart = big, topEnd = small, bottomStart = small, bottomEnd = small), Modifier.weight(1f))
+            SummaryTile(spent, RoundedCornerShape(topStart = small, topEnd = big, bottomStart = small, bottomEnd = small), Modifier.weight(1f))
         }
+        SummaryTile(budget, RoundedCornerShape(topStart = small, topEnd = small, bottomStart = big, bottomEnd = big), Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun SummaryTile(s: Summary, shape: Shape, modifier: Modifier) {
+    Column(
+        modifier.heightIn(min = 72.dp).clip(shape).background(KairoTheme.colors.item)
+            .then(if (s.onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = "Open ${s.label}", onClick = s.onClick) else Modifier)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(s.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Text(
+            s.value, style = MaterialTheme.typography.titleLargeEmphasized, color = s.color,
+            maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(12.sp, 22.sp),
+        )
+        if (s.progress != null) androidx.compose.material3.LinearWavyProgressIndicator(
+            progress = { s.progress.coerceIn(0f, 1f) },
+            color = s.color,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
     }
 }
 

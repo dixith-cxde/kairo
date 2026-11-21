@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -62,7 +64,9 @@ fun deleteTaskWithUndo(app: app.kairo.KairoApplication, snackbar: androidx.compo
 
 /**
  * Swipe a task row (owner, 2026-11-21): swipe left = complete, swipe right = delete (with Undo).
- * The revealed side shows the action on its color; the icon grows as you pass the threshold.
+ * M3 Expressive swipe, as in Android 16's notification shade and Gmail: as the row moves, its
+ * corners round off into a pill, and a separate action pill grows in the gap it leaves, 4dp away.
+ * Past the threshold the action pill turns solid and its icon springs bigger.
  */
 @Composable
 fun TaskSwipe(task: Task, enabled: Boolean, onComplete: (Task) -> Unit, content: @Composable () -> Unit) {
@@ -72,6 +76,11 @@ fun TaskSwipe(task: Task, enabled: Boolean, onComplete: (Task) -> Unit, content:
     val scope = rememberCoroutineScope()
     val state = rememberSwipeToDismissBoxState()
     val c = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val gap = with(density) { 4.dp.toPx() }
+    val roundBy = with(density) { 56.dp.toPx() } // fully round after 56dp of travel
+    fun offset() = runCatching { state.requireOffset() }.getOrDefault(0f)
     SwipeToDismissBox(
         state = state,
         enableDismissFromStartToEnd = enabled,
@@ -86,25 +95,51 @@ fun TaskSwipe(task: Task, enabled: Boolean, onComplete: (Task) -> Unit, content:
         },
         backgroundContent = {
             val dir = state.dismissDirection
+            if (dir == SwipeToDismissBoxValue.Settled) return@SwipeToDismissBox
             val delete = dir == SwipeToDismissBoxValue.StartToEnd
             val past = state.targetValue != SwipeToDismissBoxValue.Settled
-            val grow by animateFloatAsState(if (past) 1.25f else 1f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "swipeIcon")
-            Row(
-                Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp))
-                    .background(if (dir == SwipeToDismissBoxValue.Settled) c.surfaceContainerHigh else if (delete) c.errorContainer else c.tertiaryContainer)
-                    .padding(horizontal = 24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (delete) Arrangement.Start else Arrangement.End,
-            ) {
-                if (dir != SwipeToDismissBoxValue.Settled) Icon(
-                    painterResource(if (delete) R.drawable.ic_delete else R.drawable.ic_check),
-                    if (delete) "Delete" else "Complete",
-                    tint = if (delete) c.onErrorContainer else c.onTertiaryContainer,
-                    modifier = Modifier.size(24.dp).graphicsLayer { scaleX = grow; scaleY = grow },
-                )
+            val grow by animateFloatAsState(if (past) 1.3f else 1f, motion.fastSpatialSpec(), label = "swipeIcon")
+            val bg by androidx.compose.animation.animateColorAsState(
+                when { delete && past -> c.error; delete -> c.errorContainer; past -> c.tertiary; else -> c.tertiaryContainer },
+                motion.defaultEffectsSpec(), label = "swipeBg",
+            )
+            val fg by androidx.compose.animation.animateColorAsState(
+                when { delete && past -> c.onError; delete -> c.onErrorContainer; past -> c.onTertiary; else -> c.onTertiaryContainer },
+                motion.defaultEffectsSpec(), label = "swipeFg",
+            )
+            Box(Modifier.fillMaxSize(), contentAlignment = if (delete) Alignment.CenterStart else Alignment.CenterEnd) {
+                // The action pill: as wide as the gap the row leaves (minus 4dp), always fully round.
+                Box(
+                    Modifier
+                        .layout { m, cs ->
+                            val w = (kotlin.math.abs(offset()) - gap).coerceIn(0f, cs.maxWidth.toFloat()).toInt()
+                            val p = m.measure(cs.copy(minWidth = w, maxWidth = w))
+                            layout(w, p.height) { p.place(0, 0) }
+                        }
+                        .fillMaxHeight()
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(bg),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(if (delete) R.drawable.ic_delete else R.drawable.ic_check),
+                        if (delete) "Delete" else "Complete",
+                        tint = fg,
+                        modifier = Modifier.size(24.dp).graphicsLayer { scaleX = grow; scaleY = grow },
+                    )
+                }
             }
         },
-    ) { content() }
+    ) {
+        // The row itself rounds into a pill as it travels.
+        Box(Modifier.graphicsLayer {
+            val f = (kotlin.math.abs(offset()) / roundBy).coerceIn(0f, 1f)
+            if (f > 0f) {
+                clip = true
+                shape = RoundedCornerShape(percent = (f * 50).toInt().coerceAtLeast(1))
+            }
+        }) { content() }
+    }
 }
 
 /** The ⋮ drawer for one task: open, done, duplicate, reschedule, move, archive, delete. */

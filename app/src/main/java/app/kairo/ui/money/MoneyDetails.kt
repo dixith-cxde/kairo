@@ -209,9 +209,9 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
             }
             if (all.isEmpty()) item(key = "empty") {
                 app.kairo.ui.common.EmptyState(
-                    icon = accountIcon(b.account.type), title = "No transactions yet",
+                    title = "No transactions yet",
                     body = "Expenses, income and transfers for ${b.account.name} show up here.",
-                    shape = MaterialShapes.Cookie4Sided, size = 160.dp,
+                    size = 160.dp,
                 )
             }
             mine.forEach { (date, list) ->
@@ -571,9 +571,8 @@ fun RecurringScreen(money: MoneyRepository, onBack: () -> Unit) {
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp)) {
             if (items.isEmpty()) item(key = "empty") {
                 app.kairo.ui.common.EmptyState(
-                    icon = R.drawable.ic_receipt_long, title = "No bills yet",
+                    title = "No bills yet",
                     body = "Add rent, subscriptions or salary once and Kairo shows what's due each month.",
-                    shape = MaterialShapes.Clover4Leaf,
                 ) { FilledTonalButton(onClick = { editing = 0L }, shapes = ButtonDefaults.shapes()) { Text("Add a bill") } }
             } else item(key = "total") {
                 Column(Modifier.padding(bottom = 16.dp, start = 4.dp)) {

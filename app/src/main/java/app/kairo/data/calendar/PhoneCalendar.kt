@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.CalendarContract.Instances
+import android.provider.CalendarContract.Calendars as C
+import android.provider.CalendarContract.Events as E
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,6 +36,9 @@ data class CalEvent(
     val color: Int,
     val calendar: String,
 )
+
+/** A calendar on the phone Kairo may add events to (Google account calendars, local ones). */
+data class PhoneCal(val id: Long, val name: String, val account: String, val color: Int, val primary: Boolean)
 
 /**
  * Reads events through the Android Calendar Provider: no sign-in, only the READ_CALENDAR permission.
@@ -73,6 +78,44 @@ class PhoneCalendar(private val context: Context) {
 
     fun hasPermission() =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+
+    fun canWrite() =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
+
+    /** Calendars you can add events to (contributor access or better), primary ones first. */
+    suspend fun writableCalendars(): List<PhoneCal> = withContext(Dispatchers.IO) {
+        if (!hasPermission()) return@withContext emptyList()
+        val out = mutableListOf<PhoneCal>()
+        context.contentResolver.query(
+            C.CONTENT_URI,
+            arrayOf(C._ID, C.CALENDAR_DISPLAY_NAME, C.ACCOUNT_NAME, C.CALENDAR_COLOR, C.IS_PRIMARY),
+            "${C.CALENDAR_ACCESS_LEVEL} >= ${C.CAL_ACCESS_CONTRIBUTOR} AND ${C.VISIBLE} = 1", null, null,
+        )?.use { c ->
+            while (c.moveToNext()) out += PhoneCal(c.getLong(0), c.getString(1) ?: "Calendar", c.getString(2) ?: "", c.getInt(3), c.getInt(4) == 1)
+        }
+        out.sortedByDescending { it.primary }
+    }
+
+    /**
+     * Adds one event through the Calendar Provider; Google Calendar uploads it on its next sync.
+     * All-day events are stored at UTC midnight with an exclusive end, as the provider expects.
+     */
+    suspend fun addEvent(calendarId: Long, title: String, start: LocalDateTime, end: LocalDateTime, allDay: Boolean): Long? =
+        withContext(Dispatchers.IO) {
+            if (!canWrite()) return@withContext null
+            val zone = if (allDay) ZoneOffset.UTC else ZoneId.systemDefault()
+            val s = if (allDay) start.toLocalDate().atStartOfDay() else start
+            val e = if (allDay) end.toLocalDate().plusDays(1).atStartOfDay() else end
+            val values = android.content.ContentValues().apply {
+                put(E.CALENDAR_ID, calendarId)
+                put(E.TITLE, title)
+                put(E.DTSTART, s.atZone(zone).toInstant().toEpochMilli())
+                put(E.DTEND, e.atZone(zone).toInstant().toEpochMilli())
+                put(E.ALL_DAY, if (allDay) 1 else 0)
+                put(E.EVENT_TIMEZONE, if (allDay) "UTC" else ZoneId.systemDefault().id)
+            }
+            context.contentResolver.insert(E.CONTENT_URI, values)?.let { ContentUris.parseId(it) }
+        }
 
     /** Instances (not Events) so repeating events expand into each occurrence. */
     suspend fun events(from: LocalDate, toExclusive: LocalDate): List<CalEvent> = withContext(Dispatchers.IO) {

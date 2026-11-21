@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ButtonGroup
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ fun <T> ConnectedGroup(
     enabled: Boolean = true,
     onPick: (T) -> Unit,
 ) {
+    val many = options.size >= 4
     ButtonGroup(
         overflowIndicator = {},
         modifier = modifier.fillMaxWidth(),
@@ -58,7 +60,10 @@ fun <T> ConnectedGroup(
                             i == options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                             else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                         },
-                        modifier = Modifier.weight(1f).animateWidth(interaction).semantics { role = Role.RadioButton },
+                        // 4+ options (Today's filters): share the width by label length so "Upcoming"
+                        // fits beside "All", and trim the side padding.
+                        contentPadding = if (many) PaddingValues(horizontal = 6.dp) else PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.weight(if (many) label(o).length + 4f else 1f).animateWidth(interaction).semantics { role = Role.RadioButton },
                     ) {
                         icon?.let { Icon(painterResource(it(o)), null, Modifier.size(18.dp)); Spacer(Modifier.size(6.dp)) }
                         Text(label(o), maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -198,9 +198,9 @@ fun TodayScreen(
             if (blank && (filter == TodayFilter.All || filter == TodayFilter.Today)) {
                 item(key = "blank") {
                     EmptyState(
-                        icon = R.drawable.ic_wb_sunny, title = "A clear day",
+                        title = "A clear day",
                         body = "Nothing planned for today. Add a task with + or say it to the Quick add widget.",
-                        shape = MaterialShapes.Sunny, size = 220.dp,
+                        size = 220.dp,
                     )
                 }
                 return@LazyColumn
@@ -261,12 +261,10 @@ fun TodayScreen(
             }
             if (empty != null) item(key = "empty") {
                 EmptyState(
-                    icon = when (filter) { TodayFilter.Overdue -> R.drawable.ic_event_available; TodayFilter.Upcoming -> R.drawable.ic_date_range
-                        else -> R.drawable.ic_task_alt },
                     title = empty,
                     body = when (filter) { TodayFilter.Overdue -> "You're caught up."; TodayFilter.Upcoming -> "The week ahead is open."
                         else -> "Tick something off and it shows here." },
-                    shape = MaterialShapes.Clover8Leaf, size = 160.dp,
+                    size = 180.dp,
                 )
             }
         }
@@ -376,39 +374,15 @@ private fun HeroCard(state: TodayState, modifier: Modifier = Modifier) {
 /** Which part of the day the list shows (chips at the top). */
 enum class TodayFilter(val label: String) { All("All"), Overdue("Overdue"), Today("Today"), Upcoming("Upcoming"), Done("Done") }
 
-/** M3 filter chips, one per section, each with its count. Scrolls sideways on narrow phones. */
+/**
+ * The section switcher: the same Expressive connected ButtonGroup as Stats and Money (owner,
+ * 2026-11-21) — pressing one springs it wider and squeezes its neighbours.
+ */
 @Composable
 private fun FilterChips(state: TodayState, filter: TodayFilter, onPick: (TodayFilter) -> Unit) {
-    val c = MaterialTheme.colorScheme
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-    ) {
-        items(TodayFilter.entries, key = { it.name }) { f ->
-            val count = when (f) {
-                TodayFilter.All -> null
-                TodayFilter.Overdue -> state.overdue.size
-                TodayFilter.Today -> state.today.size
-                TodayFilter.Upcoming -> state.upcoming.size
-                TodayFilter.Done -> state.completed.size
-            }
-            val alert = f == TodayFilter.Overdue && state.overdue.isNotEmpty()
-            FilterChip(
-                selected = f == filter,
-                onClick = { onPick(f) },
-                label = { Text(if (count == null) f.label else "${f.label} $count") },
-                leadingIcon = if (f == filter) {
-                    { Icon(painterResource(R.drawable.ic_check), null, Modifier.size(FilterChipDefaults.IconSize)) }
-                } else null,
-                colors = FilterChipDefaults.filterChipColors(
-                    labelColor = if (alert) c.error else c.onSurfaceVariant,
-                    selectedContainerColor = if (alert) c.errorContainer else c.secondaryContainer,
-                    selectedLabelColor = if (alert) c.onErrorContainer else c.onSecondaryContainer,
-                    selectedLeadingIconColor = if (alert) c.onErrorContainer else c.onSecondaryContainer,
-                ),
-            )
-        }
-    }
+    app.kairo.ui.common.ConnectedGroup(
+        TodayFilter.entries, filter, { it.label }, Modifier.padding(bottom = 12.dp),
+    ) { onPick(it) }
 }
 
 private fun upcomingLabel(day: LocalDate): String =

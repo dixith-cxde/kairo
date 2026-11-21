@@ -146,15 +146,14 @@ fun MoneyScreen(
                                 val sp by countUp((spent / 100).toInt())
                                 val budget = overall?.let { b ->
                                     val left = b.limitPaise - spent
-                                    if (left >= 0) Summary("Left", Money.format(left), c.primary, onBudgets)
-                                    else Summary("Over", Money.format(-left), c.error, onBudgets)
-                                } ?: Summary("Budget", "Set up", c.primary, onBudgets)
+                                    val used = if (b.limitPaise > 0) spent.toFloat() / b.limitPaise else 0f
+                                    if (left >= 0) Summary("Left of ${Money.format(b.limitPaise)}", Money.format(left), c.primary, onBudgets, used)
+                                    else Summary("Over ${Money.format(b.limitPaise)} by", Money.format(-left), c.error, onBudgets, 1f)
+                                } ?: Summary("Monthly budget", "Set up", c.primary, onBudgets)
                                 SummaryGroup(
-                                    listOf(
-                                        Summary("Income", Money.format(inc * 100L), c.tertiary),
-                                        Summary("Spent", Money.format(sp * 100L), c.onSurface),
-                                        budget,
-                                    ),
+                                    Summary("Income", Money.format(inc * 100L), c.tertiary),
+                                    Summary("Spent", Money.format(sp * 100L), c.onSurface),
+                                    budget,
                                     Modifier.padding(end = 4.dp, bottom = 4.dp),
                                 )
                             }
@@ -166,10 +165,8 @@ fun MoneyScreen(
                 if (loaded.isEmpty()) {
                     item(key = "empty") {
                         EmptyState(
-                            icon = R.drawable.ic_account_balance_wallet,
                             title = "Start with an account",
                             body = "Add a bank account, card, wallet or cash, then track what comes in and goes out.",
-                            shape = MaterialShapes.Cookie12Sided,
                             size = 200.dp,
                             modifier = springItem().padding(top = 24.dp),
                             action = {
@@ -192,7 +189,6 @@ fun MoneyScreen(
                     MoneyTab.Activity -> {
                         if (days.isEmpty()) item(key = "a-empty") {
                             EmptyState(
-                                icon = R.drawable.ic_receipt_long,
                                 title = "No activity yet",
                                 body = "Spending and income you add with + show up here, by day.",
                                 size = 160.dp,
