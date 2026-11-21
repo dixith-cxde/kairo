@@ -157,8 +157,14 @@ fun SelectionTopBar(selection: Selection, allIds: List<Long>, modifier: Modifier
                 }
             },
             actions = {
-                TextButton(shapes = ButtonDefaults.shapes(), onClick = { if (selection.ids.size == allIds.size) selection.clear() else selection.setAll(allIds) }) {
-                    Text(if (selection.ids.size == allIds.size) "None" else "All")
+                val all = allIds.isNotEmpty() && selection.ids.containsAll(allIds)
+                androidx.compose.material3.FilledTonalButton(
+                    shapes = ButtonDefaults.shapes(), modifier = Modifier.padding(end = 8.dp),
+                    onClick = { if (all) selection.clear() else selection.setAll(allIds) },
+                ) {
+                    Icon(painterResource(R.drawable.ic_select_all), null, Modifier.size(18.dp))
+                    androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                    Text(if (all) "Select none" else "Select all")
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = KairoTheme.colors.bg),

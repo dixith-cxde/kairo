@@ -62,7 +62,7 @@ fun LockScreen(locked: Boolean, onUnlock: () -> Unit) {
                     Box(Modifier.size(112.dp).graphicsLayer { rotationZ = spin }.background(c.primaryContainer, MaterialShapes.Cookie9Sided.toShape()))
                     Icon(painterResource(R.drawable.ic_lock), null, tint = c.onPrimaryContainer, modifier = Modifier.size(44.dp))
                 }
-                Text("Kairo is locked", style = MaterialTheme.typography.headlineMediumEmphasized)
+                Text("Kairo is locked", style = MaterialTheme.typography.headlineMediumEmphasized, color = c.onSurface)
                 Text("Use your fingerprint, face or screen lock to open it.",
                     style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant, textAlign = TextAlign.Center)
                 Button(onClick = onUnlock, shapes = ButtonDefaults.shapes(), contentPadding = PaddingValues(horizontal = 32.dp),

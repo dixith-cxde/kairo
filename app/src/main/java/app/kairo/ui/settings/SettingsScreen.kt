@@ -187,7 +187,7 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text("Lock after", style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
-                        Connected(listOf(0, 60, 300), settings.lockAfterSec, { when (it) { 0 -> "Now"; 60 -> "1 min"; else -> "5 min" } }) {
+                        Connected(listOf(0, 60, 300), settings.lockAfterSec, { when (it) { 0 -> "Instant"; 60 -> "1 min"; else -> "5 min" } }) {
                             scope.launch { store.setLockAfter(it) }
                         }
                         Text(

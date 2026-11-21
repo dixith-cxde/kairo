@@ -190,10 +190,15 @@ fun Modifier.tourTarget(id: String, cornerRadius: androidx.compose.ui.unit.Dp): 
 private class Step(val id: String, val icon: Int, val title: String, val body: String)
 
 private val Steps = listOf(
+    Step("hero", R.drawable.ic_today, "Your day at a glance", "The ring fills as you finish today's tasks. When it closes, you're done for the day."),
+    Step("filters", R.drawable.ic_tune, "Slice the day", "Overdue, today, the week ahead or what you've done. Tap a chip to switch."),
     Step("search", R.drawable.ic_search, "Search everything", "Tasks, lists and money, from any tab."),
-    Step("add", R.drawable.ic_add_bold, "Create anything", "Tap + for a task, expense, income, transfer or list. It stays put when the bar tucks away as you scroll."),
-    Step("nav", R.drawable.ic_today, "Five tabs", "Today, Lists, Calendar, Money and Stats. You can also swipe between them."),
+    Step("focus", R.drawable.ic_timer, "Focus timer", "Start a focus session for a task, up to 5 hours, with a live notification."),
+    Step("settings", R.drawable.ic_settings, "Make it yours", "Theme, colors, app lock, widgets and importing from Ivy Wallet live in Settings."),
+    Step("add", R.drawable.ic_add_bold, "Create anything", "Tap + for a task, expense, income, transfer or list. Type naturally: \"gym tmrw 7am\". It stays put when the bar tucks away."),
+    Step("nav", R.drawable.ic_checklist, "Five tabs", "Today, Lists, Calendar, Money and Stats. On any task row, swipe left to complete or right to delete, or tap ⋮ for more."),
 )
+
 
 @Composable
 fun TourOverlay(onDone: () -> Unit) {

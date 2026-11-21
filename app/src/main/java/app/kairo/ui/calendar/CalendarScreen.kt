@@ -2,13 +2,14 @@
 
 package app.kairo.ui.calendar
 
-import app.kairo.ui.common.LocalOpenSearch
-import app.kairo.ui.common.SearchPill
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.IconButtonDefaults
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,21 +26,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuGroup
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,13 +56,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -66,41 +77,29 @@ import app.kairo.data.TaskRepository
 import app.kairo.data.calendar.CalEvent
 import app.kairo.data.calendar.PhoneCalendar
 import app.kairo.data.model.Task
-import app.kairo.ui.theme.KairoTheme
-import app.kairo.ui.today.TaskRow
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import app.kairo.ui.common.LocalOpenSearch
+import app.kairo.ui.common.SearchPill
 import app.kairo.ui.common.SelectionTopBar
+import app.kairo.ui.common.TabHeader
 import app.kairo.ui.common.TaskSelectionToolbar
+import app.kairo.ui.common.fullBleed
 import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.common.rememberSelection
 import app.kairo.ui.common.slowSpin
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.ui.graphics.graphicsLayer
-import kotlinx.coroutines.launch
+import app.kairo.ui.theme.KairoTheme
+import app.kairo.ui.today.TaskRow
 import kotlinx.coroutines.flow.drop
-import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
-import java.util.Locale
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.ToggleButton
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.semantics.role
-import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
+import java.util.Locale
 
 private enum class CalView(val label: String, val icon: Int) {
     Month("Month", R.drawable.ic_calendar_month), Week("Week", R.drawable.ic_date_range), Day("Day", R.drawable.ic_today)
@@ -168,13 +167,10 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
     val anchor = when (view) { CalView.Month -> monthAt(settled); CalView.Week -> YearMonth.from(weekAt(settled).plusDays(3)); CalView.Day -> YearMonth.from(dayAt(settled)) }
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(granted) { if (granted) calendar.changes().collect { tick++ } }
-    var refreshing by remember { mutableStateOf(false) }
     // Covers the month either side too, so neighbouring pages already have their events mid-swipe.
     val events by produceState(emptyList<CalEvent>(), anchor, granted, tick) {
         value = calendar.events(anchor.minusMonths(1).atDay(1).minusDays(7), anchor.plusMonths(1).atEndOfMonth().plusDays(8))
-        refreshing = false
     }
-    val pull = rememberPullToRefreshState()
 
     val tasksByDay = remember(tasks) { tasks.filter { it.due != null }.groupBy { it.due!! } }
     val eventDays = remember(events) {
@@ -212,109 +208,97 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
         eventCount = { d -> eventsOn(d).size },
     )
 
-    val title = when (view) {
-        CalView.Month -> monthAt(settled).format(DateTimeFormatter.ofPattern("MMMM yyyy"))
-        CalView.Week -> weekTitle(weekAt(settled))
-        CalView.Day -> dayAt(settled).format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+    // The month the visible page sits in (a week counts as the month its Thursday is in).
+    val shownMonth = when (view) {
+        CalView.Month -> monthAt(settled)
+        CalView.Week -> YearMonth.from(weekAt(settled).plusDays(3))
+        CalView.Day -> YearMonth.from(dayAt(settled))
     }
-    val unit = view.label.lowercase()
-    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val motion = MaterialTheme.motionScheme
+    val spatial = motion.defaultSpatialSpec<Float>()
+    val effects = motion.defaultEffectsSpec<Float>()
 
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val selection = rememberSelection()
     val entrance = rememberEntrance()
-    Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-        containerColor = k.bg,
-        bottomBar = { TaskSelectionToolbar(selection, dayTasks, lists, onOpenTask) },
-        topBar = {
-          Box {
-            LargeFlexibleTopAppBar(
-                title = { Text(title) },
-                actions = {
-                    SearchPill(LocalOpenSearch.current)
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
+
+    // Big month title, search, then one row: the view menu on the left and the chevrons on the right.
+    val header: @Composable (Modifier) -> Unit = { mod ->
+        TabHeader(
+            title = shownMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()),
+            subtitle = "${shownMonth.year}",
+            modifier = mod,
+            actions = { SearchPill(LocalOpenSearch.current) },
+            below = {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ViewMenu(
+                        view = view,
+                        onPick = { if (it != view) show(it) },
+                        onToday = {
+                            selected = today.toString()
+                            scope.launch { pager.animateScrollToPage(pageFor(view, today), animationSpec = spatial) }
+                        },
+                        onRefresh = { scope.launch { calendar.requestSync(); tick++ } },
+                    )
+                    Spacer(Modifier.weight(1f))
+                    val unit = view.label.lowercase()
+                    FilledTonalIconButton(shapes = IconButtonDefaults.shapes(), onClick = {
                         scope.launch { pager.animateScrollToPage(pager.currentPage - 1, animationSpec = spatial) }
                     }) { Icon(painterResource(R.drawable.ic_chevron_left), "Previous $unit") }
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
+                    FilledTonalIconButton(shapes = IconButtonDefaults.shapes(), onClick = {
                         scope.launch { pager.animateScrollToPage(pager.currentPage + 1, animationSpec = spatial) }
                     }) { Icon(painterResource(R.drawable.ic_chevron_right), "Next $unit") }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
-                scrollBehavior = scroll,
-            )
-            SelectionTopBar(selection, dayTasks.map { it.id })
-          }
-        },
-    ) { padding ->
-      Column(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
-        // Month / Week / Day: M3 Expressive connected button group.
-        Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-        ) {
-            CalView.entries.forEachIndexed { i, v ->
-                ToggleButton(
-                    checked = v == view,
-                    onCheckedChange = { if (v != view) show(v) },
-                    shapes = when (i) {
-                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                        CalView.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                    },
-                    modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                ) {
-                    Icon(painterResource(v.icon), null, Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                    Text(v.label, style = MaterialTheme.typography.labelLarge)
                 }
-            }
-        }
-        // Pull down to sync: M3 Expressive pull-to-refresh with the morphing LoadingIndicator.
-        PullToRefreshBox(
-            isRefreshing = refreshing,
-            onRefresh = {
-                refreshing = true
-                scope.launch { calendar.requestSync(); tick++ }
             },
-            state = pull,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter))
-            },
-        ) {
-          AnimatedContent(
-              targetState = view,
-              transitionSpec = { fadeIn(effects) togetherWith fadeOut(effects) },
-              label = "calView",
-          ) { v ->
+        )
+    }
+
+    Scaffold(
+        containerColor = k.bg,
+        bottomBar = { TaskSelectionToolbar(selection, dayTasks, lists, onOpenTask) },
+    ) { _ ->
+      Box(Modifier.fillMaxSize()) {
+        AnimatedContent(
+            targetState = view,
+            transitionSpec = { fadeIn(effects) togetherWith fadeOut(effects) },
+            modifier = Modifier.fillMaxSize(),
+            label = "calView",
+        ) { v ->
             when (v) {
+              // Week and Day: the header stays put; swipe on the dates to change week/day, the hours only scroll.
               CalView.Week -> Column(Modifier.fillMaxSize()) {
-                  if (!granted) PermissionCard(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
-                  WeekView(weekPager, weekAt, today, day, data, onPickDay = { show(CalView.Day, it) }, onOpenTask, Modifier.weight(1f))
+                  header(Modifier)
+                  if (!granted) PermissionCard(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+                  WeekView(weekPager, weekAt, today, day, data, onPickDay = { show(CalView.Day, it) }, onOpenTask, Modifier.weight(1f).padding(top = 8.dp))
               }
               CalView.Day -> Column(Modifier.fillMaxSize()) {
-                  if (!granted) PermissionCard(Modifier.padding(horizontal = 16.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+                  header(Modifier)
+                  if (!granted) PermissionCard(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
                   DayView(dayPager, dayAt, today, data, onOpenTask, Modifier.weight(1f))
               }
               CalView.Month -> LazyColumn(
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 140.dp), // clear the floating nav
                 modifier = Modifier.fillMaxSize(),
               ) {
+                item(key = "header") { header(Modifier.fullBleed()) }
                 item(key = "grid") {
                     // Swipe for months. Every month draws six weeks, so the height never jumps.
-                    HorizontalPager(monthPager, Modifier.fillMaxWidth(), pageSpacing = 16.dp, verticalAlignment = Alignment.Top) { page ->
+                    HorizontalPager(monthPager, Modifier.fillMaxWidth().padding(top = 8.dp), pageSpacing = 16.dp, verticalAlignment = Alignment.Top) { page ->
                         MonthGrid(monthAt(page), today, day, tasksByDay.keys, eventDays) { d -> selected = d.toString() }
                     }
                 }
                 if (!granted) item(key = "perm") {
-                    PermissionCard(Modifier.padding(top = 16.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
+                    PermissionCard(Modifier.padding(top = 24.dp)) { ask.launch(Manifest.permission.READ_CALENDAR) }
                 }
-                item(key = "hero") { DayHero(day, today, dayTasks.count { !it.done }, dayEvents.size) }
-                if (dayEvents.isEmpty() && dayTasks.isEmpty()) item(key = "empty") { EmptyDay() }
+                item(key = "hero") { Box(Modifier.padding(top = 16.dp)) { DayHero(day, today, dayTasks.count { !it.done }, dayEvents.size) } }
+                if (dayEvents.isEmpty() && dayTasks.isEmpty()) item(key = "empty") {
+                    Box(Modifier.animateItem(fadeInSpec = motion.defaultEffectsSpec(), placementSpec = motion.defaultSpatialSpec(), fadeOutSpec = motion.fastEffectsSpec())) { EmptyDay() }
+                }
                 itemsIndexed(dayEvents, key = { _, e -> "e${e.eventId}-${e.start}" }) { i, e ->
-                    Column(with(entrance) { Modifier.enter("e${e.eventId}-${e.start}", i) }) {
+                    Column(
+                        Modifier
+                            .animateItem(fadeInSpec = motion.defaultEffectsSpec(), placementSpec = motion.defaultSpatialSpec(), fadeOutSpec = motion.fastEffectsSpec())
+                            .then(with(entrance) { Modifier.enter("e${e.eventId}-${e.start}", i) }),
+                    ) {
                         SegmentedListItem(
                             shapes = ListItemDefaults.segmentedShapes(i, dayEvents.size + dayTasks.size),
                             colors = ListItemDefaults.segmentedColors(containerColor = k.item),
@@ -334,7 +318,11 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
                     }
                 }
                 itemsIndexed(dayTasks, key = { _, t -> "t${t.id}" }) { i, t ->
-                    Column(with(entrance) { Modifier.enter("$day-t${t.id}", dayEvents.size + i) }) {
+                    Column(
+                        Modifier
+                            .animateItem(fadeInSpec = motion.defaultEffectsSpec(), placementSpec = motion.defaultSpatialSpec(), fadeOutSpec = motion.fastEffectsSpec())
+                            .then(with(entrance) { Modifier.enter("$day-t${t.id}", dayEvents.size + i) }),
+                    ) {
                         (listMap[t.listId] ?: app.kairo.data.model.TaskList.None).let { l ->
                             TaskRow(t, l, dayEvents.size + i, dayEvents.size + dayTasks.size,
                                 onToggle = { scope.launch { repo.setDone(it, !it.done) } }, onOpen = onOpenTask, selection = selection)
@@ -344,9 +332,61 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
                 }
               }
             }
-          }
         }
+        // Selection bar floats over the header instead of pushing the content down.
+        SelectionTopBar(selection, dayTasks.map { it.id }, Modifier.align(Alignment.TopCenter))
       }
+    }
+}
+
+/**
+ * The view switcher: one tonal pill (current view's icon, name, chevron) that opens the Expressive
+ * grouped menu: Month / Week / Day, then Today and Refresh.
+ */
+@Composable
+private fun ViewMenu(view: CalView, onPick: (CalView) -> Unit, onToday: () -> Unit, onRefresh: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FilledTonalButton(
+            onClick = { open = true },
+            shapes = ButtonDefaults.shapes(),
+            contentPadding = PaddingValues(start = 16.dp, end = 12.dp),
+            modifier = Modifier.height(40.dp).semantics { contentDescription = "View: ${view.label}. Change view" },
+        ) {
+            Icon(painterResource(view.icon), null, Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text(view.label, style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.size(4.dp))
+            Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.size(ButtonDefaults.IconSize))
+        }
+        DropdownMenuPopup(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 2)) {
+                CalView.entries.forEach { v ->
+                    SelectableDropdownMenuItem(
+                        selected = v == view,
+                        onClick = { onPick(v); open = false },
+                        text = { Text(v.label) },
+                        shapes = MenuDefaults.itemShapes(),
+                        leadingIcon = { Icon(painterResource(v.icon), null, Modifier.size(20.dp)) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(MenuDefaults.GroupSpacing))
+            DropdownMenuGroup(shapes = MenuDefaults.groupShape(1, 2)) {
+                DropdownMenuItem(
+                    text = { Text("Today") },
+                    onClick = { onToday(); open = false },
+                    shapes = MenuDefaults.itemShapes(),
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_event_available), null, Modifier.size(20.dp)) },
+                )
+                DropdownMenuItem(
+                    text = { Text("Refresh") },
+                    onClick = { onRefresh(); open = false },
+                    shapes = MenuDefaults.itemShapes(),
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_repeat), null, Modifier.size(20.dp)) },
+                )
+            }
+        }
     }
 }
 
@@ -359,14 +399,6 @@ private fun occursOn(e: CalEvent, d: LocalDate): Boolean {
     return d.isBefore(en) || (d == en && (e.end.toLocalTime() > LocalTime.MIDNIGHT || e.start == e.end))
 }
 
-private fun weekTitle(start: LocalDate): String {
-    val end = start.plusDays(6)
-    return when {
-        start.month == end.month -> start.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
-        start.year == end.year -> "${start.format(DateTimeFormatter.ofPattern("MMM"))} – ${end.format(DateTimeFormatter.ofPattern("MMM yyyy"))}"
-        else -> "${start.format(DateTimeFormatter.ofPattern("MMM yyyy"))} – ${end.format(DateTimeFormatter.ofPattern("MMM yyyy"))}"
-    }
-}
 
 @Composable
 private fun PermissionCard(modifier: Modifier = Modifier, onAllow: () -> Unit) {

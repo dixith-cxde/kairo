@@ -91,7 +91,9 @@ fun FloatingNavBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
+            .padding(start = 16.dp, end = 16.dp, bottom = 20.dp)
+            // The tour spotlights bar + FAB as one connected pill.
+            .then(with(app.kairo.ui.onboarding.TourTargetScope) { Modifier.target("nav", OuterCorner) }),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -102,7 +104,6 @@ fun FloatingNavBar(
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
-                .then(with(app.kairo.ui.onboarding.TourTargetScope) { Modifier.target("nav", OuterCorner) })
                 .graphicsLayer { translationY = hide * 120.dp.toPx(); alpha = (1f - hide * 1.4f).coerceIn(0f, 1f) }
                 .height(BarHeight)
                 .floatShadow(barShape, surfaces.floatShadow)
