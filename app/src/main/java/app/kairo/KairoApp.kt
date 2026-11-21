@@ -213,7 +213,8 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                         is Route.TabRoute -> HorizontalPager(
                             state = pager,
                             // No tab swiping while a screen is selecting rows (its toolbar owns the gestures).
-                            userScrollEnabled = selecting.value == 0,
+                            // Off: rows swipe to complete/delete instead (owner, 2026-11-21). Tabs change from the nav.
+                            userScrollEnabled = false,
                             key = { Tab.entries[it].name },
                             modifier = Modifier.fillMaxSize(),
                         ) { page ->

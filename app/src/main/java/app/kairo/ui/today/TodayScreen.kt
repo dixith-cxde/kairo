@@ -98,6 +98,9 @@ import androidx.compose.ui.unit.dp
 import app.kairo.R
 import app.kairo.ui.common.EmptyState
 import app.kairo.ui.common.TabHeader
+import app.kairo.ui.common.TaskSwipe
+import app.kairo.ui.common.TaskOptionsSheet
+import app.kairo.ui.common.MoreButton
 import app.kairo.ui.common.fullBleed
 import app.kairo.ui.onboarding.tourTarget
 import app.kairo.data.model.Priority
@@ -482,6 +485,10 @@ fun TaskRow(
     val titleColor by animateColorAsState(
         if (shownDone) c.onSurfaceVariant else c.onSurface, motion.defaultEffectsSpec(), label = "title",
     )
+    var options by remember { mutableStateOf(false) }
+    if (options) TaskOptionsSheet(task, onOpen, onToggle, onDismiss = { options = false })
+    // Swipe left = done, swipe right = delete (owner, 2026-11-21); off while selecting.
+    TaskSwipe(task, enabled = selection?.active != true, onComplete = onToggle) {
     // M3 Expressive selectable segmented item: it morphs to the selected shape and color itself.
     SegmentedListItem(
         selected = selected,
@@ -532,6 +539,7 @@ fun TaskRow(
           }
         },
         supportingContent = { TaskMeta(task, list, overdue) },
+        trailingContent = if (selection?.active == true) null else { { MoreButton("More for ${task.title}") { options = true } } },
     ) {
         Text(
             task.title,
@@ -541,6 +549,7 @@ fun TaskRow(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+    }
     }
 }
 
