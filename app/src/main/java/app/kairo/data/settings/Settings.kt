@@ -22,6 +22,8 @@ data class AppSettings(
     val appLock: Boolean = false,
     val lockAfterSec: Int = 0,               // 0 = every time, 60, 300 (same choices as Stash)
     val blockScreenshots: Boolean = false,   // FLAG_SECURE: no screenshots, recordings or recents preview
+    val onboarded: Boolean = false,          // welcome pages seen
+    val tourDone: Boolean = false,           // spotlight tour seen
 )
 
 private val Context.store by preferencesDataStore("settings")
@@ -35,6 +37,8 @@ class SettingsStore(private val context: Context) {
     private val appLock = booleanPreferencesKey("appLock")
     private val lockAfter = androidx.datastore.preferences.core.intPreferencesKey("lockAfter")
     private val secure = booleanPreferencesKey("blockScreenshots")
+    private val onboardedKey = booleanPreferencesKey("onboarded")
+    private val tourKey = booleanPreferencesKey("tourDone")
 
     val settings: Flow<AppSettings> = context.store.data.map { p: Preferences ->
         AppSettings(
@@ -45,6 +49,8 @@ class SettingsStore(private val context: Context) {
             appLock = p[appLock] ?: false,
             lockAfterSec = p[lockAfter] ?: 0,
             blockScreenshots = p[secure] ?: false,
+            onboarded = p[onboardedKey] ?: false,
+            tourDone = p[tourKey] ?: false,
         )
     }
 
@@ -56,4 +62,6 @@ class SettingsStore(private val context: Context) {
     suspend fun setAppLock(v: Boolean) = context.store.edit { it[appLock] = v }
     suspend fun setLockAfter(sec: Int) = context.store.edit { it[lockAfter] = sec }
     suspend fun setBlockScreenshots(v: Boolean) = context.store.edit { it[secure] = v }
+    suspend fun setOnboarded(v: Boolean) = context.store.edit { it[onboardedKey] = v }
+    suspend fun setTourDone(v: Boolean) = context.store.edit { it[tourKey] = v }
 }

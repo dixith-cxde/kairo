@@ -29,6 +29,7 @@ val LocalOpenSearch = androidx.compose.runtime.staticCompositionLocalOf<() -> Un
 fun SearchPill(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier
+            .then(with(app.kairo.ui.onboarding.TourTargetScope) { Modifier.target("search", 20.dp) })
             .height(40.dp)
             .clip(CircleShape)
             .background(KairoTheme.colors.itemHigh)

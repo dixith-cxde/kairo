@@ -102,6 +102,7 @@ fun FloatingNavBar(
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
+                .then(with(app.kairo.ui.onboarding.TourTargetScope) { Modifier.target("nav", OuterCorner) })
                 .graphicsLayer { translationY = hide * 120.dp.toPx(); alpha = (1f - hide * 1.4f).coerceIn(0f, 1f) }
                 .height(BarHeight)
                 .floatShadow(barShape, surfaces.floatShadow)
@@ -209,6 +210,7 @@ private fun CreateFab(onClick: () -> Unit, open: Boolean, collapsed: Float) {
         interactionSource = interaction,
         modifier = Modifier
             .size(side)
+            .then(with(app.kairo.ui.onboarding.TourTargetScope) { Modifier.target("add", 20.dp) })
             .floatShadow(shape, KairoTheme.colors.floatShadow),
     ) {
         // + turns into × while the create menu is open.

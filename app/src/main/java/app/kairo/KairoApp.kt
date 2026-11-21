@@ -72,6 +72,8 @@ import app.kairo.navigation.Tab
 import app.kairo.ui.detail.TaskDetailScreen
 import app.kairo.ui.detail.TaskDetailViewModel
 import app.kairo.ui.nav.FloatingNavBar
+import app.kairo.ui.onboarding.TourOverlay
+import app.kairo.ui.onboarding.WelcomeScreen
 import app.kairo.ui.focus.FocusScreen
 import app.kairo.ui.search.SearchScreen
 import app.kairo.ui.common.LocalOpenSearch
@@ -286,6 +288,14 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
 
         // One snackbar for the app, above the floating nav (64dp + 20dp + gap).
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 92.dp))
+
+        // First run: welcome pages, then the spotlight tour on Today (Stash's pattern).
+        val prefs by app.settings.settings.collectAsStateWithLifecycle(initialValue = null)
+        prefs?.let { p ->
+            if (!p.onboarded) WelcomeScreen { scope.launch { app.settings.setOnboarded(true) } }
+            else if (!p.tourDone && backStack.size == 1 && currentTab == Tab.Today && sheet == null && !createMenu)
+                TourOverlay { scope.launch { app.settings.setTourDone(true) } }
+        }
 
         when (val sh = sheet) {
             null -> {}
