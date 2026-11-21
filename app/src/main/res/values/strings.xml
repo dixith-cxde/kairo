@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Kairo</string>
+    <string name="widget_today_desc">Today\'s tasks with checkboxes</string>
+    <string name="widget_progress_desc">How much of today is done</string>
+    <string name="widget_money_desc">Spent this month and budget</string>
 </resources>

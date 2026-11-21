@@ -11,6 +11,10 @@ import app.kairo.reminders.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import app.kairo.widgets.updateAllWidgets
 
 /** App-wide objects, created once. (Manual wiring: small app, no DI framework needed.) */
 class KairoApplication : Application() {
@@ -31,6 +35,13 @@ class KairoApplication : Application() {
             money.seedIfEmpty(sample = debug)
             // Keep alarms in step with the database: any change to a task re-syncs its reminder.
             repository.tasks.collect { reminders.sync(it) }
+        }
+        // Widgets follow the data: refresh shortly after tasks or money change.
+        appScope.launch {
+            combine(repository.tasks, money.transactions) { a, b -> a.size + b.size }.collectLatest {
+                delay(500)
+                updateAllWidgets(this@KairoApplication)
+            }
         }
     }
 }

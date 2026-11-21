@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,7 +69,7 @@ import java.time.LocalDate
  * Today is always at the bottom; another tab sits on top of it; detail screens stack on top of a tab.
  */
 @Composable
-fun KairoApp() {
+fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     val backStack: SnapshotStateList<Route> = rememberSaveable(saver = StackSaver) {
         mutableListOf<Route>(Route.TabRoute(Tab.Today)).toMutableStateList()
     }
@@ -88,6 +89,15 @@ fun KairoApp() {
     }
     fun open(route: Route) = backStack.add(route)
     fun back() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
+
+    // Widget shortcuts.
+    LaunchedEffect(action) {
+        when (action) {
+            MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today); showQuickAdd = true }
+            MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money); showQuickAdd = true }
+        }
+        if (action != null) onActionHandled()
+    }
 
     // The floating nav hides while content scrolls down and returns on scroll up (canvas AppBars board).
     var navVisible by remember { mutableStateOf(true) }
