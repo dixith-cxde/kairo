@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -187,15 +188,19 @@ private fun HeroCard(state: TodayState) {
             .clip(RoundedCornerShape(32.dp))
             .background(c.primaryContainer),
     ) {
-        Box(
+        // Decoration must not size the card: matchParentSize + unbounded wrap.
+        Box(Modifier.matchParentSize()) {
+          Box(
             Modifier
                 .align(Alignment.TopEnd)
+                .wrapContentSize(align = Alignment.TopEnd, unbounded = true)
                 .offset(x = 56.dp, y = (-64).dp)
                 .size(210.dp)
                 .rotate(12f)
                 .alpha(0.10f)
                 .background(c.onPrimaryContainer, MaterialShapes.Cookie12Sided.toShape()),
-        )
+          )
+        }
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 20.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
