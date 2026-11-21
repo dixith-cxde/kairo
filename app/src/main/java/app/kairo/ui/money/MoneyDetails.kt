@@ -127,6 +127,7 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
         fun signed(t: app.kairo.data.db.TransactionEntity) = when (t.kind) { TxKind.Income -> t.amountPaise; TxKind.Expense -> -t.amountPaise; TxKind.Transfer -> t.amountPaise }
         (29 downTo 0).map { d -> val day = today.minusDays(d.toLong()); b.balancePaise - all.filter { it.date.isAfter(day) }.sumOf(::signed) }
     }
+    val selection = app.kairo.ui.common.rememberSelection()
     if (editing) AccountSheet(money, b.account, canDelete = true, onDismiss = { editing = false }, onDeleted = onBack)
     adding?.let { kind ->
         AddTransactionSheet(money, accounts, cats, initialKind = TxKind.valueOf(kind), initialAccount = accountId, onDismiss = { adding = null })
@@ -134,7 +135,8 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
     DetailScaffold(b.account.name, onBack, actions = {
         IconButton(shapes = IconButtonDefaults.shapes(), onClick = { editing = true }) { Icon(painterResource(R.drawable.ic_edit), "Edit account") }
     }) { padding ->
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp)) {
+      Box(Modifier.fillMaxSize()) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 140.dp)) {
             item(key = "hero") {
                 val on = k.onContainer(b.account.color)
                 val spin by app.kairo.ui.common.slowSpin(60_000)
@@ -219,14 +221,20 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
                 }
                 list.forEachIndexed { i, tx ->
                     item(key = "t${tx.id}") {
-                        Column {
-                            TxRow(tx, tx.categoryId?.let(catMap::get), b.account, i, list.size)
+                        Column(Modifier.animateItem()) {
+                            TxRow(tx, tx.categoryId?.let(catMap::get), b.account, i, list.size,
+                                selected = tx.id in selection, selecting = selection.active,
+                                onLongClick = { selection.toggle(tx.id) },
+                            ) { if (selection.active) selection.toggle(tx.id) }
                             if (i < list.lastIndex) SegGap()
                         }
                     }
                 }
             }
         }
+        app.kairo.ui.common.SelectionTopBar(selection, all.map { it.id }, Modifier.align(Alignment.TopCenter))
+        app.kairo.ui.common.MoneySelectionToolbar(selection, all, Modifier.align(Alignment.BottomCenter))
+      }
     }
 }
 

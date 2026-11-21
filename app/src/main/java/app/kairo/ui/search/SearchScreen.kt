@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairo.KairoApplication
 import app.kairo.R
+import app.kairo.ui.common.SelectionTopBar
+import app.kairo.ui.common.TaskSelectionToolbar
+import app.kairo.ui.common.MoneySelectionToolbar
+import app.kairo.ui.common.rememberSelection
 import app.kairo.data.model.TaskList
 import app.kairo.data.model.Task
 import app.kairo.ui.common.rememberEntrance
@@ -73,6 +77,10 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
         t.note.contains(q, true) || t.tags.contains(q, true) || (t.categoryId?.let { catMap[it]?.name?.contains(q, true) } == true)
     }.take(30)
 
+    val taskSelection = rememberSelection()
+    val txSelection = rememberSelection()
+    val listsAll by app.repository.lists.collectAsStateWithLifecycle(initialValue = emptyList())
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().padding(top = 8.dp).statusBarsPadding()) {
         // M3 SearchBar with its input field; back arrow leaves search.
         SearchBar(
@@ -118,7 +126,7 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
                 itemsIndexed(foundTasks, key = { _, t -> "t${t.id}" }) { i, t ->
                     Column(with(entrance) { Modifier.enter("t${t.id}", i) }) {
                         (listMap[t.listId] ?: TaskList.None).let { l ->
-                            TaskRow(t, l, i, foundTasks.size, onToggle = { scope.launch { app.repository.setDone(it, !it.done) } }, onOpen = onOpenTask)
+                            TaskRow(t, l, i, foundTasks.size, onToggle = { scope.launch { app.repository.setDone(it, !it.done) } }, onOpen = onOpenTask, selection = taskSelection)
                         }
                         if (i < foundTasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                     }
@@ -128,12 +136,21 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
                 item { Header("Money") }
                 itemsIndexed(foundTx, key = { _, t -> "x${t.id}" }) { i, t ->
                     Column(with(entrance) { Modifier.enter("x${t.id}", i) }) {
-                        TxRow(t, t.categoryId?.let(catMap::get), accMap[t.accountId], i, foundTx.size) { onOpenAccount(t.accountId) }
+                        TxRow(t, t.categoryId?.let(catMap::get), accMap[t.accountId], i, foundTx.size,
+                            selected = t.id in txSelection, selecting = txSelection.active,
+                            onLongClick = { txSelection.toggle(t.id) },
+                        ) { if (txSelection.active) txSelection.toggle(t.id) else onOpenAccount(t.accountId) }
                         if (i < foundTx.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                     }
                 }
             }
         }
+    }
+    // Long-press results to select them; the same toolbars as the tabs.
+    SelectionTopBar(taskSelection, foundTasks.map { it.id }, Modifier.align(androidx.compose.ui.Alignment.TopCenter))
+    TaskSelectionToolbar(taskSelection, foundTasks, listsAll, onOpenTask, modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter))
+    SelectionTopBar(txSelection, foundTx.map { it.id }, Modifier.align(androidx.compose.ui.Alignment.TopCenter))
+    MoneySelectionToolbar(txSelection, foundTx, Modifier.align(androidx.compose.ui.Alignment.BottomCenter))
     }
 }
 

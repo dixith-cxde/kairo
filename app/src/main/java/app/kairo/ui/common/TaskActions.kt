@@ -126,7 +126,7 @@ fun TaskOptionsSheet(task: Task, onOpen: (Task) -> Unit, onToggle: (Task) -> Uni
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Text(task.title, style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 2,
                 modifier = Modifier.padding(start = 4.dp, bottom = 16.dp))
-            val items = listOf(
+            val items = listOf<Triple<Int, String, () -> Unit>>(
                 Triple(R.drawable.ic_open_in_full, "Open") { close { onOpen(task) } },
                 Triple(R.drawable.ic_check, if (task.done) "Mark not done" else "Mark done") { close { onToggle(task) } },
                 Triple(R.drawable.ic_event, "Reschedule") { reschedule = true },
