@@ -412,7 +412,7 @@ private fun LazyListScope.taskGroup(
             ).then(entrance?.run { Modifier.enter("$keyPrefix${task.id}", i + 1) } ?: Modifier),
         ) {
             if (indexOffset > 0) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
-            TaskRow(task, lists.getValue(task.listId), i + indexOffset, tasks.size + indexOffset, onToggle, onOpen, overdue, selection)
+            TaskRow(task, lists[task.listId] ?: TaskList.None, i + indexOffset, tasks.size + indexOffset, onToggle, onOpen, overdue, selection)
             if (i < tasks.lastIndex && indexOffset == 0) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
         }
     }

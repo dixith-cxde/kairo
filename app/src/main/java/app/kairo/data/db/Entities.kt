@@ -28,7 +28,7 @@ data class ListEntity(
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
-    val listId: Long,
+    val listId: Long? = null, // v6: optional, no list = Inbox (no default lists, owner 2026-11-21)
     val notes: String = "",
     val due: LocalDate? = null,
     val time: LocalTime? = null,

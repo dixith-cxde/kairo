@@ -323,7 +323,7 @@ fun ListDetailScreen(vm: ListDetailViewModel, onBack: () -> Unit, onOpenTask: (T
                         placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
                         fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
                     ).then(with(entrance) { Modifier.enter("$title-${t.id}", i) })) {
-                        TaskRow(t, s.lists.getValue(t.listId), i, tasks.size, vm::toggle, onOpenTask, overdue = title == "Overdue", selection = selection)
+                        TaskRow(t, s.lists[t.listId] ?: TaskList.None, i, tasks.size, vm::toggle, onOpenTask, overdue = title == "Overdue", selection = selection)
                         if (i < tasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                     }
                 }

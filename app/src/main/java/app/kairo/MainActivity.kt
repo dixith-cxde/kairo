@@ -113,6 +113,8 @@ class MainActivity : FragmentActivity() {
         const val ACTION_FOCUS = "focus"
         const val ACTION_VOICE_ADD = "voice_add"
         const val ACTION_STATS = "stats"
+        const val ACTION_ADD_INCOME = "add_income"
+        const val ACTION_ADD_TRANSFER = "add_transfer"
         /** "task:12" opens that task. */
         fun taskAction(id: Long) = "task:$id"
     }

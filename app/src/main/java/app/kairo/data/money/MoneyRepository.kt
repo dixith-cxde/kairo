@@ -89,33 +89,23 @@ class MoneyRepository(db: KairoDatabase) {
         dao.updateRecurring(r.copy(nextDue = r.nextDue.plusMonths(1)))
     }
 
-    suspend fun seedIfEmpty(sample: Boolean) {
+    /**
+     * Categories only (owner, 2026-11-21: no default accounts or other data). Debug builds also get
+     * sample accounts and transactions. Older installs lose the untouched default accounts once.
+     */
+    suspend fun seedIfEmpty(sample: Boolean, cleanDefaults: Boolean) {
         dao.migrateShapes()
-        if (dao.accountCount() > 0) return
-        val acc = if (sample) listOf(
+        if (cleanDefaults) { dao.deleteIfUnused("Personal"); dao.deleteIfUnused("Cash") }
+        if (dao.categoryCount() == 0) seedCategories()
+        if (!sample || dao.accountCount() > 0) return
+        val catIds = dao.categoryIds()
+        val acc = listOf(
             AccountEntity(name = "Personal", type = AccountType.Bank, color = ListColor.Indigo, openingPaise = 85_000_00),
             AccountEntity(name = "Shared", type = AccountType.Bank, color = ListColor.Teal, openingPaise = 42_000_00, position = 1),
             AccountEntity(name = "Savings", type = AccountType.Bank, color = ListColor.Green, openingPaise = 2_40_000_00, position = 2),
             AccountEntity(name = "Cash", type = AccountType.Cash, color = ListColor.Amber, openingPaise = 6_500_00, position = 3),
-        ) else listOf(
-            AccountEntity(name = "Personal", type = AccountType.Bank, color = ListColor.Indigo),
-            AccountEntity(name = "Cash", type = AccountType.Cash, color = ListColor.Amber, position = 1),
         )
         val accIds = acc.map { dao.insertAccount(it) }
-        val cats = listOf(
-            CategoryEntity(name = "Food", icon = "restaurant", color = ListColor.Coral, shape = ListShape.Cookie6),
-            CategoryEntity(name = "Groceries", icon = "shopping_cart", color = ListColor.Green, shape = ListShape.Clover),
-            CategoryEntity(name = "Transport", icon = "directions_car", color = ListColor.Indigo, shape = ListShape.Pentagon),
-            CategoryEntity(name = "Shopping", icon = "shopping_bag", color = ListColor.Pink, shape = ListShape.Gem),
-            CategoryEntity(name = "Bills", icon = "receipt_long", color = ListColor.Amber, shape = ListShape.Hexagon),
-            CategoryEntity(name = "Health", icon = "medical_services", color = ListColor.Teal, shape = ListShape.Triangle),
-            CategoryEntity(name = "Fun", icon = "sports_esports", color = ListColor.Violet, shape = ListShape.Cookie9),
-            CategoryEntity(name = "Other", icon = "category", color = ListColor.Indigo, shape = ListShape.Square),
-            CategoryEntity(name = "Salary", icon = "payments", color = ListColor.Green, shape = ListShape.Cookie9, income = true),
-            CategoryEntity(name = "Other income", icon = "savings", color = ListColor.Teal, shape = ListShape.Square, income = true),
-        )
-        val catIds = cats.map { dao.insertCategory(it) }
-        if (!sample) return
         val today = LocalDate.now()
         dao.insertBudget(BudgetEntity(limitPaise = 40_000_00))
         dao.insertBudget(BudgetEntity(categoryId = catIds[0], limitPaise = 8_000_00))
@@ -141,5 +131,21 @@ class MoneyRepository(db: KairoDatabase) {
             categoryId = catIds[6], monthlyDay = 18, nextDue = today.plusDays(14)))
         dao.insertRecurring(RecurringEntity(name = "Spotify", kind = RecurringKind.Subscription, amountPaise = 119_00, accountId = accIds[0],
             categoryId = catIds[6], monthlyDay = 22, nextDue = today.plusDays(18)))
+    }
+
+    private suspend fun seedCategories() {
+        val cats = listOf(
+            CategoryEntity(name = "Food", icon = "restaurant", color = ListColor.Coral, shape = ListShape.Cookie6),
+            CategoryEntity(name = "Groceries", icon = "shopping_cart", color = ListColor.Green, shape = ListShape.Clover),
+            CategoryEntity(name = "Transport", icon = "directions_car", color = ListColor.Indigo, shape = ListShape.Pentagon),
+            CategoryEntity(name = "Shopping", icon = "shopping_bag", color = ListColor.Pink, shape = ListShape.Gem),
+            CategoryEntity(name = "Bills", icon = "receipt_long", color = ListColor.Amber, shape = ListShape.Hexagon),
+            CategoryEntity(name = "Health", icon = "medical_services", color = ListColor.Teal, shape = ListShape.Triangle),
+            CategoryEntity(name = "Fun", icon = "sports_esports", color = ListColor.Violet, shape = ListShape.Cookie9),
+            CategoryEntity(name = "Other", icon = "category", color = ListColor.Indigo, shape = ListShape.Square),
+            CategoryEntity(name = "Salary", icon = "payments", color = ListColor.Green, shape = ListShape.Cookie9, income = true),
+            CategoryEntity(name = "Other income", icon = "savings", color = ListColor.Teal, shape = ListShape.Square, income = true),
+        )
+        cats.forEach { dao.insertCategory(it) }
     }
 }

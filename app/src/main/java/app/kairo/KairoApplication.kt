@@ -33,8 +33,12 @@ class KairoApplication : Application() {
         ReminderScheduler.createChannel(this)
         app.kairo.focus.FocusController.createChannels(this)
         appScope.launch {
-            repository.seedIfEmpty(sampleTasks = debug)
-            money.seedIfEmpty(sample = debug)
+            // One-time cleanup of the old default lists/accounts (only ones never used).
+            val prefs = getSharedPreferences("seed", MODE_PRIVATE)
+            val clean = !debug && !prefs.getBoolean("defaultsCleaned", false)
+            repository.seedIfEmpty(sampleTasks = debug, cleanDefaults = clean)
+            money.seedIfEmpty(sample = debug, cleanDefaults = clean)
+            if (clean) prefs.edit().putBoolean("defaultsCleaned", true).apply()
             // Keep alarms in step with the database: any change to a task re-syncs its reminder.
             repository.tasks.collect { reminders.sync(it) }
         }

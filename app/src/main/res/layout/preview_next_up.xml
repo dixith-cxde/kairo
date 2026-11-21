@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wp_bg_card" android:paddingHorizontal="12dp" android:gravity="center_vertical" android:orientation="horizontal">
+ <ImageView android:layout_width="44dp" android:layout_height="44dp" android:padding="11dp" android:background="@drawable/wp_bg_container_oval" android:src="@drawable/ic_bolt" android:tint="@color/wp_on_container" />
+ <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:orientation="vertical">
+  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="9:30 AM" android:textStyle="bold" android:textSize="12sp" android:textColor="@color/wp_primary" />
+  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Standup notes" android:textSize="14sp" android:textColor="@color/wp_on" />
+ </LinearLayout>
+</LinearLayout>

@@ -88,7 +88,7 @@ import java.time.format.FormatStyle
 fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () -> Unit) {
     val task by vm.task.collectAsStateWithLifecycle()
     val t = task ?: return
-    val list = lists.firstOrNull { it.id == t.listId } ?: return
+    val list = lists.firstOrNull { it.id == t.listId } ?: TaskList.None
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     val haptic = LocalHapticFeedback.current
@@ -129,7 +129,7 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                         label = { Text(list.name) },
                         leadingIcon = { Box(Modifier.size(14.dp).background(k.accent(list.color), list.shape.polygon.toShape())) },
                     )
-                    ListPickerMenu(listMenu, lists, t.listId, onDismiss = { listMenu = false }) { l -> vm.edit { it.copy(listId = l.id) } }
+                    ListPickerMenu(listMenu, lists, t.listId, onDismiss = { listMenu = false }) { l -> vm.edit { it.copy(listId = l.id.takeIf { id -> id > 0 }) } }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {

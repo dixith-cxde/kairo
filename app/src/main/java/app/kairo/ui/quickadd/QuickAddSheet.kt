@@ -101,16 +101,17 @@ fun QuickAddSheet(
 
     val parsed = remember(text) { QuickAddParser.parse(text) }
     val tokenList = parsed.listName?.let { n -> lists.firstOrNull { it.name.equals(n, ignoreCase = true) } }
-    val list = pickedList ?: tokenList ?: lists.firstOrNull { it.name == "Personal" } ?: lists.firstOrNull()
+    // No list picked = Inbox (no default lists, owner 2026-11-21).
+    val list = (pickedList ?: tokenList)?.takeIf { it.id > 0 }
     val due = dateOverride?.let { it.date } ?: parsed.due ?: defaultDue
     val time = dateOverride?.let { it.time } ?: parsed.time
     val priority = priorityOverride ?: parsed.priority ?: Priority.None
 
     fun close() = scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
     fun submit() {
-        if (parsed.title.isBlank() || list == null) return
+        if (parsed.title.isBlank()) return
         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
-        onAdd(Task(0, parsed.title, list.id, due, time, priority, reminder = reminder))
+        onAdd(Task(0, parsed.title, list?.id, due, time, priority, reminder = reminder))
         close() // done → the drawer closes (owner, 2026-11-21)
     }
 
@@ -142,7 +143,7 @@ fun QuickAddSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(Modifier.padding(horizontal = 20.dp)) {
             Text(
-                "New task in ${list?.name ?: "…"}",
+                "New task in ${list?.name ?: "Inbox"}",
                 style = MaterialTheme.typography.labelMediumEmphasized,
                 color = c.primary,
             )
@@ -178,7 +179,7 @@ fun QuickAddSheet(
                         tint = prioColor(priority),
                     )
                 }
-                DropdownMenuPopup(expanded = prioMenu, onDismissRequest = { prioMenu = false }) {
+                DropdownMenuPopup(expanded = prioMenu, onDismissRequest = { prioMenu = false }, properties = app.kairo.ui.common.KeepKeyboard) {
                     DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                         listOf(Priority.High, Priority.Medium, Priority.Low, Priority.None).forEach { p ->
                             SelectableDropdownMenuItem(

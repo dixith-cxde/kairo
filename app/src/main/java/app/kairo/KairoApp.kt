@@ -146,6 +146,8 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         when (action) {
             MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today, animate = false); quickAddText = ""; sheet = "task" }
             MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money, animate = false); sheet = TxKind.Expense.name }
+            MainActivity.ACTION_ADD_INCOME -> { select(Tab.Money, animate = false); sheet = TxKind.Income.name }
+            MainActivity.ACTION_ADD_TRANSFER -> { select(Tab.Money, animate = false); sheet = TxKind.Transfer.name }
             MainActivity.ACTION_FOCUS -> { select(Tab.Today, animate = false); open(Route.FocusRoute) }
             MainActivity.ACTION_STATS -> select(Tab.Stats, animate = false)
         }

@@ -35,7 +35,7 @@ class TaskRepository(private val db: KairoDatabase) {
     suspend fun setDone(ids: List<Long>, done: Boolean) =
         db.tasks().setDoneAll(ids, done, if (done) System.currentTimeMillis() else null)
     suspend fun setArchived(ids: List<Long>, archived: Boolean) = db.tasks().setArchived(ids, archived)
-    suspend fun move(ids: List<Long>, listId: Long) = db.tasks().move(ids, listId)
+    suspend fun move(ids: List<Long>, listId: Long?) = db.tasks().move(ids, listId)
     suspend fun reschedule(ids: List<Long>, due: LocalDate?, time: LocalTime?, reminder: Boolean) =
         db.tasks().reschedule(ids, due, time, reminder)
     suspend fun duplicate(task: Task): Long = db.tasks().insert(task.toEntity().copy(id = 0, done = false, completedAt = null))
@@ -49,12 +49,15 @@ class TaskRepository(private val db: KairoDatabase) {
         db.lists().updateAll(lists.mapIndexed { i, l -> ListEntity(l.id, l.name, l.shape, l.color, i) })
     suspend fun deleteList(list: TaskList) = db.lists().delete(list.id)
 
-    /** First launch: the default lists. Debug builds also get the canvas sample tasks. */
-    suspend fun seedIfEmpty(sampleTasks: Boolean) {
+    /**
+     * No default lists (owner, 2026-11-21): tasks start in the Inbox. Debug builds still get the
+     * canvas sample lists and tasks. Older installs lose the untouched default lists once.
+     */
+    suspend fun seedIfEmpty(sampleTasks: Boolean, cleanDefaults: Boolean) {
         db.lists().migrateShapes()
-        if (db.lists().count() > 0) return
+        if (cleanDefaults) defaultLists.forEach { (name, _, _) -> db.lists().deleteIfEmpty(name) }
+        if (!sampleTasks || db.lists().count() > 0) return
         val ids = defaultLists.map { (name, shape, color) -> db.lists().insert(ListEntity(name = name, shape = shape, color = color)) }
-        if (!sampleTasks) return
         val today = LocalDate.now()
         fun t(title: String, list: Int, due: LocalDate? = today, time: LocalTime? = null, p: Priority = Priority.None,
               done: Boolean = false, sub: Pair<Int, Int> = 0 to 0, reminder: Boolean = false) =

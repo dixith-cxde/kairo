@@ -268,7 +268,7 @@ fun TaskSelectionToolbar(
     }
     if (moving) ListPickerSheet(lists, title = "Move ${selection.ids.size} to…", onDismiss = { moving = false }) { l ->
         val ids = selection.ids.toList()
-        scope.launch { repo.move(ids, l.id) }
+        scope.launch { repo.move(ids, l.id.takeIf { it > 0 }) }
         moving = false; selection.clear()
     }
 }
@@ -302,7 +302,8 @@ fun MoneySelectionToolbar(selection: Selection, txs: List<TransactionEntity>, mo
 
 /** Pick a list in a bottom sheet: each list as a segmented row with its own shape. */
 @Composable
-fun ListPickerSheet(lists: List<TaskList>, title: String, selectedId: Long? = null, onDismiss: () -> Unit, onPick: (TaskList) -> Unit) {
+fun ListPickerSheet(lists0: List<TaskList>, title: String, selectedId: Long? = null, onDismiss: () -> Unit, onPick: (TaskList) -> Unit) {
+    val lists = listOf(TaskList.None) + lists0 // Inbox = no list
     val k = KairoTheme.colors
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
@@ -325,11 +326,12 @@ fun ListPickerSheet(lists: List<TaskList>, title: String, selectedId: Long? = nu
 @Composable
 fun ListPickerMenu(expanded: Boolean, lists: List<TaskList>, selectedId: Long?, onDismiss: () -> Unit, onPick: (TaskList) -> Unit) {
     val k = KairoTheme.colors
-    DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismiss) {
+    // Not focusable: opening it keeps the keyboard up (owner, 2026-11-21).
+    DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismiss, properties = KeepKeyboard) {
         DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
-            lists.forEach { l ->
+            (listOf(TaskList.None) + lists).forEach { l ->
                 SelectableDropdownMenuItem(
-                    selected = l.id == selectedId,
+                    selected = l.id == (selectedId ?: 0L),
                     onClick = { onPick(l); onDismiss() },
                     text = { Text(l.name) },
                     shapes = MenuDefaults.itemShapes(),
@@ -340,3 +342,6 @@ fun ListPickerMenu(expanded: Boolean, lists: List<TaskList>, selectedId: Long?, 
     }
 }
 
+
+/** Menu popups that don't take focus, so an open keyboard stays open (owner, 2026-11-21). */
+val KeepKeyboard = androidx.compose.ui.window.PopupProperties(focusable = false)

@@ -110,6 +110,11 @@ interface MoneyDao {
     @Insert suspend fun insertRecurring(r: RecurringEntity): Long
     @Update suspend fun updateRecurring(r: RecurringEntity)
     @Query("SELECT COUNT(*) FROM accounts") suspend fun accountCount(): Int
+    @Query("SELECT COUNT(*) FROM categories") suspend fun categoryCount(): Int
+    @Query("SELECT id FROM categories ORDER BY income, id") suspend fun categoryIds(): List<Long>
+    /** Removes an old default account if it was never used (no opening balance, no rows, no bills). */
+    @Query("DELETE FROM accounts WHERE name = :name AND openingPaise = 0 AND NOT EXISTS (SELECT 1 FROM transactions WHERE transactions.accountId = accounts.id) AND NOT EXISTS (SELECT 1 FROM recurring WHERE recurring.accountId = accounts.id) AND NOT EXISTS (SELECT 1 FROM budgets WHERE budgets.accountId = accounts.id)")
+    suspend fun deleteIfUnused(name: String)
     @Query("SELECT * FROM transactions WHERE id IN (:ids) OR transferPeerId IN (:ids)") suspend fun txWithPeers(ids: List<Long>): List<TransactionEntity>
     @Query("DELETE FROM transactions WHERE id IN (:ids) OR transferPeerId IN (:ids)") suspend fun deleteTxs(ids: List<Long>)
     @Insert suspend fun insertTxs(t: List<TransactionEntity>)

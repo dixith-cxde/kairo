@@ -31,12 +31,17 @@ data class TaskList(
     val shape: ListShape,
     val color: ListColor,
     val position: Int = 0,
-)
+) {
+    companion object {
+        /** Stand-in shown for tasks without a list (id 0 never matches a real row). */
+        val None = TaskList(0, "Inbox", ListShape.Square, ListColor.Indigo)
+    }
+}
 
 data class Task(
     val id: Long,
     val title: String,
-    val listId: Long,
+    val listId: Long?,
     val due: LocalDate? = null,
     val time: LocalTime? = null,
     val priority: Priority = Priority.None,

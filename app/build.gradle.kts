@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.work) // newer WorkManager for Glance (see libs.versions.toml)
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

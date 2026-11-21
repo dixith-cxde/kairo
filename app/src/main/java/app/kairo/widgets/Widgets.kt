@@ -55,6 +55,7 @@ import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
@@ -199,6 +200,7 @@ suspend fun updateAllWidgets(context: Context) {
     NextUpWidget().updateAll(context)
     StreakWidget().updateAll(context)
     StatsWidget().updateAll(context)
+    ActionsWidget().updateAll(context)
 }
 
 /** Each widget loads its data once, then renders it for the home screen and for the picker preview. */
@@ -608,6 +610,48 @@ private class StatsWidget : KairoWidget<StatsData>() {
     }
 }
 
+// ───────── Quick actions · buttons only (4×1; 2×1 → 4×2) ─────────
+
+/** Just the create buttons (owner, 2026-11-21): task, expense, income, transfer, focus. No data. */
+private class ActionsWidget : KairoWidget<Unit>() {
+    override suspend fun load(context: Context) = Unit
+
+    @Composable
+    override fun Content(context: Context, d: Unit, t: WTheme) {
+        val c = GlanceTheme.colors
+        val size = LocalSize.current
+        val all = listOf(
+            Triple("Task", R.drawable.ic_add_task, MainActivity.ACTION_QUICK_ADD),
+            Triple("Expense", R.drawable.ic_payments, MainActivity.ACTION_ADD_EXPENSE),
+            Triple("Income", R.drawable.ic_savings, MainActivity.ACTION_ADD_INCOME),
+            Triple("Transfer", R.drawable.ic_swap_vert, MainActivity.ACTION_ADD_TRANSFER),
+            Triple("Focus", R.drawable.ic_timer, MainActivity.ACTION_FOCUS),
+        )
+        // As many buttons as fit at ≥ 56dp each; labels when there's height for them.
+        val fit = ((size.width.value - 16) / 60).toInt().coerceIn(2, all.size)
+        val shown = all.take(fit)
+        val labels = size.height >= 64.dp
+        Row(GlanceModifier.card(t).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            shown.forEachIndexed { i, (label, icon, action) ->
+                // The first (new task) is the one solid primary; the rest are tonal (rule 4).
+                val primary = i == 0
+                Column(
+                    GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(20.dp)
+                        .background(if (primary) c.primary else c.secondaryContainer)
+                        .clickable(openApp(context, action)),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Image(ImageProvider(icon), label, GlanceModifier.size(24.dp),
+                        colorFilter = tint(if (primary) c.onPrimary else c.onSecondaryContainer))
+                    if (labels) Text(label, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                        color = if (primary) c.onPrimary else c.onSecondaryContainer), maxLines = 1)
+                }
+                if (i < shown.lastIndex) Spacer(GlanceModifier.width(6.dp))
+            }
+        }
+    }
+}
+
 // ───────── receivers ─────────
 
 class TodayWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = TodayWidget() }
@@ -617,17 +661,29 @@ class QuickAddWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAp
 class NextUpWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = NextUpWidget() }
 class StreakWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = StreakWidget() }
 class StatsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = StatsWidget() }
+class ActionsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = ActionsWidget() }
 
-/** Picker previews from real content (Android 15+). Rate-limited by the system, so once per app version. */
+/**
+ * Picker previews from real content (Android 15+). The system rate-limits these calls, so each
+ * widget is published once per app version + [PreviewRev]; failures retry on the next launch.
+ * Older Androids (and any widget whose call failed) fall back to the XML previewLayout.
+ */
+private const val PreviewRev = 2
+
 suspend fun publishWidgetPreviews(context: Context) {
     if (android.os.Build.VERSION.SDK_INT < 35) return
     val prefs = context.getSharedPreferences("widgets", Context.MODE_PRIVATE)
-    val version = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
-    if (prefs.getLong("previews", -1) == version) return
+    val version = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode * 100 + PreviewRev
     val m = androidx.glance.appwidget.GlanceAppWidgetManager(context)
-    val ok = listOf(
-        TodayWidgetReceiver::class, ProgressWidgetReceiver::class, MoneyWidgetReceiver::class,
-        QuickAddWidgetReceiver::class, NextUpWidgetReceiver::class, StreakWidgetReceiver::class, StatsWidgetReceiver::class,
-    ).all { runCatching { m.setWidgetPreviews(it) }.getOrNull() == androidx.glance.appwidget.GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS }
-    if (ok) prefs.edit().putLong("previews", version).apply()
+    listOf(
+        TodayWidgetReceiver::class, ProgressWidgetReceiver::class, MoneyWidgetReceiver::class, QuickAddWidgetReceiver::class,
+        NextUpWidgetReceiver::class, StreakWidgetReceiver::class, StatsWidgetReceiver::class, ActionsWidgetReceiver::class,
+    ).forEach { r ->
+        val key = "preview-${r.simpleName}"
+        if (prefs.getLong(key, -1) == version) return@forEach
+        val result = runCatching { m.setWidgetPreviews(r) }
+            .onFailure { android.util.Log.w("KairoWidgets", "preview ${r.simpleName} failed", it) }.getOrNull()
+        if (result == androidx.glance.appwidget.GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS) prefs.edit().putLong(key, version).apply()
+        else android.util.Log.w("KairoWidgets", "preview ${r.simpleName}: result $result")
+    }
 }
