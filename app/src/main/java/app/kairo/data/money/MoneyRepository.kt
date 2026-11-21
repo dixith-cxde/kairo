@@ -52,6 +52,11 @@ class MoneyRepository(db: KairoDatabase) {
     }
 
     suspend fun delete(tx: TransactionEntity) = dao.deleteTx(tx.id)
+    suspend fun addCategory(name: String, icon: String, color: ListColor, income: Boolean): Long {
+        val shapes = ListShape.choices
+        return dao.insertCategory(CategoryEntity(name = name.trim(), icon = icon, color = color,
+            shape = shapes[(name.hashCode() and 0x7fffffff) % shapes.size], income = income))
+    }
     /** Deletes (with transfer peers) and returns the rows for Undo. */
     suspend fun deleteAll(ids: List<Long>): List<TransactionEntity> = dao.txWithPeers(ids).also { dao.deleteTxs(ids) }
     suspend fun restore(rows: List<TransactionEntity>) = dao.insertTxs(rows)

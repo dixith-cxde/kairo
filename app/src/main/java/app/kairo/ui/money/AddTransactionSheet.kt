@@ -5,6 +5,18 @@ package app.kairo.ui.money
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import app.kairo.data.model.ListColor
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.SelectableDropdownMenuItem
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.DropdownMenuPopup
+import androidx.compose.material3.DropdownMenuGroup
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.AssistChip
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.TextField
@@ -95,7 +107,6 @@ fun AddTransactionSheet(
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val c = MaterialTheme.colorScheme
-    val k = KairoTheme.colors
 
     var kind by rememberSaveable { mutableStateOf(initialKind) }
     var amount by rememberSaveable { mutableStateOf("") }
@@ -104,6 +115,7 @@ fun AddTransactionSheet(
     var toAccountId by rememberSaveable { mutableStateOf(accounts.getOrNull(1)?.id) }
     var note by rememberSaveable { mutableStateOf("") }   // title (optional)
     var tags by rememberSaveable { mutableStateOf("") }
+    var newCategory by rememberSaveable { mutableStateOf(false) }
     val amountFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { amountFocus.requestFocus() } // number keyboard straight away
     val success = remember { Animatable(0f) }
@@ -117,16 +129,22 @@ fun AddTransactionSheet(
         TxKind.Expense -> categoryId != null
         TxKind.Income -> true
     }
+    val missing = when {
+        paise <= 0 -> "Enter an amount"
+        kind == TxKind.Expense && categoryId == null -> "Pick a category"
+        kind == TxKind.Transfer && toAccountId == accountId -> "Pick two different accounts"
+        else -> null
+    }
 
     fun save() {
         if (!canSave) return
         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
         scope.launch {
             val tagText = Regex("""\w+""").findAll(tags).joinToString(" ") { "#" + it.value }
-            val cleanNote = note.trim()
-            if (kind == TxKind.Transfer) money.transfer(paise, accountId!!, toAccountId!!, LocalDate.now(), cleanNote)
-            else money.add(kind, paise, accountId!!, categoryId, LocalDate.now(), cleanNote, tagText)
-            // Scalloped success (Cookie12) blooms, then the sheet closes.
+            val title = note.trim()
+            if (kind == TxKind.Transfer) money.transfer(paise, accountId!!, toAccountId!!, LocalDate.now(), title)
+            else money.add(kind, paise, accountId!!, categoryId, LocalDate.now(), title, tagText)
+            // Scalloped success (Cookie12) blooms, then the drawer closes.
             success.snapTo(0f)
             success.animateTo(1f, fastSpatial)
             sheet.hide(); onDismiss()
@@ -135,7 +153,10 @@ fun AddTransactionSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Box {
-            Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
                     TxKind.entries.forEachIndexed { i, kd ->
                         ToggleButton(
@@ -163,7 +184,7 @@ fun AddTransactionSheet(
                     singleLine = true,
                     visualTransformation = RupeeGrouping,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).focusRequester(amountFocus),
+                    modifier = Modifier.fillMaxWidth().focusRequester(amountFocus),
                     decorationBox = { inner ->
                         Box {
                             if (amount.isEmpty()) Text("₹0", style = MaterialTheme.typography.displayMediumEmphasized, color = c.onSurfaceVariant)
@@ -173,32 +194,39 @@ fun AddTransactionSheet(
                 )
 
                 if (kind == TxKind.Transfer) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AccountPicker("From", accounts, accountId, Modifier.weight(1f)) { accountId = it }
+                    // Transfer: From card, swap, To card — each a dropdown of accounts with balances.
+                    AccountSelect("From", accounts, accountId) { accountId = it }
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         FilledTonalIconButton(onClick = { val a = accountId; accountId = toAccountId; toAccountId = a }, shapes = IconButtonDefaults.shapes()) {
                             Icon(painterResource(R.drawable.ic_swap_vert), "Swap accounts")
                         }
-                        AccountPicker("To", accounts, toAccountId, Modifier.weight(1f)) { toAccountId = it }
                     }
+                    AccountSelect("To", accounts, toAccountId) { toAccountId = it }
                 } else {
-                    // Categories: the picked one morphs from a circle into its own shape. Tap again to clear.
+                    // Categories as selectable chips; tap again to clear; make your own.
                     Text(if (kind == TxKind.Income) "Category (optional)" else "Category",
-                        style = MaterialTheme.typography.labelLarge, color = c.onSurfaceVariant)
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        cats.forEach { cat -> CategoryPick(cat, cat.id == categoryId) { categoryId = if (categoryId == cat.id) null else cat.id } }
+                        style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        cats.forEach { cat -> CategoryChip(cat, cat.id == categoryId) { categoryId = if (categoryId == cat.id) null else cat.id } }
+                        AssistChip(
+                            onClick = { newCategory = true },
+                            label = { Text("New category") },
+                            leadingIcon = { Icon(painterResource(R.drawable.ic_add), null, Modifier.size(18.dp)) },
+                            shape = CircleShape,
+                        )
                     }
-                    AccountPicker("Account", accounts, accountId, Modifier.fillMaxWidth()) { accountId = it }
+                    AccountSelect("Account", accounts, accountId) { accountId = it }
                 }
-                // Normal keyboard for text. Filled fields, no underline (Expressive).
-                KairoField(note, { note = it }, "Title (optional)", KeyboardCapitalization.Sentences)
-                KairoField(tags, { tags = it }, "Tags (optional) · e.g. trip food", KeyboardCapitalization.None)
+                // Normal keyboard for text. The keyboard's ✓ on the last field saves.
+                KairoField(note, { note = it }, "Title (optional)", KeyboardCapitalization.Sentences, ImeAction.Next) {}
+                KairoField(tags, { tags = it }, "Tags (optional) · e.g. trip food", KeyboardCapitalization.None, ImeAction.Done) { save() }
+
                 Button(
                     onClick = ::save,
                     enabled = canSave,
                     shapes = ButtonDefaults.shapes(),
-                    colors = ButtonDefaults.buttonColors(containerColor = c.primary, contentColor = c.onPrimary),
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                ) { Text("Save ${kind.name.lowercase()}", style = MaterialTheme.typography.titleMediumEmphasized) }
+                ) { Text(missing ?: "Save ${kind.name.lowercase()}", style = MaterialTheme.typography.titleMediumEmphasized) }
             }
             if (success.value > 0f) Box(
                 Modifier.align(Alignment.Center).size(160.dp)
@@ -208,45 +236,130 @@ fun AddTransactionSheet(
             ) { Icon(painterResource(R.drawable.ic_check), "Saved", tint = c.onTertiaryContainer, modifier = Modifier.size(56.dp)) }
         }
     }
+    if (newCategory) NewCategorySheet(income = kind == TxKind.Income, onDismiss = { newCategory = false }) { name, icon, color ->
+        scope.launch { categoryId = money.addCategory(name, icon, color, kind == TxKind.Income) }
+        newCategory = false
+    }
 }
 
+/** A category as a selectable chip: its own shape + icon, its color when picked. */
 @Composable
-private fun CategoryPick(cat: CategoryEntity, selected: Boolean, onClick: () -> Unit) {
+private fun CategoryChip(cat: CategoryEntity, selected: Boolean, onClick: () -> Unit) {
     val k = KairoTheme.colors
-    val progress by animateFloatAsState(if (selected) 1f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "cat")
-    val morph = remember(cat.shape) { Morph(MaterialShapes.Circle, cat.shape.polygon) }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            Modifier.size(52.dp)
-                .background(if (selected) k.accent(cat.color) else k.container(cat.color), MorphShape(morph, progress))
-                .clickable(role = Role.RadioButton, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(painterResource(categoryIcon(cat.icon)), cat.name,
-                tint = if (selected) MaterialTheme.colorScheme.surface else k.onContainer(cat.color), modifier = Modifier.size(24.dp))
-        }
-        Text(cat.name, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-    }
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(cat.name) },
+        leadingIcon = {
+            Box(Modifier.size(22.dp).background(if (selected) k.accent(cat.color) else k.container(cat.color), cat.shape.polygon.toShape()),
+                contentAlignment = Alignment.Center) {
+                Icon(painterResource(categoryIcon(cat.icon)), null, Modifier.size(14.dp),
+                    tint = if (selected) MaterialTheme.colorScheme.surface else k.onContainer(cat.color))
+            }
+        },
+        shape = CircleShape,
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = k.container(cat.color), selectedLabelColor = k.onContainer(cat.color),
+        ),
+    )
 }
 
+/** Account as a card-like field that opens an Expressive grouped menu (name + balance). */
 @Composable
-private fun AccountPicker(label: String, accounts: List<AccountEntity>, selected: Long?, modifier: Modifier, onPick: (Long) -> Unit) {
-    Column(modifier) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            accounts.forEach { a -> FilterChip(selected = a.id == selected, onClick = { onPick(a.id) }, label = { Text(a.name) }) }
+private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected: Long?, onPick: (Long) -> Unit) {
+    val k = KairoTheme.colors
+    val c = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf(false) }
+    val acc = accounts.firstOrNull { it.id == selected }
+    Box {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.itemHigh)
+                .clickable(role = Role.Button) { open = true }.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (acc != null) Box(Modifier.size(36.dp).background(k.container(acc.color), MaterialShapes.Cookie4Sided.toShape()), contentAlignment = Alignment.Center) {
+                Icon(painterResource(accountIcon(acc.type)), null, tint = k.onContainer(acc.color), modifier = Modifier.size(20.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+                Text(acc?.name ?: "Choose account", style = MaterialTheme.typography.titleMediumEmphasized)
+            }
+            Icon(painterResource(R.drawable.ic_expand_more), null, tint = c.onSurfaceVariant)
+        }
+        DropdownMenuPopup(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
+                accounts.forEach { a ->
+                    SelectableDropdownMenuItem(
+                        selected = a.id == selected,
+                        onClick = { onPick(a.id); open = false },
+                        text = { Text(a.name) },
+                        shapes = MenuDefaults.itemShapes(),
+                        leadingIcon = { Icon(painterResource(accountIcon(a.type)), null, tint = k.accent(a.color), modifier = Modifier.size(20.dp)) },
+                    )
+                }
+            }
         }
     }
 }
 
+/** Make a category: name, icon, color. Becomes a chip you can pick from then on. */
+@Composable
+private fun NewCategorySheet(income: Boolean, onDismiss: () -> Unit, onCreate: (String, String, ListColor) -> Unit) {
+    val k = KairoTheme.colors
+    val c = MaterialTheme.colorScheme
+    var name by rememberSaveable { mutableStateOf("") }
+    var icon by rememberSaveable { mutableStateOf(CategoryIconChoices.first()) }
+    var color by rememberSaveable { mutableStateOf(ListColor.Coral) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(if (income) "New income category" else "New category", style = MaterialTheme.typography.headlineSmallEmphasized)
+            TextField(
+                value = name, onValueChange = { name = it }, label = { Text("Name · e.g. Food & drinks") }, singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { if (name.isNotBlank()) onCreate(name, icon, color) }),
+                colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            )
+            Text("Icon", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CategoryIconChoices.forEach { ic ->
+                    val on = ic == icon
+                    Box(
+                        Modifier.size(44.dp).clip(if (on) MaterialShapes.Cookie9Sided.toShape() else CircleShape)
+                            .background(if (on) k.container(color) else k.itemHigh)
+                            .clickable(role = Role.RadioButton) { icon = ic },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(painterResource(categoryIcon(ic)), ic, tint = if (on) k.onContainer(color) else c.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
+                }
+            }
+            Text("Color", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ListColor.entries.forEach { co ->
+                    Box(Modifier.size(36.dp).clip(CircleShape).background(k.accent(co)).clickable(role = Role.RadioButton) { color = co },
+                        contentAlignment = Alignment.Center) {
+                        if (co == color) Icon(painterResource(R.drawable.ic_check), null, tint = c.surface, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+            Button(onClick = { onCreate(name, icon, color) }, enabled = name.isNotBlank(), shapes = ButtonDefaults.shapes(),
+                modifier = Modifier.fillMaxWidth().height(56.dp)) { Text("Create category", style = MaterialTheme.typography.titleMediumEmphasized) }
+        }
+    }
+}
 
 /** Text field in Kairo's style: filled itemHigh, 12dp corners, no indicator line. */
 @Composable
-private fun KairoField(value: String, onChange: (String) -> Unit, label: String, caps: KeyboardCapitalization) {
+private fun KairoField(value: String, onChange: (String) -> Unit, label: String, caps: KeyboardCapitalization, ime: ImeAction, onDone: () -> Unit) {
     TextField(
         value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true,
         shape = RoundedCornerShape(12.dp),
-        keyboardOptions = KeyboardOptions(capitalization = caps, imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(capitalization = caps, imeAction = ime),
+        keyboardActions = KeyboardActions(onDone = { onDone() }),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = KairoTheme.colors.itemHigh, unfocusedContainerColor = KairoTheme.colors.itemHigh,
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,

@@ -32,7 +32,26 @@ import app.kairo.ui.theme.KairoTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+/** Icons offered when creating a category (Material Symbols Rounded names). */
+val CategoryIconChoices = listOf(
+    "restaurant", "local_cafe", "fastfood", "shopping_cart", "shopping_bag", "directions_car", "local_gas_station",
+    "receipt_long", "home", "medical_services", "fitness_center", "sports_esports", "movie", "celebration",
+    "flight", "school", "pets", "redeem", "work", "payments", "savings", "category",
+)
+
 fun categoryIcon(name: String): Int = when (name) {
+    "local_cafe" -> R.drawable.ic_local_cafe
+    "fastfood" -> R.drawable.ic_fastfood
+    "local_gas_station" -> R.drawable.ic_local_gas_station
+    "home" -> R.drawable.ic_home
+    "fitness_center" -> R.drawable.ic_fitness_center
+    "movie" -> R.drawable.ic_movie
+    "celebration" -> R.drawable.ic_celebration
+    "flight" -> R.drawable.ic_flight
+    "school" -> R.drawable.ic_school
+    "pets" -> R.drawable.ic_pets
+    "redeem" -> R.drawable.ic_redeem
+    "work" -> R.drawable.ic_work
     "restaurant" -> R.drawable.ic_restaurant
     "shopping_cart" -> R.drawable.ic_shopping_cart
     "directions_car" -> R.drawable.ic_directions_car

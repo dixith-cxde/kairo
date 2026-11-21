@@ -206,6 +206,11 @@ private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String, ListShape, L
             androidx.compose.material3.TextField(
                 value = name, onValueChange = { name = it },
                 label = { Text("Name") }, singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (name.isNotBlank()) onCreate(name, shape, color) }),
                 shape = RoundedCornerShape(12.dp),
                 colors = androidx.compose.material3.TextFieldDefaults.colors(
                     focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,

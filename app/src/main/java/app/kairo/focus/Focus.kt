@@ -93,8 +93,14 @@ class FocusController(private val app: KairoApplication) {
     }
 
     fun setTask(id: Long?) = set(_state.value.copy(taskId = id))
-    fun configure(focusMin: Int, breakMin: Int, sessions: Int) =
-        set(_state.value.copy(focusMin = focusMin, breakMin = breakMin, sessions = sessions))
+    /**
+     * New timing. While paused, the current phase restarts with the new length (that's what
+     * "change the timer" means when you tap the clock); while running it applies from the next phase.
+     */
+    fun configure(focusMin: Int, breakMin: Int, sessions: Int) {
+        val s = _state.value.copy(focusMin = focusMin, breakMin = breakMin, sessions = sessions.coerceAtLeast(_state.value.session))
+        set(if (!s.running && s.phase != Phase.Idle) s.copy(remainingMs = s.phaseMs) else s)
+    }
 
     /** Phase time is up (alarm fired, or the screen noticed). Focus → break → next focus. */
     fun finishPhase() {

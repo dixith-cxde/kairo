@@ -18,8 +18,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuGroup
+import androidx.compose.material3.DropdownMenuPopup
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -108,7 +110,7 @@ fun QuickAddSheet(
         if (parsed.title.isBlank() || list == null) return
         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
         onAdd(Task(0, parsed.title, list.id, due, time, priority, reminder = reminder))
-        text = ""; priorityOverride = null; reminder = false; dateOverride = null // stay open for the next one
+        close() // done → the drawer closes (owner, 2026-11-21)
     }
 
     val focus = remember { FocusRequester() }
@@ -143,15 +145,17 @@ fun QuickAddSheet(
                 style = MaterialTheme.typography.labelMediumEmphasized,
                 color = c.primary,
             )
+          Row(verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
                 value = text,
+                singleLine = true, // so the keyboard's ✓ saves instead of adding a new line
                 onValueChange = { text = it },
                 textStyle = MaterialTheme.typography.titleLarge.copy(color = c.onSurface),
                 cursorBrush = SolidColor(c.primary),
                 visualTransformation = highlight,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { submit() }),
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp).focusRequester(focus),
+                modifier = Modifier.weight(1f).padding(top = 6.dp).focusRequester(focus),
                 decorationBox = { inner ->
                     Box {
                         if (text.isEmpty()) Text(
@@ -163,6 +167,34 @@ fun QuickAddSheet(
                     }
                 },
             )
+            // Priority right in the input: a small flag that opens a compact Expressive menu.
+            Box {
+                var prioMenu by remember { mutableStateOf(false) }
+                IconButton(onClick = { prioMenu = true }, shapes = IconButtonDefaults.shapes()) {
+                    Icon(
+                        painterResource(if (priority == Priority.None) R.drawable.ic_flag else R.drawable.ic_flag_filled),
+                        contentDescription = "Priority: ${priority.name}",
+                        tint = prioColor(priority),
+                    )
+                }
+                DropdownMenuPopup(expanded = prioMenu, onDismissRequest = { prioMenu = false }) {
+                    DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
+                        listOf(Priority.High, Priority.Medium, Priority.Low, Priority.None).forEach { p ->
+                            SelectableDropdownMenuItem(
+                                selected = p == priority,
+                                onClick = { priorityOverride = p; prioMenu = false },
+                                text = { Text(if (p == Priority.None) "No priority" else p.name) },
+                                shapes = MenuDefaults.itemShapes(),
+                                leadingIcon = {
+                                    Icon(painterResource(if (p == Priority.None) R.drawable.ic_flag else R.drawable.ic_flag_filled), null,
+                                        tint = prioColor(p), modifier = Modifier.size(20.dp))
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+          }
         }
 
         // Chips mirror what the parser understood; tapping changes it.
@@ -175,20 +207,6 @@ fun QuickAddSheet(
                 onClick = { dateSheet = true },
                 label = { Text(describe(due, time)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_event), null, Modifier.size(18.dp)) },
-            )
-            FilterChip(
-                selected = priority != Priority.None,
-                onClick = { priorityOverride = Priority.entries[(priority.ordinal + 1) % Priority.entries.size] },
-                label = { Text(if (priority == Priority.None) "Priority" else priority.name) },
-                leadingIcon = {
-                    Icon(
-                        painterResource(R.drawable.ic_flag_filled), null, Modifier.size(18.dp),
-                        tint = when (priority) {
-                            Priority.High -> k.prioHigh; Priority.Medium -> k.prioMed
-                            Priority.Low -> k.prioLow; Priority.None -> c.onSurfaceVariant
-                        },
-                    )
-                },
             )
             FilterChip(
                 selected = reminder,
@@ -225,6 +243,14 @@ fun QuickAddSheet(
         initial = DateChoice(due, time, reminder),
         onDismiss = { dateSheet = false },
     ) { ch -> dateOverride = ch; reminder = ch.reminder; if (ch.reminder) askNotifications(); dateSheet = false }
+}
+
+@Composable
+private fun prioColor(p: Priority) = when (p) {
+    Priority.High -> KairoTheme.colors.prioHigh
+    Priority.Medium -> KairoTheme.colors.prioMed
+    Priority.Low -> KairoTheme.colors.prioLow
+    Priority.None -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
 private val DayFmt = DateTimeFormatter.ofPattern("EEE, d MMM")
