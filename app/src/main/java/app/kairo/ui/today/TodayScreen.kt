@@ -351,7 +351,7 @@ private fun HeroCard(state: TodayState, modifier: Modifier = Modifier) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    if (left == 0) "All done for today" else "$left to go today",
+                    when { state.total == 0 -> "Nothing due today"; left == 0 -> "All done for today"; else -> "$left to go today" },
                     style = MaterialTheme.typography.titleLargeEmphasized,
                     color = c.onPrimaryContainer,
                 )

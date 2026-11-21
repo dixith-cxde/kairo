@@ -46,12 +46,14 @@ fun TabHeader(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (title != null) Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.displaySmallEmphasized, color = c.primary, maxLines = 1)
-                if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.titleSmall, color = c.onSurfaceVariant)
-            } else Row(Modifier.weight(1f)) {}
+            if (title != null) Text(title, style = MaterialTheme.typography.displaySmallEmphasized, color = c.primary, maxLines = 1,
+                modifier = Modifier.weight(1f))
+            else Row(Modifier.weight(1f)) {}
             actions()
         }
+        // The subtitle gets the full width under the title row, so it never wraps beside the buttons.
+        if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.titleMedium, color = c.onSurfaceVariant,
+            modifier = Modifier.padding(top = 0.dp).offsetUp())
         below?.invoke(this)
     }
 }
@@ -61,4 +63,10 @@ fun Modifier.fullBleed(h: androidx.compose.ui.unit.Dp = 16.dp) = layout { m, cs 
     val extra = h.roundToPx() * 2
     val p = m.measure(cs.copy(minWidth = cs.maxWidth + extra, maxWidth = cs.maxWidth + extra))
     layout(cs.maxWidth, p.height) { p.place(-extra / 2, 0) }
+}
+
+/** Pulls the subtitle up under the title (the column's 16dp gap is for the chips row). */
+private fun Modifier.offsetUp() = layout { m, cs ->
+    val p = m.measure(cs); val up = 12.dp.roundToPx()
+    layout(p.width, (p.height - up).coerceAtLeast(0)) { p.place(0, -up) }
 }
