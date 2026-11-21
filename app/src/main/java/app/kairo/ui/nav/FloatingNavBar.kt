@@ -1,27 +1,19 @@
 package app.kairo.ui.nav
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +21,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,10 +34,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import app.kairo.R
@@ -59,12 +48,12 @@ private val OuterCorner = 32.dp        // fully round outer ends
 private val InnerCorner = 8.dp         // where bar and FAB meet (connected button group inner corner)
 private val FabPressedCorner = 16.dp   // FAB outer corners while pressed
 private val PillHeight = 48.dp
-private const val ActiveWeight = 3f    // the active slot is 3x as wide, to fit its label
 
 /**
  * Kairo's floating nav: a pill bar and the create FAB as one connected group,
  * 16dp from the sides and 20dp above the system navigation bar.
- * Only the selected tab shows its label. Deliberate departure from the docked M3 nav bar (rule 5).
+ * Icon-only (owner, 2026-11-21): the selected tab shows a pill and a filled icon, no label;
+ * the label is still announced by TalkBack. Deliberate departure from the docked M3 nav bar (rule 5).
  */
 @Composable
 fun FloatingNavBar(
@@ -114,12 +103,7 @@ private fun RowScope.NavSlot(tab: Tab, selected: Boolean, onClick: () -> Unit) {
     val motion = MaterialTheme.motionScheme
     val colors = MaterialTheme.colorScheme
 
-    // Spatial: the slot widens. Effects: colors fade. Both from the expressive motion scheme.
-    val weight by animateFloatAsState(
-        targetValue = if (selected) ActiveWeight else 1f,
-        animationSpec = motion.defaultSpatialSpec(),
-        label = "slotWeight",
-    )
+    // Effects: colors fade, from the expressive motion scheme.
     val pillColor by animateColorAsState(
         targetValue = if (selected) colors.secondaryContainer else Color.Transparent,
         animationSpec = motion.defaultEffectsSpec(),
@@ -134,7 +118,7 @@ private fun RowScope.NavSlot(tab: Tab, selected: Boolean, onClick: () -> Unit) {
     val pillShape = RoundedCornerShape(PillHeight / 2)
     Row(
         modifier = Modifier
-            .weight(weight)
+            .weight(1f)
             .height(PillHeight)
             .clip(pillShape)
             .background(pillColor)
@@ -158,24 +142,6 @@ private fun RowScope.NavSlot(tab: Tab, selected: Boolean, onClick: () -> Unit) {
                 tint = contentColor,
                 modifier = Modifier.size(24.dp),
             )
-        }
-        AnimatedVisibility(
-            visible = selected,
-            enter = expandHorizontally(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
-            exit = shrinkHorizontally(motion.defaultSpatialSpec()) + fadeOut(motion.fastEffectsSpec()),
-        ) {
-            Row {
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = tab.label,
-                    style = MaterialTheme.typography.labelLargeEmphasized,
-                    color = contentColor,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.clearAndSetSemantics { }, // the slot already announces the label
-                )
-            }
         }
     }
 }

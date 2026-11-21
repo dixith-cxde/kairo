@@ -113,7 +113,7 @@ All from `MaterialTheme.motionScheme` (expressive). See the spring table in [01-
 | Toggle / checkbox | fill fastEffects, scale 1 → 0.85 → 1 fastSpatial |
 | Complete task | burst 0–350ms, strike 60ms, collapse at 700ms (defaultSpatial), ring advances (slowSpatial), undo snackbar 4s |
 | FAB → quick add | container transform, slowSpatial bounds + slowEffects color; content fades in after 30% |
-| Nav slot change | new slot widens + label slides in (defaultSpatial), icon outlined → filled |
+| Nav slot change | icon-only (owner, 2026-11-21): pill fades in (defaultEffects), icon outlined → filled; no label, slots equal width |
 | Large app bar | collapses 1:1 with scroll, snaps to nearest state (defaultSpatial); container bg → surfaceContainer |
 | Floating nav on scroll | hides on scroll down, returns on scroll up (defaultSpatial) |
 | Reorder | lifted row tertiaryContainer, 16 corners, elevation 2, 1° tilt |
