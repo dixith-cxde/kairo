@@ -21,7 +21,7 @@ These are the working rules for Claude (or anyone) working on Kairo. They come f
 - One screen or one feature per step. The app should run after every step.
 - Follow [docs/07-roadmap.md](docs/07-roadmap.md) for the order.
 - Use the real Expressive components from `androidx.compose.material3` before hand-rolling anything. Check the current library version and API names when starting; Expressive APIs moved between alpha releases (`@OptIn(ExperimentalMaterial3ExpressiveApi::class)` may be needed).
-- Read motion from `MaterialTheme.motionScheme` (`fastSpatialSpec()`, `defaultEffectsSpec()` …). Never hand-write durations or easing curves.
+- Read motion from `MaterialTheme.motionScheme` (`fastSpatialSpec()`, `defaultEffectsSpec()` …). Never hand-write durations or easing curves. Exception (owner, 2026-11-21): slow ambient loops on decorative hero shapes (`slowSpin` in `ui/common/Motion.kt`), since the motion scheme has no looping token. The owner wants every tab to feel alive: entrances, count-ups, springy transitions.
 - Shapes from `MaterialShapes` (graphics-shapes `RoundedPolygon`) and `Morph` for transitions.
 
 ## 4. Design rules that must not drift
