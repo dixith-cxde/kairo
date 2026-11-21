@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import app.kairo.data.TaskRepository
 import app.kairo.data.db.KairoDatabase
+import app.kairo.data.calendar.PhoneCalendar
 import app.kairo.reminders.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -15,6 +16,7 @@ class KairoApplication : Application() {
     val database by lazy { KairoDatabase.create(this) }
     val repository by lazy { TaskRepository(database) }
     val reminders by lazy { ReminderScheduler(this) }
+    val phoneCalendar by lazy { PhoneCalendar(this) }
 
     override fun onCreate() {
         super.onCreate()
