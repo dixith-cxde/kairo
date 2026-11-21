@@ -1,0 +1,12 @@
+<!-- Material Symbols "download" (24px, weight 400). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <group android:translateY="960">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M480,-320 L280,-520 L336,-578 L440,-474 L440,-800 L520,-800 L520,-474 L624,-578 L680,-520 Z M240,-160 Q207,-160 183.5,-183.5 Q160,-207 160,-240 L160,-360 L240,-360 L240,-240 L720,-240 L720,-360 L800,-360 L800,-240 Q800,-207 776.5,-183.5 Q753,-160 720,-160 Z"/>
+  </group>
+</vector>

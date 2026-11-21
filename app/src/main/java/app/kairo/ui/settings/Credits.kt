@@ -2,6 +2,10 @@
 
 package app.kairo.ui.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kairo.ui.update.release
+import app.kairo.update.UpdateState
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Column
@@ -67,9 +71,33 @@ fun AboutSection() {
     var credits by rememberSaveable { mutableStateOf(false) }
     var reading by rememberSaveable { mutableStateOf<String?>(null) } // asset path of the license being read
 
+    val updater = (context.applicationContext as app.kairo.KairoApplication).updater
+    val update by updater.state.collectAsStateWithLifecycle()
+    SegmentedListItem(
+        onClick = {
+            // An update already found: bring its drawer back. Otherwise ask GitHub now.
+            if (update.release != null) updater.dismissed.value = null
+            else updater.check((context.applicationContext as app.kairo.KairoApplication).appScope)
+        },
+        shapes = ListItemDefaults.segmentedShapes(0, 3),
+        colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+        leadingContent = { SettingsRoundIcon(R.drawable.ic_download, tertiary = update.release != null) },
+        supportingContent = {
+            Text(when (val u = update) {
+                is UpdateState.Checking -> "Checking…"
+                is UpdateState.Available -> "Kairo ${u.release.version} is ready · tap to update"
+                is UpdateState.Downloading -> "Downloading ${u.release.version}" + (u.progress?.let { " · ${(it * 100).toInt()}%" } ?: "…")
+                is UpdateState.Installing -> "Installing ${u.release.version}…"
+                is UpdateState.Failed -> u.message
+                is UpdateState.UpToDate -> "Version ${updater.currentVersion} · up to date"
+                UpdateState.Idle -> "Version ${updater.currentVersion} · tap to check"
+            })
+        },
+    ) { Text("App updates") }
+    Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
     SegmentedListItem(
         onClick = { credits = true },
-        shapes = ListItemDefaults.segmentedShapes(0, 2),
+        shapes = ListItemDefaults.segmentedShapes(1, 3),
         colors = ListItemDefaults.segmentedColors(containerColor = k.item),
         leadingContent = { SettingsRoundIcon(R.drawable.ic_info) },
         supportingContent = { Text("Fonts, icons and libraries Kairo is built with") },
@@ -77,7 +105,7 @@ fun AboutSection() {
     Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
     SegmentedListItem(
         onClick = { reading = "licenses/kairo-cc-by-nc-sa-4.0.txt" },
-        shapes = ListItemDefaults.segmentedShapes(1, 2),
+        shapes = ListItemDefaults.segmentedShapes(2, 3),
         colors = ListItemDefaults.segmentedColors(containerColor = k.item),
         leadingContent = { SettingsRoundIcon(R.drawable.ic_license, tertiary = true) },
         supportingContent = { Text("CC BY-NC-SA 4.0 · © 2026 dixith-cxde") },

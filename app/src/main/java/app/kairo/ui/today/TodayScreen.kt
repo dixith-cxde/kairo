@@ -3,7 +3,6 @@
 package app.kairo.ui.today
 
 import app.kairo.ui.common.LocalOpenSearch
-import app.kairo.ui.common.SearchPill
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
@@ -180,8 +179,8 @@ fun TodayScreen(
                     title = "Today",
                     subtitle = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM")),
                     modifier = Modifier.fullBleed(),
+                    searchModifier = Modifier.tourTarget("search", 24.dp),
                     actions = {
-                        SearchPill(LocalOpenSearch.current, Modifier.tourTarget("search", 20.dp))
                         FilledTonalIconButton(onClick = onFocus, shapes = IconButtonDefaults.shapes(), modifier = Modifier.tourTarget("focus", 24.dp)) {
                             Icon(painterResource(R.drawable.ic_timer), contentDescription = "Focus timer")
                         }

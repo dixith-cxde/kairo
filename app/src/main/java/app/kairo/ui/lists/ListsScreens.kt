@@ -5,7 +5,6 @@ package app.kairo.ui.lists
 import app.kairo.ui.common.TabHeader
 import app.kairo.ui.common.fullBleed
 import app.kairo.ui.common.LocalOpenSearch
-import app.kairo.ui.common.SearchPill
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
@@ -101,7 +100,7 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "header") {
-                TabHeader("Lists", Modifier.fullBleed(), actions = { SearchPill(LocalOpenSearch.current) })
+                TabHeader("Lists", Modifier.fullBleed())
             }
             // Smart lists (owner, 2026-11-21): 2×2 tiles with Archived full width under them, cut as one
             // piece. Only the block's four outer corners are large; every inner corner is small, 2dp gaps.

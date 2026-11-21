@@ -235,13 +235,14 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                 if (uri == null) return@rememberLauncherForActivityResult
                 importing = "Importing…"
                 scope.launch {
-                    importing = runCatching {
+                    importing = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        // File read and CSV parsing off the main thread (a big export froze the screen).
                         val text = context.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
                         val r = app.kairo.data.money.IvyImport.import(kairo.money, text)
                         "Added ${r.added} · skipped ${r.skipped}" +
                             (if (r.accountsCreated > 0) " · ${r.accountsCreated} new accounts" else "") +
                             (if (r.categoriesCreated > 0) " · ${r.categoriesCreated} new categories" else "")
-                    }.getOrElse { "Couldn't import: ${it.message}" }
+                    } }.getOrElse { "Couldn't import: ${it.message}" }
                 }
             }
             SegmentedListItem(

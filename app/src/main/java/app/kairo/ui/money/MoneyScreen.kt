@@ -52,7 +52,6 @@ import app.kairo.data.money.MoneyRepository
 import app.kairo.ui.common.EmptyState
 import app.kairo.ui.common.LocalOpenSearch
 import app.kairo.ui.common.MoneySelectionToolbar
-import app.kairo.ui.common.SearchPill
 import app.kairo.ui.common.SelectionTopBar
 import app.kairo.ui.common.TabHeader
 import app.kairo.ui.common.countUp
@@ -129,7 +128,6 @@ fun MoneyScreen(
                 item(key = "header") {
                     TabHeader(
                         title = null,
-                        actions = { SearchPill(LocalOpenSearch.current) },
                         below = if (balancesOrNull.isNullOrEmpty()) null else {
                             {
                                 Column(Modifier.padding(end = 4.dp)) {

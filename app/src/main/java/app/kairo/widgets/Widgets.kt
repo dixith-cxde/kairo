@@ -191,16 +191,23 @@ private fun ShapeIcon(shape: Bitmap, fill: ColorProvider, icon: Int, iconColor: 
 private fun timeText(context: Context, t: LocalTime, ampm: Boolean): String =
     t.format(DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else if (ampm) "h:mm a" else "h:mm", Locale.getDefault()))
 
-/** Refresh every Kairo widget (called when tasks, money or settings change). */
-suspend fun updateAllWidgets(context: Context) {
-    TodayWidget().updateAll(context)
-    ProgressWidget().updateAll(context)
-    MoneyWidget().updateAll(context)
-    QuickAddWidget().updateAll(context)
-    NextUpWidget().updateAll(context)
-    StreakWidget().updateAll(context)
-    StatsWidget().updateAll(context)
-    ActionsWidget().updateAll(context)
+/**
+ * Refresh Kairo widgets. [tasks] / [money]: which data changed; [theme]: settings changed.
+ * Quick add and Actions show no data, so they only redraw for a theme change.
+ */
+suspend fun updateAllWidgets(context: Context, tasks: Boolean = true, money: Boolean = true, theme: Boolean = true) {
+    if (tasks || theme) {
+        TodayWidget().updateAll(context)
+        ProgressWidget().updateAll(context)
+        NextUpWidget().updateAll(context)
+        StreakWidget().updateAll(context)
+    }
+    if (money || theme) MoneyWidget().updateAll(context)
+    if (tasks || money || theme) StatsWidget().updateAll(context)
+    if (theme) {
+        QuickAddWidget().updateAll(context)
+        ActionsWidget().updateAll(context)
+    }
 }
 
 /** Each widget loads its data once, then renders it for the home screen and for the picker preview. */

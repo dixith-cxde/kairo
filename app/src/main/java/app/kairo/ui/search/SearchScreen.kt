@@ -68,14 +68,16 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
     val entrance = rememberEntrance()
 
     val q = query.text.toString().trim()
-    val listMap = lists.associateBy { it.id }
-    val catMap = cats.associateBy { it.id }
-    val accMap = accounts.associateBy { it.id }
-    val foundTasks = if (q.isEmpty()) emptyList() else tasks.filter { it.title.contains(q, true) || it.notes.contains(q, true) }.take(30)
-    val foundLists = if (q.isEmpty()) emptyList() else lists.filter { it.name.contains(q, true) }
-    val foundTx = if (q.isEmpty()) emptyList() else txs.filter { t ->
+    // remember: these scan every task and transaction; only redo them when the query or data change
+    // (not on selection taps and other recompositions).
+    val listMap = remember(lists) { lists.associateBy { it.id } }
+    val catMap = remember(cats) { cats.associateBy { it.id } }
+    val accMap = remember(accounts) { accounts.associateBy { it.id } }
+    val foundTasks = remember(q, tasks) { if (q.isEmpty()) emptyList() else tasks.filter { it.title.contains(q, true) || it.notes.contains(q, true) }.take(30) }
+    val foundLists = remember(q, lists) { if (q.isEmpty()) emptyList() else lists.filter { it.name.contains(q, true) } }
+    val foundTx = remember(q, txs, catMap) { if (q.isEmpty()) emptyList() else txs.filter { t ->
         t.note.contains(q, true) || t.tags.contains(q, true) || (t.categoryId?.let { catMap[it]?.name?.contains(q, true) } == true)
-    }.take(30)
+    }.take(30) }
 
     val taskSelection = rememberSelection()
     val txSelection = rememberSelection()

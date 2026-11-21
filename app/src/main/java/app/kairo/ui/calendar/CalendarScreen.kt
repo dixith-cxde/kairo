@@ -85,7 +85,6 @@ import app.kairo.data.calendar.CalEvent
 import app.kairo.data.calendar.PhoneCalendar
 import app.kairo.data.model.Task
 import app.kairo.ui.common.LocalOpenSearch
-import app.kairo.ui.common.SearchPill
 import app.kairo.ui.common.SelectionTopBar
 import app.kairo.ui.common.TabHeader
 import app.kairo.ui.common.TaskSelectionToolbar
@@ -180,11 +179,18 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
     }
 
     val tasksByDay = remember(tasks) { tasks.filter { it.due != null }.groupBy { it.due!! } }
-    val eventDays = remember(events) {
-        events.flatMap { e -> generateSequence(e.start.toLocalDate()) { it.plusDays(1) }
-            .takeWhile { !it.isAfter(e.end.toLocalDate()) }.filter { occursOn(e, it) }.toList() }.toSet()
+    // Events grouped by day once per load; each day cell used to filter the whole list (up to 3x per cell).
+    val eventsByDay = remember(events) {
+        val m = HashMap<LocalDate, MutableList<CalEvent>>()
+        events.forEach { e ->
+            generateSequence(e.start.toLocalDate()) { it.plusDays(1) }
+                .takeWhile { !it.isAfter(e.end.toLocalDate()) }.filter { occursOn(e, it) }
+                .forEach { m.getOrPut(it) { mutableListOf() } += e }
+        }
+        m
     }
-    fun eventsOn(d: LocalDate) = events.filter { e -> occursOn(e, d) }
+    val eventDays = eventsByDay.keys
+    fun eventsOn(d: LocalDate): List<CalEvent> = eventsByDay[d].orEmpty()
     val dayTasks = tasksByDay[day].orEmpty().sortedWith(compareBy(nullsLast()) { it.time })
     val dayEvents = eventsOn(day)
 
@@ -237,8 +243,6 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
             subtitle = "${shownMonth.year}",
             modifier = mod,
             below = {
-                // Search: full width above the view controls (owner, 2026-11-21).
-                SearchPill(LocalOpenSearch.current, Modifier.fillMaxWidth().height(48.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ViewMenu(
                         view = view,

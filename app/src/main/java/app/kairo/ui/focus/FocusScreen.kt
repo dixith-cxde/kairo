@@ -94,7 +94,8 @@ fun FocusScreen(app: KairoApplication, onBack: () -> Unit) {
     val s by focus.state.collectAsStateWithLifecycle()
     val tasks by app.repository.tasks.collectAsStateWithLifecycle(initialValue = emptyList())
     val since = remember { LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() }
-    val todayMin by app.database.focus().minutesSince(since).collectAsStateWithLifecycle(initialValue = 0)
+    // remember: the 1 s timer recomposes this screen; a fresh Flow each time re-ran the query every second.
+    val todayMin by remember(since) { app.database.focus().minutesSince(since) }.collectAsStateWithLifecycle(initialValue = 0)
     val c = MaterialTheme.colorScheme
     val k = KairoTheme.colors
     val haptic = LocalHapticFeedback.current

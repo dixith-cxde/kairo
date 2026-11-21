@@ -38,9 +38,26 @@ class ReminderScheduler(private val context: Context) {
         return at.takeIf { it.isAfter(LocalDateTime.now()) }
     }
 
-    fun sync(tasks: List<Task>) = tasks.forEach { t ->
-        val at = triggerAt(t)
-        if (at != null) schedule(t.id, at) else cancel(t.id)
+    /** What each task's alarm was last set to (null = none), so a change only touches the tasks that moved. */
+    private val synced = HashMap<Long, LocalDateTime?>()
+
+    /**
+     * Called on every change to the tasks table. Only tasks whose alarm time changed reach
+     * AlarmManager; tasks that disappeared (deleted or archived) get their alarm cancelled.
+     */
+    @Synchronized
+    fun sync(tasks: List<Task>, force: Boolean = false) {
+        if (force) synced.clear() // boot / clock / timezone change: same local times, new instants
+        val seen = HashSet<Long>(tasks.size)
+        for (t in tasks) {
+            seen += t.id
+            val at = triggerAt(t)
+            if (synced.containsKey(t.id) && synced[t.id] == at) continue
+            if (at != null) schedule(t.id, at) else if (synced[t.id] != null || !synced.containsKey(t.id)) cancel(t.id)
+            synced[t.id] = at
+        }
+        val gone = synced.keys.filter { it !in seen }
+        gone.forEach { id -> if (synced[id] != null) cancel(id); synced.remove(id) }
     }
 
     fun schedule(taskId: Long, at: LocalDateTime) {
@@ -54,7 +71,13 @@ class ReminderScheduler(private val context: Context) {
         }
     }
 
-    fun cancel(taskId: Long) = alarms.cancel(alarmIntent(taskId))
+    /** FLAG_NO_CREATE: only look up an existing alarm; don't create a PendingIntent just to cancel it. */
+    fun cancel(taskId: Long) {
+        PendingIntent.getBroadcast(
+            context, taskId.toInt(), Intent(context, ReminderReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+        )?.let { alarms.cancel(it); it.cancel() }
+    }
 
     private fun alarmIntent(taskId: Long): PendingIntent = PendingIntent.getBroadcast(
         context, taskId.toInt(),
@@ -149,7 +172,7 @@ class RescheduleReceiver : BroadcastReceiver() {
         val app = context.applicationContext as KairoApplication
         val pending = goAsync()
         app.appScope.launch {
-            try { app.reminders.sync(app.repository.tasks.first()) } finally { pending.finish() }
+            try { app.reminders.sync(app.repository.tasks.first(), force = true) } finally { pending.finish() }
         }
     }
 }

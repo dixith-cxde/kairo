@@ -9,18 +9,28 @@ import app.kairo.data.model.Priority
 import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalTime
 
 /** The one place screens get data from. Screens see domain models, never Room entities. */
-class TaskRepository(private val db: KairoDatabase) {
+/** Share one upstream between all collectors; skip re-emitting an identical value. */
+internal fun <T> Flow<T>.share(scope: CoroutineScope): Flow<T> =
+    distinctUntilChanged().shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
 
-    private val all: Flow<List<Task>> = db.tasks().observeAll().map { it.map(TaskEntity::toModel) }
+class TaskRepository(private val db: KairoDatabase, scope: CoroutineScope) {
+
+    // Shared: one Room query per change, however many screens, widgets and the reminder sync are
+    // listening (each collector used to run its own). Stays hot 5 s after the last one leaves.
+    private val all: Flow<List<Task>> = db.tasks().observeAll().map { it.map(TaskEntity::toModel) }.share(scope)
     /** Everything the app shows; archived tasks are hidden except in the Archived smart list. */
-    val tasks: Flow<List<Task>> = all.map { l -> l.filter { !it.archived } }
+    val tasks: Flow<List<Task>> = all.map { l -> l.filter { !it.archived } }.share(scope)
     val archived: Flow<List<Task>> = all.map { l -> l.filter { it.archived } }
-    val lists: Flow<List<TaskList>> = db.lists().observeAll().map { it.map(ListEntity::toModel) }
+    val lists: Flow<List<TaskList>> = db.lists().observeAll().map { it.map(ListEntity::toModel) }.share(scope)
 
     fun task(id: Long): Flow<Task?> = db.tasks().observe(id).map { it?.toModel() }
 

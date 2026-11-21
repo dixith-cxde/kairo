@@ -20,12 +20,13 @@ import app.kairo.widgets.updateAllWidgets
 class KairoApplication : Application() {
     val appScope = CoroutineScope(SupervisorJob())
     val database by lazy { KairoDatabase.create(this) }
-    val repository by lazy { TaskRepository(database) }
+    val repository by lazy { TaskRepository(database, appScope) }
     val reminders by lazy { ReminderScheduler(this) }
     val phoneCalendar by lazy { PhoneCalendar(this) }
     val settings by lazy { SettingsStore(this) }
-    val money by lazy { MoneyRepository(database) }
+    val money by lazy { MoneyRepository(database, appScope) }
     val focus by lazy { app.kairo.focus.FocusController(this) }
+    val updater by lazy { app.kairo.update.Updater(this) }
 
     override fun onCreate() {
         super.onCreate()
@@ -45,9 +46,18 @@ class KairoApplication : Application() {
         // Widgets follow the data: refresh shortly after tasks or money change.
         appScope.launch {
             // Content changes, or settings (palette, theme) so the widgets match the app.
-            combine(repository.tasks, money.transactions, money.budgets, settings.settings) { a, b, c, s -> listOf(a, b, c, s) }.collectLatest {
+            // Only the widgets whose data changed are redrawn.
+            var last: List<Any?>? = null
+            combine(repository.tasks, money.transactions, money.budgets, settings.settings) { a, b, c, s -> listOf(a, b, c, s) }.collectLatest { now ->
                 delay(500)
-                updateAllWidgets(this@KairoApplication)
+                val prev = last
+                updateAllWidgets(
+                    this@KairoApplication,
+                    tasks = prev == null || prev[0] != now[0],
+                    money = prev == null || prev[1] != now[1] || prev[2] != now[2],
+                    theme = prev == null || prev[3] != now[3],
+                )
+                last = now
             }
         }
         appScope.launch { runCatching { app.kairo.widgets.publishWidgetPreviews(this@KairoApplication) } }

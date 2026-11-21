@@ -13,6 +13,8 @@ import app.kairo.data.model.ListColor
 import app.kairo.data.model.ListShape
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.CoroutineScope
+import app.kairo.data.share
 import java.time.LocalDate
 import java.util.Random
 
@@ -22,14 +24,15 @@ data class AccountBalance(val account: AccountEntity, val balancePaise: Long)
  * Money data. The Room rows are simple enough to use directly as models here.
  * Balance = opening + income − expense + transfer legs (signed).
  */
-class MoneyRepository(db: KairoDatabase) {
+class MoneyRepository(db: KairoDatabase, scope: CoroutineScope) {
     private val dao = db.money()
 
-    val accounts: Flow<List<AccountEntity>> = dao.accounts()
-    val categories: Flow<List<CategoryEntity>> = dao.categories()
-    val transactions: Flow<List<TransactionEntity>> = dao.transactions()
-    val budgets: Flow<List<BudgetEntity>> = dao.budgets()
-    val recurring: Flow<List<RecurringEntity>> = dao.recurring()
+    // Shared like TaskRepository's: one query per change for all listeners.
+    val accounts: Flow<List<AccountEntity>> = dao.accounts().share(scope)
+    val categories: Flow<List<CategoryEntity>> = dao.categories().share(scope)
+    val transactions: Flow<List<TransactionEntity>> = dao.transactions().share(scope)
+    val budgets: Flow<List<BudgetEntity>> = dao.budgets().share(scope)
+    val recurring: Flow<List<RecurringEntity>> = dao.recurring().share(scope)
 
     val balances: Flow<List<AccountBalance>> = combine(accounts, transactions) { accs, txs ->
         val byAcc = txs.groupBy { it.accountId }
@@ -38,7 +41,7 @@ class MoneyRepository(db: KairoDatabase) {
                 when (t.kind) { TxKind.Income -> t.amountPaise; TxKind.Expense -> -t.amountPaise; TxKind.Transfer -> t.amountPaise }
             })
         }
-    }
+    }.share(scope)
 
     suspend fun add(kind: TxKind, amountPaise: Long, accountId: Long, categoryId: Long?, date: LocalDate, note: String, tags: String) =
         dao.insertTx(TransactionEntity(accountId = accountId, kind = kind, amountPaise = amountPaise, categoryId = categoryId,

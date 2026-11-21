@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -33,7 +34,10 @@ fun TabHeader(
     title: String?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = NoActions,
+    /** Full-width search bar under the title (owner, 2026-11-21: every tab, like Calendar). */
+    search: Boolean = true,
+    searchModifier: Modifier = Modifier,
     below: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val c = MaterialTheme.colorScheme
@@ -45,7 +49,7 @@ fun TabHeader(
             .padding(start = 20.dp, end = 16.dp, top = 20.dp, bottom = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (title != null || actions !== NoActions) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (title != null) Text(title, style = MaterialTheme.typography.displaySmallEmphasized, color = c.primary, maxLines = 1,
                 modifier = Modifier.weight(1f))
             else Row(Modifier.weight(1f)) {}
@@ -54,9 +58,12 @@ fun TabHeader(
         // The subtitle gets the full width under the title row, so it never wraps beside the buttons.
         if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.titleMedium, color = c.onSurfaceVariant,
             modifier = Modifier.padding(top = 0.dp).offsetUp())
+        if (search) SearchPill(LocalOpenSearch.current, searchModifier.fillMaxWidth().height(48.dp))
         below?.invoke(this)
     }
 }
+
+private val NoActions: @Composable RowScope.() -> Unit = {}
 
 /** Lets a header inside a padded LazyColumn reach the screen edges (undoes [h] of side padding). */
 fun Modifier.fullBleed(h: androidx.compose.ui.unit.Dp = 16.dp) = layout { m, cs ->

@@ -99,6 +99,9 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         current?.let { AppLock.onForeground(it.appLock, it.lockAfterSec) }
+        // Every open: ask GitHub for a newer release (cheap; see Updater).
+        val app = application as KairoApplication
+        app.updater.checkOnOpen(app.appScope)
     }
 
     override fun onNewIntent(intent: Intent) {

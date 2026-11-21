@@ -5,7 +5,6 @@ package app.kairo.ui.stats
 import app.kairo.ui.common.TabHeader
 import app.kairo.ui.common.fullBleed
 import app.kairo.ui.common.LocalOpenSearch
-import app.kairo.ui.common.SearchPill
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -162,7 +161,7 @@ fun StatsScreen(repo: TaskRepository) {
                 .padding(start = 16.dp, end = 16.dp, bottom = 140.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TabHeader("Stats", Modifier.fullBleed(), actions = { SearchPill(LocalOpenSearch.current) })
+            TabHeader("Stats", Modifier.fullBleed())
             // M3 Expressive connected button group.
             app.kairo.ui.common.ConnectedGroup(Range.entries, range, { it.label }) { range = it }
 

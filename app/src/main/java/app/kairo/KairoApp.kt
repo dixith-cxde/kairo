@@ -97,6 +97,7 @@ import app.kairo.ui.calendar.CalendarFocus
 import app.kairo.ui.calendar.NewEventSheet
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.today.TodayScreen
+import app.kairo.ui.update.UpdatePrompt
 import app.kairo.ui.today.TodayViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -343,6 +344,8 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                 )
             }
         }
+        // A newer GitHub release (checked on every open): offered once the welcome is done and no other sheet is up.
+        if (prefs?.onboarded == true && sheet == null) UpdatePrompt()
     }
     }
 }

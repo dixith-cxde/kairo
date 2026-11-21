@@ -11,6 +11,7 @@ import android.os.Looper
 import android.provider.CalendarContract
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.callbackFlow
 import android.content.Context
 import android.content.pm.PackageManager
@@ -50,13 +51,14 @@ class PhoneCalendar(private val context: Context) {
      * Emits whenever anything in the phone's calendar changes (a Google Calendar sync landing,
      * an event edited in another app). Push-based: no polling, no battery cost while idle.
      */
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     fun changes(): Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) { trySend(Unit) }
         }
         context.contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, observer)
         awaitClose { context.contentResolver.unregisterContentObserver(observer) }
-    }
+    }.debounce(300) // a Google sync fires dozens of callbacks; reload once it settles
 
     /** Ask every synced calendar account to sync now (what "pull to refresh" does). */
     suspend fun requestSync() = withContext(Dispatchers.IO) {
