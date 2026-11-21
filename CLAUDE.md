@@ -4,7 +4,7 @@ These are the working rules for Claude (or anyone) working on Kairo. They come f
 
 ## 1. Where we are
 
-- **Build phase (v1).** The owner approved the design and started building on 2026-11-20. Step guides live in `docs/build/`; the current step is the lowest-numbered one not marked done. Steps 1–7 are done (3–7 not yet run on the phone).
+- **Build phase (v1).** The owner approved the design and started building on 2026-11-20. Step guides live in `docs/build/`; the current step is the lowest-numbered one not marked done. Steps 1–8 are done (3–8 not yet run on the phone).
 - The Android project lives in this `kairo/` folder (Gradle files next to `docs/`).
 - The source of truth for the look is the canvas: https://claude.ai/artifact/RthtmHKkEsUMm2WUMRUE49. These docs are the source of truth for the *why* and the rules.
 - Keep all Kairo docs inside this `kairo/` folder.
