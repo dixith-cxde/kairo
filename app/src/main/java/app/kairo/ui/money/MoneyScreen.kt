@@ -86,7 +86,9 @@ fun MoneyScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             // M3 carousel of accounts.
-            if (balances.isNotEmpty()) item(key = "accounts") {
+            // Always present (even before data loads), so the list doesn't anchor below it.
+            item(key = "accounts") {
+                if (balances.isEmpty()) { androidx.compose.foundation.layout.Spacer(Modifier.height(150.dp)); return@item }
                 val state = rememberCarouselState { balances.size }
                 HorizontalMultiBrowseCarousel(
                     state = state,
@@ -180,9 +182,10 @@ private fun Tile(label: String, value: String, color: androidx.compose.ui.graphi
 
 @Composable
 private fun LinkButton(label: String, icon: Int, onClick: () -> Unit, modifier: Modifier) {
-    FilledTonalButton(onClick = onClick, modifier = modifier) {
+    FilledTonalButton(onClick = onClick, modifier = modifier, contentPadding = PaddingValues(horizontal = 8.dp)) {
         Icon(painterResource(icon), null, Modifier.size(18.dp))
-        Text(" $label", maxLines = 1)
+        androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
+        Text(label, maxLines = 1, softWrap = false)
     }
 }
 
