@@ -2,6 +2,8 @@
 
 package app.kairo.ui.detail
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,6 +72,7 @@ import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
 import app.kairo.reminders.rememberAskNotifications
 import app.kairo.ui.shapes.polygon
+import app.kairo.ui.common.ListPickerMenu
 import app.kairo.ui.theme.KairoTheme
 import java.time.Duration
 import java.time.Instant
@@ -105,7 +108,7 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") }
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg),
             )
@@ -125,15 +128,7 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                         label = { Text(list.name) },
                         leadingIcon = { Box(Modifier.size(14.dp).background(k.accent(list.color), list.shape.polygon.toShape())) },
                     )
-                    DropdownMenu(expanded = listMenu, onDismissRequest = { listMenu = false }) {
-                        lists.forEach { l ->
-                            DropdownMenuItem(
-                                text = { Text(l.name) },
-                                leadingIcon = { Box(Modifier.size(16.dp).background(k.accent(l.color), l.shape.polygon.toShape())) },
-                                onClick = { vm.edit { it.copy(listId = l.id) }; listMenu = false },
-                            )
-                        }
-                    }
+                    ListPickerMenu(listMenu, lists, t.listId, onDismiss = { listMenu = false }) { l -> vm.edit { it.copy(listId = l.id) } }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
@@ -221,11 +216,11 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                     .navigationBarsPadding()
                     .padding(bottom = 20.dp),
             ) {
-                IconButton(onClick = { pickDate = true }) { Icon(painterResource(R.drawable.ic_event), "Date") }
-                IconButton(onClick = { if (!t.reminder) askNotifications(); vm.edit { it.copy(reminder = !it.reminder) } }) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = { pickDate = true }) { Icon(painterResource(R.drawable.ic_event), "Date") }
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = { if (!t.reminder) askNotifications(); vm.edit { it.copy(reminder = !it.reminder) } }) {
                     Icon(painterResource(R.drawable.ic_notifications), "Reminder")
                 }
-                IconButton(onClick = {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.Reject) // rule 9: delete
                     vm.delete(onBack)
                 }) { Icon(painterResource(R.drawable.ic_delete), "Delete") }
@@ -240,14 +235,14 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
         DatePickerDialog(
             onDismissRequest = { pickDate = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(shapes = ButtonDefaults.shapes(), onClick = {
                     val d = state.selectedDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
                     vm.edit { it.copy(due = d) }
                     pickDate = false
                 }) { Text("Done") }
             },
             dismissButton = {
-                TextButton(onClick = { vm.edit { it.copy(due = null, time = null) }; pickDate = false }) { Text("Clear") }
+                TextButton(shapes = ButtonDefaults.shapes(), onClick = { vm.edit { it.copy(due = null, time = null) }; pickDate = false }) { Text("Clear") }
             },
         ) { DatePicker(state) }
     }
@@ -259,13 +254,13 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
             onDismissRequest = { pickTime = false },
             title = { Text("Time") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(shapes = ButtonDefaults.shapes(), onClick = {
                     vm.edit { it.copy(time = LocalTime.of(state.hour, state.minute), due = it.due ?: LocalDate.now()) }
                     pickTime = false
                 }) { Text("Done") }
             },
             dismissButton = {
-                TextButton(onClick = { vm.edit { it.copy(time = null) }; pickTime = false }) { Text("Clear") }
+                TextButton(shapes = ButtonDefaults.shapes(), onClick = { vm.edit { it.copy(time = null) }; pickTime = false }) { Text("Clear") }
             },
         ) { TimePicker(state) }
     }

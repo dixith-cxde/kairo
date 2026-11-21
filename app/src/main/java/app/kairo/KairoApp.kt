@@ -7,6 +7,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideOutHorizontally
 import androidx.navigation3.scene.Scene
 import androidx.compose.animation.togetherWith
@@ -21,6 +23,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import app.kairo.ui.common.LocalAppSnackbar
 import app.kairo.ui.common.LocalKairoApp
+import app.kairo.ui.common.LocalSelecting
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
@@ -138,8 +141,10 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         }
     }
     val onTab = top is Route.TabRoute
+    // Screens in selection mode show their own floating toolbar; the nav steps aside.
+    val selecting = remember { mutableStateOf(0) }
     val navOffset by animateDpAsState(
-        targetValue = if (navVisible && onTab) 0.dp else 160.dp,
+        targetValue = if (navVisible && onTab && selecting.value == 0) 0.dp else 160.dp,
         animationSpec = motion.defaultSpatialSpec(),
         label = "navOffset",
     )
@@ -151,11 +156,15 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         else -> 100 + scene.entries.size
     }
     fun slide(dir: Int): ContentTransform =
-        (slideInHorizontally(motion.defaultSpatialSpec()) { w -> dir * w / 4 } + fadeIn(motion.defaultEffectsSpec())) togetherWith
-            (slideOutHorizontally(motion.defaultSpatialSpec()) { w -> -dir * w / 4 } + fadeOut(motion.fastEffectsSpec()))
+        (slideInHorizontally(motion.slowSpatialSpec()) { w -> dir * w / 2 } +
+            fadeIn(motion.defaultEffectsSpec()) +
+            scaleIn(motion.slowSpatialSpec(), initialScale = 0.92f)) togetherWith
+            (slideOutHorizontally(motion.slowSpatialSpec()) { w -> -dir * w / 3 } +
+                fadeOut(motion.defaultEffectsSpec()) +
+                scaleOut(motion.slowSpatialSpec(), targetScale = 0.92f))
 
     val snackbar = remember { SnackbarHostState() }
-    CompositionLocalProvider(LocalKairoApp provides app, LocalAppSnackbar provides snackbar) {
+    CompositionLocalProvider(LocalKairoApp provides app, LocalAppSnackbar provides snackbar, LocalSelecting provides selecting) {
     Box(Modifier.fillMaxSize().background(KairoTheme.colors.bg).nestedScroll(hideOnScroll)) {
         NavDisplay(
             backStack = backStack,

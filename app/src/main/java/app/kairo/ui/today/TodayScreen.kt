@@ -2,6 +2,8 @@
 
 package app.kairo.ui.today
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -19,7 +21,10 @@ import kotlinx.coroutines.launch
 import app.kairo.ui.common.Entrance
 import app.kairo.ui.common.LocalAppSnackbar
 import app.kairo.ui.common.Selection
-import app.kairo.ui.common.TaskSelectionBar
+import app.kairo.ui.common.SelectBadge
+import app.kairo.ui.common.SelectionTopBar
+import app.kairo.ui.common.TaskSelectionToolbar
+import app.kairo.ui.common.selectableRowColors
 import app.kairo.ui.common.countUp
 import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.common.rememberSelection
@@ -34,6 +39,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.padding
@@ -134,25 +140,26 @@ fun TodayScreen(
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = k.bg,
+        bottomBar = {
+            TaskSelectionToolbar(selection, state.overdue + state.today + state.completed, state.lists.values.toList(), onOpen)
+        },
         topBar = {
           Box {
             LargeFlexibleTopAppBar(
                 title = { Text("Today") },
                 subtitle = { Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))) },
                 actions = {
-                    IconButton(onClick = { /* Search: later */ }) {
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { /* Search: later */ }) {
                         Icon(painterResource(R.drawable.ic_search), contentDescription = "Search")
                     }
-                    IconButton(onClick = onSettings) {
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = onSettings) {
                         Icon(painterResource(R.drawable.ic_settings), contentDescription = "Settings")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scrollBehavior,
             )
-            TaskSelectionBar(
-                selection, state.overdue + state.today + state.completed, state.lists.values.toList(), onOpen,
-            )
+            SelectionTopBar(selection, (state.overdue + state.today + state.completed).map { it.id })
           }
         },
     ) { padding ->
@@ -169,7 +176,7 @@ fun TodayScreen(
             if (state.overdue.isNotEmpty()) {
                 item(key = "h-overdue") {
                     SectionHeader("Overdue · ${state.overdue.size}", MaterialTheme.colorScheme.error) {
-                        TextButton(onClick = { /* Reschedule: step 7 */ }) { Text("Reschedule") }
+                        TextButton(shapes = ButtonDefaults.shapes(), onClick = { /* Reschedule: step 7 */ }) { Text("Reschedule") }
                     }
                 }
                 taskGroup(state.overdue, state.lists, toggle, onOpen, overdue = true, selection = selection, entrance = entrance)
@@ -183,9 +190,14 @@ fun TodayScreen(
             taskGroup(state.today, state.lists, toggle, onOpen, selection = selection, entrance = entrance)
 
             item(key = "completed-toggle") {
-                CompletedToggle(count = state.completed.size, open = showCompleted) { showCompleted = !showCompleted }
+                CompletedToggle(
+                    count = state.completed.size, open = showCompleted,
+                    groupSize = if (showCompleted) state.completed.size + 1 else 1,
+                ) { showCompleted = !showCompleted }
             }
-            if (showCompleted) taskGroup(state.completed, state.lists, toggle, onOpen, keyPrefix = "c", selection = selection, entrance = entrance)
+            if (showCompleted) taskGroup(
+                state.completed, state.lists, toggle, onOpen, keyPrefix = "c", selection = selection, entrance = entrance, indexOffset = 1,
+            )
         }
     }
 }
@@ -269,8 +281,8 @@ private fun SectionHeader(title: String, color: Color, trailing: @Composable () 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 8.dp)
-            .height(32.dp),
+            .padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 4.dp)
+            .heightIn(min = 40.dp), // room for the Expressive text button
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, style = MaterialTheme.typography.titleSmallEmphasized, color = color, modifier = Modifier.weight(1f))
@@ -287,6 +299,7 @@ private fun LazyListScope.taskGroup(
     keyPrefix: String = "t",
     selection: Selection? = null,
     entrance: Entrance? = null,
+    indexOffset: Int = 0, // > 0 when the group starts with a header segment (Completed)
 ) {
     itemsIndexed(tasks, key = { _, t -> "$keyPrefix${t.id}" }) { i, task ->
         val motion = MaterialTheme.motionScheme
@@ -298,8 +311,9 @@ private fun LazyListScope.taskGroup(
                 fadeOutSpec = motion.fastEffectsSpec(),
             ).then(entrance?.run { Modifier.enter("$keyPrefix${task.id}", i + 1) } ?: Modifier),
         ) {
-            TaskRow(task, lists.getValue(task.listId), i, tasks.size, onToggle, onOpen, overdue, selection)
-            if (i < tasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+            if (indexOffset > 0) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+            TaskRow(task, lists.getValue(task.listId), i + indexOffset, tasks.size + indexOffset, onToggle, onOpen, overdue, selection)
+            if (i < tasks.lastIndex && indexOffset == 0) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
         }
     }
 }
@@ -318,8 +332,6 @@ fun TaskRow(
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     val selected = selection != null && task.id in selection
-    // Selected rows take primaryContainer and round to 16dp (canvas .seg-item.sel).
-    val rowColor by animateColorAsState(if (selected) c.primaryContainer else k.item, MaterialTheme.motionScheme.defaultEffectsSpec(), label = "rowColor")
     val prio = when (task.priority) {
         Priority.High -> k.prioHigh
         Priority.Medium -> k.prioMed
@@ -335,14 +347,16 @@ fun TaskRow(
     val titleColor by animateColorAsState(
         if (shownDone) c.onSurfaceVariant else c.onSurface, motion.defaultEffectsSpec(), label = "title",
     )
-    val baseShapes = ListItemDefaults.segmentedShapes(index, count)
+    // M3 Expressive selectable segmented item: it morphs to the selected shape and color itself.
     SegmentedListItem(
+        selected = selected,
         onClick = { if (selection?.active == true) selection.toggle(task.id) else onOpen(task) },
         onLongClick = selection?.let { { it.toggle(task.id) } },
         onLongClickLabel = "Select",
-        shapes = if (selected) baseShapes.copy(shape = RoundedCornerShape(16.dp)) else baseShapes,
-        colors = ListItemDefaults.segmentedColors(containerColor = rowColor),
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        colors = selectableRowColors(),
         leadingContent = {
+          if (selection?.active == true) SelectBadge(selected) else
           Box(contentAlignment = Alignment.Center) {
             Box(
                 Modifier
@@ -426,18 +440,21 @@ private fun TaskMeta(task: Task, list: TaskList, overdue: Boolean) {
 }
 
 @Composable
-private fun CompletedToggle(count: Int, open: Boolean, onClick: () -> Unit) {
+private fun CompletedToggle(count: Int, open: Boolean, groupSize: Int, onClick: () -> Unit) {
     val k = KairoTheme.colors
+    val turn by androidx.compose.animation.core.animateFloatAsState(
+        if (open) 180f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "chevron",
+    )
     SegmentedListItem(
         onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(0, 1),
+        shapes = ListItemDefaults.segmentedShapes(0, groupSize),
         colors = ListItemDefaults.segmentedColors(containerColor = k.item),
         modifier = Modifier.padding(top = 12.dp),
         leadingContent = {
             Icon(
                 painterResource(R.drawable.ic_expand_more),
                 contentDescription = null,
-                modifier = Modifier.rotate(if (open) 180f else 0f),
+                modifier = Modifier.rotate(turn),
             )
         },
         trailingContent = {

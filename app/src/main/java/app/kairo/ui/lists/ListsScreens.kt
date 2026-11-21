@@ -2,6 +2,8 @@
 
 package app.kairo.ui.lists
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -62,7 +64,8 @@ import app.kairo.data.model.TaskList
 import app.kairo.ui.shapes.polygon
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.today.TaskRow
-import app.kairo.ui.common.TaskSelectionBar
+import app.kairo.ui.common.SelectionTopBar
+import app.kairo.ui.common.TaskSelectionToolbar
 import app.kairo.ui.common.countUp
 import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.common.rememberSelection
@@ -131,7 +134,7 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
             item(key = "h-mine") {
                 Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 16.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("My lists", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary, modifier = Modifier.weight(1f))
-                    androidx.compose.material3.FilledTonalButton(onClick = { creating = true }) {
+                    androidx.compose.material3.FilledTonalButton(shapes = ButtonDefaults.shapes(), onClick = { creating = true }) {
                         Icon(painterResource(R.drawable.ic_add), null, Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
                         Text("New list")
@@ -204,8 +207,8 @@ private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String, ListShape, L
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onCreate(name, shape, color) }, enabled = name.isNotBlank()) { Text("Create") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(shapes = ButtonDefaults.shapes(), onClick = { onCreate(name, shape, color) }, enabled = name.isNotBlank()) { Text("Create") } },
+        dismissButton = { TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) { Text("Cancel") } },
     )
 }
 
@@ -223,6 +226,12 @@ fun ListDetailScreen(vm: ListDetailViewModel, onBack: () -> Unit, onOpenTask: (T
 
     Scaffold(
         containerColor = k.bg,
+        bottomBar = {
+            TaskSelectionToolbar(
+                selection, s.sections.flatMap { it.second }, s.lists.values.toList(), onOpenTask,
+                archivedView = s.smart == SmartList.Archived,
+            )
+        },
         topBar = {
           Box {
             TopAppBar(
@@ -232,13 +241,10 @@ fun ListDetailScreen(vm: ListDetailViewModel, onBack: () -> Unit, onOpenTask: (T
                         Text(s.title, style = MaterialTheme.typography.titleLargeEmphasized)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
+                navigationIcon = { IconButton(shapes = IconButtonDefaults.shapes(), onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg),
             )
-            TaskSelectionBar(
-                selection, s.sections.flatMap { it.second }, s.lists.values.toList(), onOpenTask,
-                archivedView = s.smart == SmartList.Archived,
-            )
+            SelectionTopBar(selection, s.sections.flatMap { it.second }.map { it.id })
           }
         },
     ) { padding ->

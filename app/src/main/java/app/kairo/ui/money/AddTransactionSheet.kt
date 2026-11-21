@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -145,7 +146,7 @@ fun AddTransactionSheet(
                 if (kind == TxKind.Transfer) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AccountPicker("From", accounts, accountId, Modifier.weight(1f)) { accountId = it }
-                        FilledTonalIconButton(onClick = { val a = accountId; accountId = toAccountId; toAccountId = a }) {
+                        FilledTonalIconButton(onClick = { val a = accountId; accountId = toAccountId; toAccountId = a }, shapes = IconButtonDefaults.shapes()) {
                             Icon(painterResource(R.drawable.ic_swap_vert), "Swap accounts")
                         }
                         AccountPicker("To", accounts, toAccountId, Modifier.weight(1f)) { toAccountId = it }
@@ -163,7 +164,7 @@ fun AddTransactionSheet(
                 Button(
                     onClick = ::save,
                     enabled = canSave,
-                    shape = RoundedCornerShape(16.dp),
+                    shapes = ButtonDefaults.shapes(),
                     colors = ButtonDefaults.buttonColors(containerColor = c.primary, contentColor = c.onPrimary),
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) { Text("Save ${kind.name.lowercase()}", style = MaterialTheme.typography.titleMediumEmphasized) }
@@ -216,8 +217,8 @@ private fun Keypad(onKey: (String) -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 row.forEach { key ->
                     TextButton(
+                        shapes = ButtonDefaults.shapes(),
                         onClick = { onKey(key) },
-                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.textButtonColors(containerColor = KairoTheme.colors.itemHigh),
                         modifier = Modifier.weight(1f).height(52.dp),
                     ) {

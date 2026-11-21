@@ -78,21 +78,18 @@ fun accountIcon(t: app.kairo.data.db.AccountType) = when (t) {
 @Composable
 fun TxRow(
     tx: TransactionEntity, cat: CategoryEntity?, account: AccountEntity?, index: Int, count: Int,
-    selected: Boolean = false, onLongClick: (() -> Unit)? = null, onClick: () -> Unit = {},
+    selected: Boolean = false, selecting: Boolean = false, onLongClick: (() -> Unit)? = null, onClick: () -> Unit = {},
 ) {
     val c = MaterialTheme.colorScheme
     val signed = tx.signedPaise()
-    val base = ListItemDefaults.segmentedShapes(index, count)
-    val rowColor by androidx.compose.animation.animateColorAsState(
-        if (selected) c.primaryContainer else KairoTheme.colors.item, MaterialTheme.motionScheme.defaultEffectsSpec(), label = "tx",
-    )
     SegmentedListItem(
+        selected = selected,
         onClick = onClick,
         onLongClick = onLongClick,
         onLongClickLabel = "Select",
-        shapes = if (selected) base.copy(shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) else base,
-        colors = ListItemDefaults.segmentedColors(containerColor = rowColor),
-        leadingContent = { CategoryBadge(cat) },
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        colors = app.kairo.ui.common.selectableRowColors(),
+        leadingContent = { if (selecting) app.kairo.ui.common.SelectBadge(selected) else CategoryBadge(cat) },
         supportingContent = {
             Text(listOfNotNull(if (tx.kind == TxKind.Transfer) "Transfer" else cat?.name, account?.name).joinToString(" · ") +
                 if (tx.tags.isNotBlank()) " · ${tx.tags}" else "")

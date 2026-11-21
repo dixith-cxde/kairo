@@ -2,6 +2,7 @@
 
 package app.kairo.ui.money
 
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +44,8 @@ import app.kairo.data.db.TxKind
 import app.kairo.data.money.Money
 import app.kairo.data.money.MoneyRepository
 import app.kairo.ui.theme.KairoTheme
-import app.kairo.ui.common.MoneySelectionBar
+import app.kairo.ui.common.MoneySelectionToolbar
+import app.kairo.ui.common.SelectionTopBar
 import app.kairo.ui.common.countUp
 import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.common.rememberSelection
@@ -85,6 +87,7 @@ fun MoneyScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         containerColor = k.bg,
+        bottomBar = { MoneySelectionToolbar(selection, txs) },
         topBar = {
           Box {
             LargeFlexibleTopAppBar(
@@ -93,7 +96,7 @@ fun MoneyScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,
             )
-            MoneySelectionBar(selection, txs)
+            SelectionTopBar(selection, txs.map { it.id })
           }
         },
     ) { padding ->
@@ -208,6 +211,7 @@ fun MoneyScreen(
                             TxRow(
                                 tx, tx.categoryId?.let(catMap::get), accMap[tx.accountId], i, list.size,
                                 selected = tx.id in selection,
+                                selecting = selection.active,
                                 onLongClick = { selection.toggle(tx.id) },
                             ) { if (selection.active) selection.toggle(tx.id) else onAccount(tx.accountId) }
                             if (i < list.lastIndex) SegGap()
@@ -229,7 +233,7 @@ private fun Tile(label: String, value: String, color: androidx.compose.ui.graphi
 
 @Composable
 private fun LinkButton(label: String, icon: Int, onClick: () -> Unit, modifier: Modifier) {
-    FilledTonalButton(onClick = onClick, modifier = modifier, contentPadding = PaddingValues(horizontal = 8.dp)) {
+    FilledTonalButton(shapes = ButtonDefaults.shapes(), onClick = onClick, modifier = modifier, contentPadding = PaddingValues(horizontal = 8.dp)) {
         Icon(painterResource(icon), null, Modifier.size(18.dp))
         androidx.compose.foundation.layout.Spacer(Modifier.size(6.dp))
         Text(label, maxLines = 1, softWrap = false)

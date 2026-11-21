@@ -1,7 +1,17 @@
 package app.kairo.data.calendar
 
 import android.Manifest
+import android.accounts.Account
+import android.content.ContentResolver
 import android.content.ContentUris
+import android.database.ContentObserver
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.CalendarContract
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.CalendarContract.Instances
@@ -30,6 +40,36 @@ data class CalEvent(
  * Google Calendar events appear because the phone already syncs them (docs/06-data-and-calendar.md).
  */
 class PhoneCalendar(private val context: Context) {
+
+    /**
+     * Emits whenever anything in the phone's calendar changes (a Google Calendar sync landing,
+     * an event edited in another app). Push-based: no polling, no battery cost while idle.
+     */
+    fun changes(): Flow<Unit> = callbackFlow {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) { trySend(Unit) }
+        }
+        context.contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, observer)
+        awaitClose { context.contentResolver.unregisterContentObserver(observer) }
+    }
+
+    /** Ask every synced calendar account to sync now (what "pull to refresh" does). */
+    suspend fun requestSync() = withContext(Dispatchers.IO) {
+        if (!hasPermission()) return@withContext
+        val accounts = mutableSetOf<Account>()
+        context.contentResolver.query(
+            CalendarContract.Calendars.CONTENT_URI,
+            arrayOf(CalendarContract.Calendars.ACCOUNT_NAME, CalendarContract.Calendars.ACCOUNT_TYPE),
+            null, null, null,
+        )?.use { c -> while (c.moveToNext()) accounts += Account(c.getString(0), c.getString(1)) }
+        val extras = Bundle().apply {
+            putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true)
+            putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true)
+        }
+        accounts.filter { it.type != CalendarContract.ACCOUNT_TYPE_LOCAL }.forEach { a ->
+            runCatching { ContentResolver.requestSync(a, CalendarContract.AUTHORITY, extras) }
+        }
+    }
 
     fun hasPermission() =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED

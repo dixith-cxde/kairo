@@ -2,6 +2,8 @@
 
 package app.kairo.ui.settings
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
 import android.app.AlarmManager
 import android.content.Intent
 import android.net.Uri
@@ -86,7 +88,7 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
+                navigationIcon = { IconButton(shapes = IconButtonDefaults.shapes(), onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg),
             )
         },

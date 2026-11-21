@@ -2,6 +2,7 @@
 
 package app.kairo.ui.quickadd
 
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,7 @@ import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
 import app.kairo.reminders.rememberAskNotifications
 import app.kairo.ui.shapes.polygon
+import app.kairo.ui.common.ListPickerMenu
 import app.kairo.ui.theme.KairoTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -196,25 +198,17 @@ fun QuickAddSheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box {
-                IconButton(onClick = { listMenu = true }) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = { listMenu = true }) {
                     Icon(painterResource(R.drawable.ic_drive_file_move), contentDescription = "Choose list")
                 }
-                DropdownMenu(expanded = listMenu, onDismissRequest = { listMenu = false }) {
-                    lists.forEach { l ->
-                        DropdownMenuItem(
-                            text = { Text(l.name) },
-                            leadingIcon = { Box(Modifier.size(16.dp).background(k.accent(l.color), l.shape.polygon.toShape())) },
-                            onClick = { pickedList = l; listMenu = false },
-                        )
-                    }
-                }
+                ListPickerMenu(listMenu, lists, list?.id, onDismiss = { listMenu = false }) { pickedList = it }
             }
             Spacer(Modifier.weight(1f))
             // Solid primary send (rule 4 spirit): 72x56, 16dp corners.
             FilledIconButton(
                 onClick = ::submit,
                 enabled = parsed.title.isNotBlank(),
-                shape = RoundedCornerShape(16.dp),
+                shapes = IconButtonDefaults.shapes(),
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = c.primary, contentColor = c.onPrimary),
                 modifier = Modifier.size(width = 72.dp, height = 56.dp),
             ) {

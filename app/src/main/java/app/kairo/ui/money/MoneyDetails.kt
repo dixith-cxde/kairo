@@ -2,6 +2,8 @@
 
 package app.kairo.ui.money
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -77,7 +79,7 @@ private fun DetailScaffold(title: String, onBack: () -> Unit, content: @Composab
         topBar = {
             TopAppBar(
                 title = { Text(title, style = MaterialTheme.typography.titleLargeEmphasized) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
+                navigationIcon = { IconButton(shapes = IconButtonDefaults.shapes(), onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = KairoTheme.colors.bg),
             )
         },
@@ -342,7 +344,7 @@ fun RecurringScreen(money: MoneyRepository, onBack: () -> Unit) {
                             leadingContent = { CategoryBadge(cats.firstOrNull { it.id == r.categoryId }) },
                             supportingContent = { Text("${r.kind.name} · due ${r.nextDue.format(fmt)}") },
                             trailingContent = {
-                                FilledTonalButton(onClick = { scope.launch { money.pay(r) } }) { Text("Pay ${Money.format(r.amountPaise)}") }
+                                FilledTonalButton(shapes = ButtonDefaults.shapes(), onClick = { scope.launch { money.pay(r) } }) { Text("Pay ${Money.format(r.amountPaise)}") }
                             },
                         ) { Text(r.name) }
                         if (i < items.lastIndex) SegGap()

@@ -33,6 +33,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,15 +100,21 @@ fun FloatingNavBar(
             val slot = (maxWidth - gap * (count - 1)) / count
             // One pill that travels between slots on the expressive spatial spring (it overshoots a
             // little and settles: the Stash "bouncy" feel), instead of fading in place.
-            val pillX by animateDpAsState(
-                targetValue = (slot + gap) * selected.ordinal,
-                animationSpec = motion.defaultSpatialSpec(),
-                label = "pillX",
-            )
+            // The pill's two edges chase the new tab on different springs: the leading edge on
+            // fastSpatial, the trailing edge on slowSpatial. The pill stretches toward the tab,
+            // then the back catches up and both settle with a little bounce (liquid feel).
+            val target = (slot + gap) * selected.ordinal
+            val dir = remember { mutableStateOf(1) }
+            val prev = remember { mutableStateOf(selected.ordinal) }
+            if (prev.value != selected.ordinal) { dir.value = if (selected.ordinal > prev.value) 1 else -1; prev.value = selected.ordinal }
+            val fast = motion.fastSpatialSpec<androidx.compose.ui.unit.Dp>()
+            val slow = motion.slowSpatialSpec<androidx.compose.ui.unit.Dp>()
+            val left by animateDpAsState(target, if (dir.value < 0) fast else slow, label = "pillLeft")
+            val right by animateDpAsState(target + slot, if (dir.value > 0) fast else slow, label = "pillRight")
             Box(
                 Modifier
-                    .offset { IntOffset(pillX.roundToPx(), 0) }
-                    .size(width = slot, height = PillHeight)
+                    .offset { IntOffset(left.roundToPx(), 0) }
+                    .size(width = (right - left).coerceAtLeast(PillHeight), height = PillHeight)
                     .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(PillHeight / 2)),
             )
             Row(

@@ -2,6 +2,8 @@
 
 package app.kairo.ui.calendar
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -64,7 +66,11 @@ import app.kairo.data.calendar.PhoneCalendar
 import app.kairo.data.model.Task
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.today.TaskRow
-import app.kairo.ui.common.TaskSelectionBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import app.kairo.ui.common.SelectionTopBar
+import app.kairo.ui.common.TaskSelectionToolbar
 import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.common.rememberSelection
 import app.kairo.ui.common.slowSpin
@@ -102,9 +108,15 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
     val tasks by repo.tasks.collectAsStateWithLifecycle(initialValue = emptyList())
     val lists by repo.lists.collectAsStateWithLifecycle(initialValue = emptyList())
     val listMap = remember(lists) { lists.associateBy { it.id } }
-    val events by produceState(emptyList<CalEvent>(), ym, granted) {
+    // Reload when the month changes, permission is granted, or the phone's calendar changes.
+    var tick by remember { mutableStateOf(0) }
+    LaunchedEffect(granted) { if (granted) calendar.changes().collect { tick++ } }
+    var refreshing by remember { mutableStateOf(false) }
+    val events by produceState(emptyList<CalEvent>(), ym, granted, tick) {
         value = calendar.events(ym.atDay(1).minusDays(7), ym.atEndOfMonth().plusDays(8))
+        refreshing = false
     }
+    val pull = rememberPullToRefreshState()
 
     val tasksByDay = remember(tasks) { tasks.filter { it.due != null }.groupBy { it.due!! } }
     val eventDays = remember(events) {
@@ -120,23 +132,37 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         containerColor = k.bg,
+        bottomBar = { TaskSelectionToolbar(selection, dayTasks, lists, onOpenTask) },
         topBar = {
           Box {
             LargeFlexibleTopAppBar(
                 title = { Text(ym.format(DateTimeFormatter.ofPattern("MMMM yyyy"))) },
                 actions = {
-                    IconButton(onClick = { month = ym.minusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_left), "Previous month") }
-                    IconButton(onClick = { month = ym.plusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_right), "Next month") }
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { month = ym.minusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_left), "Previous month") }
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { month = ym.plusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_right), "Next month") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,
             )
-            TaskSelectionBar(selection, dayTasks, lists, onOpenTask)
+            SelectionTopBar(selection, dayTasks.map { it.id })
           }
         },
     ) { padding ->
+      // Pull down to sync: M3 Expressive pull-to-refresh with the morphing LoadingIndicator.
+      PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            refreshing = true
+            scope.launch { calendar.requestSync(); tick++ }
+        },
+        state = pull,
+        modifier = Modifier.padding(top = padding.calculateTopPadding()),
+        indicator = {
+            PullToRefreshDefaults.LoadingIndicator(state = pull, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter))
+        },
+      ) {
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "grid") {
@@ -196,6 +222,7 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
                 }
             }
         }
+      }
     }
 }
 
