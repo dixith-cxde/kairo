@@ -12,8 +12,9 @@ import androidx.room.TypeConverters
         ListEntity::class, TaskEntity::class,
         AccountEntity::class, CategoryEntity::class, TransactionEntity::class, BudgetEntity::class, RecurringEntity::class,
         app.kairo.focus.FocusSessionEntity::class,
+        app.kairo.habits.HabitEntity::class, app.kairo.habits.HabitCheckEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // v2 adds the Money tables
@@ -22,6 +23,7 @@ import androidx.room.TypeConverters
         AutoMigration(from = 4, to = 5), // v5 adds budgets.accountId (per-account budgets)
         AutoMigration(from = 5, to = 6), // v6 makes tasks.listId optional
         AutoMigration(from = 6, to = 7), // v7 adds tasks.repeat
+        AutoMigration(from = 7, to = 8), // v8 adds habits + habit_checks
     ],
 )
 @TypeConverters(Converters::class)
@@ -30,6 +32,7 @@ abstract class KairoDatabase : RoomDatabase() {
     abstract fun lists(): ListDao
     abstract fun money(): MoneyDao
     abstract fun focus(): app.kairo.focus.FocusDao
+    abstract fun habits(): app.kairo.habits.HabitDao
 
     companion object {
         fun create(context: Context): KairoDatabase =

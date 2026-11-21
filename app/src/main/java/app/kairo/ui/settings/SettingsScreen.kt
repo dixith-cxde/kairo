@@ -237,7 +237,7 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                 scope.launch {
                     importing = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         // File read and CSV parsing off the main thread (a big export froze the screen).
-                        val text = context.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+                        val text = app.kairo.data.money.IvyImport.decode(context.contentResolver.openInputStream(uri)!!.use { it.readBytes() })
                         val r = app.kairo.data.money.IvyImport.import(kairo.money, text)
                         "Added ${r.added} · skipped ${r.skipped}" +
                             (if (r.accountsCreated > 0) " · ${r.accountsCreated} new accounts" else "") +

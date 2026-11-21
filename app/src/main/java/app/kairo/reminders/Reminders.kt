@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import app.kairo.KairoApplication
 import app.kairo.MainActivity
 import app.kairo.R
+import app.kairo.habits.HabitReminders
 import app.kairo.data.model.Task
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -172,7 +173,10 @@ class RescheduleReceiver : BroadcastReceiver() {
         val app = context.applicationContext as KairoApplication
         val pending = goAsync()
         app.appScope.launch {
-            try { app.reminders.sync(app.repository.tasks.first(), force = true) } finally { pending.finish() }
+            try {
+                app.reminders.sync(app.repository.tasks.first(), force = true)
+                HabitReminders(context).sync(app.habits.habits.first())
+            } finally { pending.finish() }
         }
     }
 }

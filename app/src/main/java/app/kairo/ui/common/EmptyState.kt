@@ -26,28 +26,24 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.graphics.shapes.RoundedPolygon
-import kotlin.random.Random
 
 /** Bumped by the app each time a tab is shown, so empty states pick new shapes on every visit. */
 val LocalTabVisit = androidx.compose.runtime.compositionLocalOf { 0 }
 
 /**
- * Shapes for empty states (owner, 2026-11-21): mostly the chubby Triangle, Pill and Oval, now and
- * then a Bun, Arch or Cookie4. Never Puffy / Puffy Diamond / Heart (rule 6).
+ * Shapes for empty states (owner, 2026-11-21): one shape only, always a cookie, clover, Gem or
+ * Pentagon. Never Puffy / Puffy Diamond / Heart (rule 6).
  */
-private val Mostly = listOf(MaterialShapes.Triangle, MaterialShapes.Pill, MaterialShapes.Oval)
-private val Sometimes = listOf(MaterialShapes.Bun, MaterialShapes.Arch, MaterialShapes.Cookie4Sided)
-
-private fun pickShape(avoid: RoundedPolygon? = null): RoundedPolygon {
-    val pool = if (Random.nextFloat() < 0.8f) Mostly else Sometimes
-    return pool.filter { it !== avoid }.random()
-}
+private val EmptyShapes = listOf(
+    MaterialShapes.Cookie4Sided, MaterialShapes.Cookie6Sided, MaterialShapes.Cookie7Sided,
+    MaterialShapes.Cookie9Sided, MaterialShapes.Cookie12Sided,
+    MaterialShapes.Clover4Leaf, MaterialShapes.Clover8Leaf,
+    MaterialShapes.Gem, MaterialShapes.Pentagon,
+)
 
 /**
- * Empty screens: two nested library shapes, no icon (owner, 2026-11-21). A big soft one turns
- * slowly; a smaller one in front turns the other way. Both are picked at random each time the tab
- * is shown, then the pair pops in on the slow spatial spring.
+ * Empty screens: a single library shape, no icon. It's picked at random each time the tab is
+ * shown, pops in on the slow spatial spring, then turns slowly.
  */
 @Composable
 fun EmptyState(
@@ -55,12 +51,11 @@ fun EmptyState(
     body: String,
     modifier: Modifier = Modifier,
     size: Dp = 200.dp,
-    back: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    front: Color = MaterialTheme.colorScheme.secondaryContainer,
+    color: Color = MaterialTheme.colorScheme.secondaryContainer,
     action: (@Composable () -> Unit)? = null,
 ) {
     val visit = LocalTabVisit.current
-    val (backShape, frontShape) = remember(visit) { pickShape().let { b -> b to pickShape(avoid = b) } }
+    val shape = remember(visit) { EmptyShapes.random() }
     val spin by slowSpin(48_000)
     val pop = remember(visit) { Animatable(0.6f) }
     val spec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
@@ -70,12 +65,11 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.size(size).graphicsLayer { scaleX = pop.value; scaleY = pop.value }, contentAlignment = Alignment.Center) {
-            Box(Modifier.size(size).graphicsLayer { rotationZ = spin }.background(back, backShape.toShape()))
-            Box(
-                Modifier.size(size * 0.5f).graphicsLayer { rotationZ = -spin * 2 + 20f }.background(front, frontShape.toShape()),
-            )
-        }
+        Box(
+            Modifier.size(size)
+                .graphicsLayer { scaleX = pop.value; scaleY = pop.value; rotationZ = spin }
+                .background(color, shape.toShape()),
+        )
         Text(title, style = MaterialTheme.typography.headlineSmallEmphasized, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         if (action != null) Box(Modifier.padding(top = 4.dp)) { action() }

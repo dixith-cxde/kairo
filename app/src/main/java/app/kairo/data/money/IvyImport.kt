@@ -18,11 +18,27 @@ import java.time.format.DateTimeFormatter
 object IvyImport {
     data class Result(val added: Int, val skipped: Int, val accountsCreated: Int, val categoriesCreated: Int)
 
-    suspend fun import(money: MoneyRepository, text: String): Result {
+    /**
+     * File bytes to text. Handles the byte-order mark Ivy and spreadsheets put first (it made the
+     * first header read as "\uFEFFdate", so "no date column") and UTF-16 "Unicode text" saves.
+     */
+    fun decode(b: ByteArray): String {
+        val cs = when {
+            b.size >= 2 && b[0] == 0xFF.toByte() && b[1] == 0xFE.toByte() -> Charsets.UTF_16LE
+            b.size >= 2 && b[0] == 0xFE.toByte() && b[1] == 0xFF.toByte() -> Charsets.UTF_16BE
+            // UTF-16 without a mark: every other byte of ASCII text is zero.
+            b.size >= 4 && b[1] == 0.toByte() && b[3] == 0.toByte() -> Charsets.UTF_16LE
+            else -> Charsets.UTF_8
+        }
+        return String(b, cs).trimStart('\uFEFF')
+    }
+
+    suspend fun import(money: MoneyRepository, text0: String): Result {
+        val text = text0.trimStart('\uFEFF')
         val lines = text.lines().filter { it.isNotBlank() }
         require(lines.isNotEmpty()) { "The file is empty" }
         val delim = if (lines[0].count { it == '\t' } > lines[0].count { it == ',' }) '\t' else ','
-        val header = split(lines[0], delim).map { it.trim().lowercase() }
+        val header = split(lines[0], delim).map { it.replace("\uFEFF", "").trim().trim('"').trim().lowercase() }
         fun col(name: String) = header.indexOf(name).also { require(it >= 0) { "Not an Ivy Wallet CSV (no \"$name\" column)" } }
         val iDate = col("date"); val iTitle = col("title"); val iCat = col("category"); val iAcc = col("account")
         val iAmt = col("amount"); val iType = col("type"); val iTo = header.indexOf("to account")

@@ -14,6 +14,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.remember
+import app.kairo.habits.Habit
+import app.kairo.ui.habits.HabitDetailSheet
+import app.kairo.ui.habits.HabitSheet
+import app.kairo.ui.habits.habitsSection
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -159,6 +164,13 @@ fun TodayScreen(
         }
     }
 
+    // Habits live with the tasks (owner, 2026-11-21).
+    val kairoApp = LocalKairoApp.current
+    val habits by kairoApp.habits.habits.collectAsStateWithLifecycle(initialValue = emptyList())
+    var newHabit by remember { mutableStateOf(false) }
+    var openHabit by remember { mutableStateOf<Habit?>(null) }
+    var editHabit by remember { mutableStateOf<Habit?>(null) }
+
     Scaffold(
         modifier = modifier,
         containerColor = k.bg,
@@ -190,6 +202,12 @@ fun TodayScreen(
                     },
                     below = { Box(Modifier.tourTarget("filters", 16.dp)) { FilterChips(state, filter) { filter = it } } },
                 )
+            }
+            if (filter == TodayFilter.All || filter == TodayFilter.Today) run {
+                habitsSection(habits, onAdd = { newHabit = true }, onOpen = { openHabit = it }) { h ->
+                    if (!h.doneOn(LocalDate.now())) haptic.performHapticFeedback(HapticFeedbackType.ToggleOn) // rule 9: complete
+                    kairoApp.appScope.launch { kairoApp.habits.toggle(h) }
+                }
             }
             // A blank day (nothing due, nothing done, nothing overdue): one calm empty page instead of
             // a 0/0 ring and empty headers (owner, 2026-11-21).
@@ -271,6 +289,9 @@ fun TodayScreen(
         SelectionTopBar(selection, everything.map { it.id }, Modifier.align(Alignment.TopCenter))
       }
     }
+    if (newHabit) HabitSheet(onDismiss = { newHabit = false })
+    editHabit?.let { h -> HabitSheet(h, onDismiss = { editHabit = null }) }
+    openHabit?.let { h -> HabitDetailSheet(h, onEdit = { editHabit = h; openHabit = null }, onDismiss = { openHabit = null }) }
     if (rescheduleOverdue) DateSheet(
         initial = DateChoice(LocalDate.now(), null, false),
         title = "Reschedule ${state.overdue.size} overdue",

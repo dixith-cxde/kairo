@@ -99,6 +99,8 @@ fun QuickAddSheet(
     var listMenu by remember { mutableStateOf(false) }
     var dateSheet by remember { mutableStateOf(false) }
     var dateOverride by remember { mutableStateOf<DateChoice?>(null) }
+    var repeat by remember { mutableStateOf<app.kairo.data.model.Repeat?>(null) }
+    var repeatSheet by remember { mutableStateOf(false) }
 
     val parsed = remember(text) { QuickAddParser.parse(text) }
     val tokenList = parsed.listName?.let { n -> lists.firstOrNull { it.name.equals(n, ignoreCase = true) } }
@@ -112,7 +114,7 @@ fun QuickAddSheet(
     fun submit() {
         if (parsed.title.isBlank()) return
         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
-        onAdd(Task(0, parsed.title, list?.id, due, time, priority, reminder = reminder))
+        onAdd(Task(0, parsed.title, list?.id, due ?: repeat?.next(null), time, priority, reminder = reminder, repeat = repeat))
         close() // done → the drawer closes (owner, 2026-11-21)
     }
 
@@ -217,6 +219,12 @@ fun QuickAddSheet(
                 label = { Text("Remind") },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_notifications), null, Modifier.size(18.dp)) },
             )
+            FilterChip(
+                selected = repeat != null,
+                onClick = { repeatSheet = true },
+                label = { Text(repeat?.label() ?: "Repeat") },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_repeat), null, Modifier.size(18.dp)) },
+            )
         }
 
         Row(
@@ -242,6 +250,7 @@ fun QuickAddSheet(
             }
         }
     }
+    if (repeatSheet) app.kairo.ui.common.RepeatSheet(repeat, due, onDismiss = { repeatSheet = false }) { repeat = it; repeatSheet = false }
     if (dateSheet) DateSheet(
         initial = DateChoice(due, time, reminder),
         onDismiss = { dateSheet = false },

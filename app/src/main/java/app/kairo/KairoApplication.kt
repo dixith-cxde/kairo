@@ -25,6 +25,7 @@ class KairoApplication : Application() {
     val phoneCalendar by lazy { PhoneCalendar(this) }
     val settings by lazy { SettingsStore(this) }
     val money by lazy { MoneyRepository(database, appScope) }
+    val habits by lazy { app.kairo.habits.HabitRepository(this, appScope) }
     val focus by lazy { app.kairo.focus.FocusController(this) }
     val updater by lazy { app.kairo.update.Updater(this) }
 
@@ -33,6 +34,9 @@ class KairoApplication : Application() {
         val debug = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         ReminderScheduler.createChannel(this)
         app.kairo.focus.FocusController.createChannels(this)
+        app.kairo.habits.HabitReminders.createChannel(this)
+        // Habit reminders follow the habits (new time, removed, checked today).
+        appScope.launch { habits.habits.collect { app.kairo.habits.HabitReminders(this@KairoApplication).sync(it) } }
         appScope.launch {
             // One-time cleanup of the old default lists/accounts (only ones never used).
             val prefs = getSharedPreferences("seed", MODE_PRIVATE)
