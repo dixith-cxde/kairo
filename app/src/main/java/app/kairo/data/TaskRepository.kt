@@ -36,6 +36,8 @@ class TaskRepository(private val db: KairoDatabase) {
         db.tasks().setDoneAll(ids, done, if (done) System.currentTimeMillis() else null)
     suspend fun setArchived(ids: List<Long>, archived: Boolean) = db.tasks().setArchived(ids, archived)
     suspend fun move(ids: List<Long>, listId: Long) = db.tasks().move(ids, listId)
+    suspend fun reschedule(ids: List<Long>, due: LocalDate?, time: LocalTime?, reminder: Boolean) =
+        db.tasks().reschedule(ids, due, time, reminder)
     suspend fun duplicate(task: Task): Long = db.tasks().insert(task.toEntity().copy(id = 0, done = false, completedAt = null))
     /** Deletes and returns the rows, so Undo can put them back exactly. */
     suspend fun deleteAll(ids: List<Long>): List<TaskEntity> = db.tasks().get(ids).also { db.tasks().deleteAll(ids) }

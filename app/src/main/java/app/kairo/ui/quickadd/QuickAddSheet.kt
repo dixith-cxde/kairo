@@ -62,6 +62,8 @@ import app.kairo.data.model.TaskList
 import app.kairo.reminders.rememberAskNotifications
 import app.kairo.ui.shapes.polygon
 import app.kairo.ui.common.ListPickerMenu
+import app.kairo.ui.common.DateChoice
+import app.kairo.ui.common.DateSheet
 import app.kairo.ui.theme.KairoTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -91,19 +93,22 @@ fun QuickAddSheet(
     var priorityOverride by remember { mutableStateOf<Priority?>(null) }
     var reminder by remember { mutableStateOf(false) }
     var listMenu by remember { mutableStateOf(false) }
+    var dateSheet by remember { mutableStateOf(false) }
+    var dateOverride by remember { mutableStateOf<DateChoice?>(null) }
 
     val parsed = remember(text) { QuickAddParser.parse(text) }
     val tokenList = parsed.listName?.let { n -> lists.firstOrNull { it.name.equals(n, ignoreCase = true) } }
     val list = pickedList ?: tokenList ?: lists.firstOrNull { it.name == "Personal" } ?: lists.firstOrNull()
-    val due = parsed.due ?: defaultDue
+    val due = dateOverride?.let { it.date } ?: parsed.due ?: defaultDue
+    val time = dateOverride?.let { it.time } ?: parsed.time
     val priority = priorityOverride ?: parsed.priority ?: Priority.None
 
     fun close() = scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
     fun submit() {
         if (parsed.title.isBlank() || list == null) return
         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
-        onAdd(Task(0, parsed.title, list.id, due, parsed.time, priority, reminder = reminder))
-        text = ""; priorityOverride = null; reminder = false // stay open for the next one
+        onAdd(Task(0, parsed.title, list.id, due, time, priority, reminder = reminder))
+        text = ""; priorityOverride = null; reminder = false; dateOverride = null // stay open for the next one
     }
 
     val focus = remember { FocusRequester() }
@@ -167,8 +172,8 @@ fun QuickAddSheet(
         ) {
             FilterChip(
                 selected = due != null,
-                onClick = { /* Date picker: step 7 */ },
-                label = { Text(describe(due, parsed.time)) },
+                onClick = { dateSheet = true },
+                label = { Text(describe(due, time)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_event), null, Modifier.size(18.dp)) },
             )
             FilterChip(
@@ -216,6 +221,10 @@ fun QuickAddSheet(
             }
         }
     }
+    if (dateSheet) DateSheet(
+        initial = DateChoice(due, time, reminder),
+        onDismiss = { dateSheet = false },
+    ) { ch -> dateOverride = ch; reminder = ch.reminder; if (ch.reminder) askNotifications(); dateSheet = false }
 }
 
 private val DayFmt = DateTimeFormatter.ofPattern("EEE, d MMM")

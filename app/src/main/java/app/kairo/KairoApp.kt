@@ -69,6 +69,7 @@ import app.kairo.navigation.Tab
 import app.kairo.ui.detail.TaskDetailScreen
 import app.kairo.ui.detail.TaskDetailViewModel
 import app.kairo.ui.nav.FloatingNavBar
+import app.kairo.ui.focus.FocusScreen
 import app.kairo.ui.money.AccountScreen
 import app.kairo.ui.money.AddTransactionSheet
 import app.kairo.ui.money.BudgetsScreen
@@ -126,6 +127,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         when (action) {
             MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today); sheet = "task" }
             MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money); sheet = TxKind.Expense.name }
+            MainActivity.ACTION_FOCUS -> { select(Tab.Today); open(Route.FocusRoute) }
         }
         if (action != null) onActionHandled()
     }
@@ -179,7 +181,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                             Tab.Today -> {
                                 val vm: TodayViewModel = viewModel(factory = viewModelFactory { initializer { TodayViewModel(app.repository) } })
                                 val state by vm.state.collectAsStateWithLifecycle()
-                                state?.let { TodayScreen(it, onToggle = vm::toggle, onOpen = { t -> open(Route.TaskRoute(t.id)) }, onSettings = { open(Route.SettingsRoute) }) }
+                                state?.let { TodayScreen(it, onToggle = vm::toggle, onOpen = { t -> open(Route.TaskRoute(t.id)) }, onSettings = { open(Route.SettingsRoute) }, onFocus = { open(Route.FocusRoute) }) }
                             }
                             Tab.Lists -> {
                                 val vm: ListsViewModel = viewModel(factory = viewModelFactory { initializer { ListsViewModel(app.repository) } })
@@ -208,6 +210,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                         Route.BudgetsRoute -> BudgetsScreen(app.money, onBack = ::back)
                         Route.InsightsRoute -> InsightsScreen(app.money, onBack = ::back)
                         Route.RecurringRoute -> RecurringScreen(app.money, onBack = ::back)
+                        Route.FocusRoute -> FocusScreen(app, onBack = ::back)
                         is Route.ListRoute -> {
                             val vm: ListDetailViewModel = viewModel(
                                 key = "list-${route.listId}",

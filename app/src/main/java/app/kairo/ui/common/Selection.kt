@@ -217,6 +217,7 @@ fun TaskSelectionToolbar(
     val haptic = LocalHapticFeedback.current
     val chosen = tasks.filter { it.id in selection.ids }
     var moving by remember { mutableStateOf(false) }
+    var rescheduling by remember { mutableStateOf(false) }
 
     fun withUndo(message: String, undo: suspend () -> Unit) = scope.launch {
         snackbar.currentSnackbarData?.dismiss()
@@ -238,6 +239,7 @@ fun TaskSelectionToolbar(
                 withUndo("Completed ${ids.size} tasks") { repo.setDone(ids, false) }
             }
         }
+        if (!archivedView) ToolbarAction(R.drawable.ic_event, "Reschedule") { rescheduling = true }
         if (!archivedView) ToolbarAction(R.drawable.ic_drive_file_move, "Move to list") { moving = true }
         ToolbarAction(if (archivedView) R.drawable.ic_unarchive else R.drawable.ic_archive, if (archivedView) "Unarchive" else "Archive") {
             scope.launch { repo.setArchived(ids, !archivedView) }; selection.clear()
@@ -250,6 +252,18 @@ fun TaskSelectionToolbar(
                 val rows = repo.deleteAll(ids)
                 withUndo(if (rows.size == 1) "Deleted “${rows[0].title}”" else "Deleted ${rows.size} tasks") { repo.restore(rows) }
             }
+        }
+    }
+    if (rescheduling) {
+        val first = chosen.firstOrNull()
+        DateSheet(
+            initial = DateChoice(first?.due, first?.time, first?.reminder ?: false),
+            title = if (chosen.size == 1) "Reschedule" else "Reschedule ${chosen.size} tasks",
+            onDismiss = { rescheduling = false },
+        ) { ch ->
+            val ids = selection.ids.toList()
+            scope.launch { repo.reschedule(ids, ch.date, ch.time, ch.reminder) }
+            rescheduling = false; selection.clear()
         }
     }
     if (moving) ListPickerSheet(lists, title = "Move ${selection.ids.size} to…", onDismiss = { moving = false }) { l ->

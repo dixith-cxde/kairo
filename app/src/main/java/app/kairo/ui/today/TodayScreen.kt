@@ -22,6 +22,9 @@ import app.kairo.ui.common.Entrance
 import app.kairo.ui.common.LocalAppSnackbar
 import app.kairo.ui.common.Selection
 import app.kairo.ui.common.SelectBadge
+import app.kairo.ui.common.DateChoice
+import app.kairo.ui.common.DateSheet
+import app.kairo.ui.common.LocalKairoApp
 import app.kairo.ui.common.SelectionTopBar
 import app.kairo.ui.common.TaskSelectionToolbar
 import app.kairo.ui.common.selectableRowColors
@@ -114,6 +117,7 @@ fun TodayScreen(
     onOpen: (Task) -> Unit,
     modifier: Modifier = Modifier,
     onSettings: () -> Unit = {},
+    onFocus: () -> Unit = {},
 ) {
     val k = KairoTheme.colors
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -121,6 +125,8 @@ fun TodayScreen(
     val snackbar = LocalAppSnackbar.current
     val selection = rememberSelection()
     val entrance = rememberEntrance()
+    var rescheduleOverdue by remember { mutableStateOf(false) }
+    val app = LocalKairoApp.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
@@ -149,8 +155,8 @@ fun TodayScreen(
                 title = { Text("Today") },
                 subtitle = { Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))) },
                 actions = {
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { /* Search: later */ }) {
-                        Icon(painterResource(R.drawable.ic_search), contentDescription = "Search")
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = onFocus) {
+                        Icon(painterResource(R.drawable.ic_timer), contentDescription = "Focus timer")
                     }
                     IconButton(shapes = IconButtonDefaults.shapes(), onClick = onSettings) {
                         Icon(painterResource(R.drawable.ic_settings), contentDescription = "Settings")
@@ -176,7 +182,7 @@ fun TodayScreen(
             if (state.overdue.isNotEmpty()) {
                 item(key = "h-overdue") {
                     SectionHeader("Overdue · ${state.overdue.size}", MaterialTheme.colorScheme.error) {
-                        TextButton(shapes = ButtonDefaults.shapes(), onClick = { /* Reschedule: step 7 */ }) { Text("Reschedule") }
+                        TextButton(shapes = ButtonDefaults.shapes(), onClick = { rescheduleOverdue = true }) { Text("Reschedule") }
                     }
                 }
                 taskGroup(state.overdue, state.lists, toggle, onOpen, overdue = true, selection = selection, entrance = entrance)
@@ -199,6 +205,15 @@ fun TodayScreen(
                 state.completed, state.lists, toggle, onOpen, keyPrefix = "c", selection = selection, entrance = entrance, indexOffset = 1,
             )
         }
+    }
+    if (rescheduleOverdue) DateSheet(
+        initial = DateChoice(LocalDate.now(), null, false),
+        title = "Reschedule ${state.overdue.size} overdue",
+        onDismiss = { rescheduleOverdue = false },
+    ) { ch ->
+        val ids = state.overdue.map { it.id }
+        scope.launch { app.repository.reschedule(ids, ch.date, ch.time, ch.reminder) }
+        rescheduleOverdue = false
     }
 }
 

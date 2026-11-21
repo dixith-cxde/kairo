@@ -25,11 +25,13 @@ class KairoApplication : Application() {
     val phoneCalendar by lazy { PhoneCalendar(this) }
     val settings by lazy { SettingsStore(this) }
     val money by lazy { MoneyRepository(database) }
+    val focus by lazy { app.kairo.focus.FocusController(this) }
 
     override fun onCreate() {
         super.onCreate()
         val debug = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         ReminderScheduler.createChannel(this)
+        app.kairo.focus.FocusController.createChannels(this)
         appScope.launch {
             repository.seedIfEmpty(sampleTasks = debug)
             money.seedIfEmpty(sample = debug)

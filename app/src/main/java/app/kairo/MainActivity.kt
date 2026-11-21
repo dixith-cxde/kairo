@@ -49,5 +49,6 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_ACTION = "kairo.action"
         const val ACTION_QUICK_ADD = "quick_add"
         const val ACTION_ADD_EXPENSE = "add_expense"
+        const val ACTION_FOCUS = "focus"
     }
 }

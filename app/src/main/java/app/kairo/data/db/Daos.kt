@@ -28,6 +28,8 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE id IN (:ids)") suspend fun deleteAll(ids: List<Long>)
     @Query("UPDATE tasks SET archived = :archived WHERE id IN (:ids)") suspend fun setArchived(ids: List<Long>, archived: Boolean)
     @Query("UPDATE tasks SET listId = :listId WHERE id IN (:ids)") suspend fun move(ids: List<Long>, listId: Long)
+    @Query("UPDATE tasks SET due = :due, time = :time, reminder = :reminder WHERE id IN (:ids)")
+    suspend fun reschedule(ids: List<Long>, due: java.time.LocalDate?, time: java.time.LocalTime?, reminder: Boolean)
     @Query("UPDATE tasks SET done = :done, completedAt = :at WHERE id IN (:ids)") suspend fun setDoneAll(ids: List<Long>, done: Boolean, at: Long?)
 }
 

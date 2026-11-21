@@ -4,7 +4,7 @@ These are the working rules for Claude (or anyone) working on Kairo. They come f
 
 ## 1. Where we are
 
-- **Build phase (v1).** The owner approved the design and started building on 2026-11-20. Step guides live in `docs/build/`; the current step is the lowest-numbered one not marked done. Steps 1–15 are done and installed on the owner's phone (2026-11-21); step 16 (polish) is next.
+- **Build phase (v1).** The owner approved the design and started building on 2026-11-20. Step guides live in `docs/build/`; the current step is the lowest-numbered one not marked done. Steps 1–15 are done and installed on the owner's phone (2026-11-21), plus Focus (phase 2, pulled forward). Step 16 (polish) is next.
 - The Android project lives in this `kairo/` folder (Gradle files next to `docs/`).
 - The source of truth for the look is the canvas: https://claude.ai/artifact/RthtmHKkEsUMm2WUMRUE49. These docs are the source of truth for the *why* and the rules.
 - Keep all Kairo docs inside this `kairo/` folder.
@@ -37,6 +37,8 @@ These are the working rules for Claude (or anyone) working on Kairo. They come f
 9. **Haptics only on complete, delete and undo** (plus save/cancel on sheets).
 10. **At most two hero moments per flow.** Completing a task and the Today progress ring are the app's main ones.
 11. **Money is in ₹ with Indian digit grouping** (₹1,23,456) by default; currency is a setting.
+12. **Drawers, not dialogs** (owner, 2026-11-21). Pickers, forms and choices open as M3 bottom sheets (`ModalBottomSheet`); menus use the Expressive grouped `DropdownMenuPopup`/`DropdownMenuGroup`. No `AlertDialog` / `DatePickerDialog` / `TimePickerDialog`.
+13. **Real M3 Expressive components first**: selectable `SegmentedListItem`, `ButtonDefaults.shapes()` / `IconButtonDefaults.shapes()` on every button, connected button groups, floating toolbars, `LoadingIndicator`, wavy progress.
 
 ## 5. Keeping the canvas in sync
 

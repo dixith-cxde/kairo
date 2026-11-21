@@ -5,6 +5,11 @@ package app.kairo.ui.lists
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
+import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +28,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -170,46 +174,78 @@ fun ListBadge(l: TaskList, size: Int = 40) {
     }
 }
 
+/**
+ * New list drawer: live preview of the list's badge, name, the 8 list shapes (picked one morphs
+ * in its color), the 7 colors, Create. A bottom sheet, not a dialog (owner, 2026-11-21).
+ */
 @Composable
 private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String, ListShape, ListColor) -> Unit) {
     val k = KairoTheme.colors
+    val c = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
     var name by rememberSaveable { mutableStateOf("") }
     var shape by rememberSaveable { mutableStateOf(ListShape.Hexagon) }
     var color by rememberSaveable { mutableStateOf(ListColor.Indigo) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("New list") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ListShape.choices.forEach { sh ->
-                        val sel = sh == shape
-                        Box(
-                            Modifier
-                                .size(40.dp)
-                                .background(if (sel) k.container(color) else MaterialTheme.colorScheme.surfaceContainerHighest, sh.polygon.toShape())
-                                .clickable(role = Role.RadioButton) { shape = sh }
-                                .semantics { contentDescription = sh.name },
-                        )
+    val sheet = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { focus.requestFocus() }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Live preview: the badge morphs as you pick a shape.
+                androidx.compose.animation.AnimatedContent(shape to color, label = "preview") { (sh, co) ->
+                    Box(Modifier.size(56.dp).background(k.container(co), sh.polygon.toShape()), contentAlignment = Alignment.Center) {
+                        Text(name.take(1).uppercase().ifEmpty { "A" }, style = MaterialTheme.typography.titleLargeEmphasized, color = k.onContainer(co))
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ListColor.entries.forEach { co ->
+                Text("New list", style = MaterialTheme.typography.headlineSmallEmphasized)
+            }
+            androidx.compose.material3.TextField(
+                value = name, onValueChange = { name = it },
+                label = { Text("Name") }, singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                ),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            )
+            Text("Shape", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ListShape.choices.forEach { sh ->
+                    val on = sh == shape
+                    val scale by androidx.compose.animation.core.animateFloatAsState(if (on) 1.15f else 1f, motion.fastSpatialSpec(), label = "sh")
+                    Box(
+                        Modifier.size(36.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                            .background(if (on) k.accent(color) else c.surfaceContainerHighest, sh.polygon.toShape())
+                            .clickable(role = Role.RadioButton) { shape = sh }
+                            .semantics { contentDescription = sh.name; selected = on },
+                    )
+                }
+            }
+            Text("Color", style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ListColor.entries.forEach { co ->
+                    val on = co == color
+                    val size by androidx.compose.animation.core.animateDpAsState(if (on) 36.dp else 28.dp, motion.fastSpatialSpec(), label = "co")
+                    Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
                         Box(
-                            Modifier
-                                .size(if (co == color) 32.dp else 28.dp)
-                                .background(k.accent(co), CircleShape)
+                            Modifier.size(size).background(k.accent(co), CircleShape)
                                 .clickable(role = Role.RadioButton) { color = co }
-                                .semantics { contentDescription = co.name },
-                        )
+                                .semantics { contentDescription = co.name; selected = on },
+                            contentAlignment = Alignment.Center,
+                        ) { if (on) Icon(painterResource(R.drawable.ic_check), null, tint = c.surface, modifier = Modifier.size(18.dp)) }
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(shapes = ButtonDefaults.shapes(), onClick = { onCreate(name, shape, color) }, enabled = name.isNotBlank()) { Text("Create") } },
-        dismissButton = { TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) { Text("Cancel") } },
-    )
+            androidx.compose.material3.Button(
+                onClick = { onCreate(name, shape, color) },
+                enabled = name.isNotBlank(),
+                shapes = androidx.compose.material3.ButtonDefaults.shapes(),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) { Text("Create list", style = MaterialTheme.typography.titleMediumEmphasized) }
+        }
+    }
 }
 
 // ───────────────────────── List detail ─────────────────────────

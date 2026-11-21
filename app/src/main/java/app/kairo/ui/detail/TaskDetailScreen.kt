@@ -24,7 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,7 +42,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
@@ -73,6 +71,9 @@ import app.kairo.data.model.TaskList
 import app.kairo.reminders.rememberAskNotifications
 import app.kairo.ui.shapes.polygon
 import app.kairo.ui.common.ListPickerMenu
+import app.kairo.ui.common.DateChoice
+import app.kairo.ui.common.DateSheet
+import app.kairo.ui.common.LocalKairoApp
 import app.kairo.ui.theme.KairoTheme
 import java.time.Duration
 import java.time.Instant
@@ -228,41 +229,18 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
         }
     }
 
-    if (pickDate) {
-        val state = rememberDatePickerState(
-            initialSelectedDateMillis = (t.due ?: LocalDate.now()).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-        )
-        DatePickerDialog(
-            onDismissRequest = { pickDate = false },
-            confirmButton = {
-                TextButton(shapes = ButtonDefaults.shapes(), onClick = {
-                    val d = state.selectedDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
-                    vm.edit { it.copy(due = d) }
-                    pickDate = false
-                }) { Text("Done") }
-            },
-            dismissButton = {
-                TextButton(shapes = ButtonDefaults.shapes(), onClick = { vm.edit { it.copy(due = null, time = null) }; pickDate = false }) { Text("Clear") }
-            },
-        ) { DatePicker(state) }
-    }
-    if (pickTime) {
-        val ctx = LocalContext.current
-        val now = t.time ?: LocalTime.of(9, 0)
-        val state = rememberTimePickerState(now.hour, now.minute, android.text.format.DateFormat.is24HourFormat(ctx))
-        TimePickerDialog(
-            onDismissRequest = { pickTime = false },
-            title = { Text("Time") },
-            confirmButton = {
-                TextButton(shapes = ButtonDefaults.shapes(), onClick = {
-                    vm.edit { it.copy(time = LocalTime.of(state.hour, state.minute), due = it.due ?: LocalDate.now()) }
-                    pickTime = false
-                }) { Text("Done") }
-            },
-            dismissButton = {
-                TextButton(shapes = ButtonDefaults.shapes(), onClick = { vm.edit { it.copy(time = null) }; pickTime = false }) { Text("Clear") }
-            },
-        ) { TimePicker(state) }
+    if (pickDate || pickTime) {
+        // One drawer for date, time and reminder (canvas DatePicker board) — no dialogs.
+        val allTasks by LocalKairoApp.current.repository.tasks.collectAsStateWithLifecycle(initialValue = emptyList())
+        DateSheet(
+            initial = DateChoice(t.due, t.time, t.reminder),
+            taskDays = allTasks.mapNotNull { it.due }.toSet(),
+            onDismiss = { pickDate = false; pickTime = false },
+        ) { ch ->
+            if (ch.reminder && !t.reminder) askNotifications()
+            vm.edit { it.copy(due = ch.date, time = ch.time, reminder = ch.reminder) }
+            pickDate = false; pickTime = false
+        }
     }
 }
 
