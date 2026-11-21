@@ -25,8 +25,8 @@ android {
         applicationId = "app.kairo"
         minSdk = 31   // Android 12: dynamic color, widget checkboxes
         targetSdk = 37
-        versionCode = 5
-        versionName = "1.3.0"
+        versionCode = 6
+        versionName = "1.3.1"
     }
 
     signingConfigs {
