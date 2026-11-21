@@ -227,7 +227,7 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
             ) { Text("Exact alarms") }
 
             Header("Data")
-            val app = context.applicationContext as app.kairo.KairoApplication
+            val kairo = context.applicationContext as app.kairo.KairoApplication
             var importing by remember { mutableStateOf<String?>(null) }
             val pick = androidx.activity.compose.rememberLauncherForActivityResult(
                 androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
@@ -237,7 +237,7 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                 scope.launch {
                     importing = runCatching {
                         val text = context.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
-                        val r = app.kairo.data.money.IvyImport.import(app.money, text)
+                        val r = app.kairo.data.money.IvyImport.import(kairo.money, text)
                         "Added ${r.added} · skipped ${r.skipped}" +
                             (if (r.accountsCreated > 0) " · ${r.accountsCreated} new accounts" else "") +
                             (if (r.categoriesCreated > 0) " · ${r.categoriesCreated} new categories" else "")
