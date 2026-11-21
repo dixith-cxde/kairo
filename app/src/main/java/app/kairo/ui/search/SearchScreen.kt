@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairo.KairoApplication
 import app.kairo.R
+import app.kairo.data.model.TaskList
 import app.kairo.data.model.Task
 import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.lists.ListBadge
@@ -116,7 +117,7 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
                 item { Header("Tasks") }
                 itemsIndexed(foundTasks, key = { _, t -> "t${t.id}" }) { i, t ->
                     Column(with(entrance) { Modifier.enter("t${t.id}", i) }) {
-                        (listMap[t.listId] ?: app.kairo.data.model.TaskList.None).let { l ->
+                        (listMap[t.listId] ?: TaskList.None).let { l ->
                             TaskRow(t, l, i, foundTasks.size, onToggle = { scope.launch { app.repository.setDone(it, !it.done) } }, onOpen = onOpenTask)
                         }
                         if (i < foundTasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
