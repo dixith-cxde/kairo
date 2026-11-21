@@ -64,6 +64,7 @@ import app.kairo.data.TaskRepository
 import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
 import app.kairo.ui.theme.KairoTheme
+import app.kairo.ui.shapes.MorphShape
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -276,14 +277,6 @@ private fun MorphBadge(range: Range, change: Int?) {
             style = MaterialTheme.typography.titleLargeEmphasized,
             color = c.onPrimaryContainer,
         )
-    }
-}
-
-private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val path = morph.toPath(progress)
-        path.transform(Matrix().apply { scale(size.width, size.height) })
-        return Outline.Generic(path)
     }
 }
 

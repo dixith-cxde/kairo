@@ -40,6 +40,7 @@ import app.kairo.navigation.Tab
 import app.kairo.ui.detail.TaskDetailScreen
 import app.kairo.ui.detail.TaskDetailViewModel
 import app.kairo.ui.nav.FloatingNavBar
+import app.kairo.ui.settings.SettingsScreen
 import app.kairo.ui.stats.StatsScreen
 import app.kairo.ui.calendar.CalendarScreen
 import app.kairo.ui.lists.ListDetailScreen
@@ -117,7 +118,7 @@ fun KairoApp() {
                             Tab.Today -> {
                                 val vm: TodayViewModel = viewModel(factory = viewModelFactory { initializer { TodayViewModel(app.repository) } })
                                 val state by vm.state.collectAsStateWithLifecycle()
-                                state?.let { TodayScreen(it, onToggle = vm::toggle, onOpen = { t -> open(Route.TaskRoute(t.id)) }) }
+                                state?.let { TodayScreen(it, onToggle = vm::toggle, onOpen = { t -> open(Route.TaskRoute(t.id)) }, onSettings = { open(Route.SettingsRoute) }) }
                             }
                             Tab.Lists -> {
                                 val vm: ListsViewModel = viewModel(factory = viewModelFactory { initializer { ListsViewModel(app.repository) } })
@@ -134,6 +135,7 @@ fun KairoApp() {
                             )
                             TaskDetailScreen(vm, lists = lists, onBack = ::back)
                         }
+                        Route.SettingsRoute -> SettingsScreen(app.settings, onBack = ::back)
                         is Route.ListRoute -> {
                             val vm: ListDetailViewModel = viewModel(
                                 key = "list-${route.listId}",

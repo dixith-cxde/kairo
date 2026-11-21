@@ -1,5 +1,6 @@
 package app.kairo.ui.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
@@ -9,14 +10,15 @@ import androidx.compose.runtime.staticCompositionLocalOf
 
 @Composable
 fun KairoTheme(
-    darkTheme: Boolean = true, // Kairo rule 1: dark is the default. Settings (step 12) will let users pick.
+    darkTheme: Boolean = true, // Kairo rule 1: dark is the default; Settings lets users pick.
+    colorScheme: ColorScheme? = null, // from Settings (seed / wallpaper / contrast); null = default
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
         LocalKairoColors provides if (darkTheme) KairoDarkColorTokens else KairoLightColorTokens,
     ) {
         MaterialExpressiveTheme(
-            colorScheme = if (darkTheme) KairoDarkColors else KairoLightColors,
+            colorScheme = colorScheme ?: if (darkTheme) KairoDarkColors else KairoLightColors,
             motionScheme = MotionScheme.expressive(),
             typography = KairoTypography,
             content = content,

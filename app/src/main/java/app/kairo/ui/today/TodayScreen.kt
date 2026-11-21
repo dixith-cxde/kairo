@@ -97,6 +97,7 @@ fun TodayScreen(
     onToggle: (Task) -> Unit,
     onOpen: (Task) -> Unit,
     modifier: Modifier = Modifier,
+    onSettings: () -> Unit = {},
 ) {
     val k = KairoTheme.colors
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -131,7 +132,7 @@ fun TodayScreen(
                     IconButton(onClick = { /* Search: later */ }) {
                         Icon(painterResource(R.drawable.ic_search), contentDescription = "Search")
                     }
-                    IconButton(onClick = { /* Settings: step 12 */ }) {
+                    IconButton(onClick = onSettings) {
                         Icon(painterResource(R.drawable.ic_settings), contentDescription = "Settings")
                     }
                 },
