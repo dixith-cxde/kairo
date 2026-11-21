@@ -35,4 +35,8 @@ fun buildTodayState(tasks: List<Task>, lists: Map<Long, app.kairo.data.model.Tas
     upcoming = tasks.filter { !it.done && it.due != null && it.due > today && it.due <= today.plusDays(7) }
         .sortedWith(compareBy<Task>({ it.due }, { it.time ?: java.time.LocalTime.MAX })),
     lists = lists,
+    // "All" shows every open task (owner, 2026-11-21): later dates and no date too.
+    later = tasks.filter { !it.done && it.due != null && it.due > today }
+        .sortedWith(compareBy<Task>({ it.due }, { it.time ?: java.time.LocalTime.MAX })),
+    noDate = tasks.filter { !it.done && it.due == null },
 )

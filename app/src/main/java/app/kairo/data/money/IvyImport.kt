@@ -70,9 +70,11 @@ object IvyImport {
             val paise = Money.parsePaise(at(iAmt).replace(",", "").removePrefix("-"))
             if (date == null || paise <= 0) { skipped++; continue }
             val title = at(iTitle).ifBlank { if (iDesc >= 0) at(iDesc) else "" }
-            when (at(iType).uppercase()) {
+            // Empty columns fall back to defaults: no type = expense, no account = "Imported".
+            when (at(iType).uppercase().ifBlank { "EXPENSE" }) {
                 "EXPENSE", "INCOME" -> {
                     val kind = if (at(iType).uppercase() == "INCOME") TxKind.Income else TxKind.Expense
+
                     val acc = account(at(iAcc))
                     if (!seen.add(key(date, acc, kind, paise, title))) { skipped++; continue }
                     money.add(kind, paise, acc, category(at(iCat), kind == TxKind.Income), date, title, "")
@@ -146,8 +148,13 @@ object IvyImport {
     private val formats = listOf("M/d/yyyy H:mm", "M/d/yyyy", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "yyyy-MM-dd", "d/M/yyyy H:mm")
         .map { DateTimeFormatter.ofPattern(it) }
 
-    private fun parseDate(s: String): LocalDate? {
+    internal fun parseDate(s0: String): LocalDate? {
+        val s = s0.trim()
         if (s.isBlank()) return null
+        // Ivy's own export: ISO "2026-11-21T20:25:44.269" (fraction of any length, maybe a zone).
+        runCatching { return java.time.LocalDateTime.parse(s).toLocalDate() }
+        runCatching { return java.time.OffsetDateTime.parse(s).toLocalDate() }
+        runCatching { return java.time.ZonedDateTime.parse(s).toLocalDate() }
         for (f in formats) {
             runCatching { return java.time.LocalDateTime.parse(s, f).toLocalDate() }
             runCatching { return LocalDate.parse(s, f) }

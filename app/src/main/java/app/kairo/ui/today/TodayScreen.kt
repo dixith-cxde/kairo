@@ -123,6 +123,8 @@ data class TodayState(
     val completed: List<Task>,
     val upcoming: List<Task>,
     val lists: Map<Long, TaskList>,
+    val later: List<Task> = emptyList(),
+    val noDate: List<Task> = emptyList(),
 ) {
     val total get() = today.size + completed.size
     val done get() = completed.size
@@ -203,15 +205,10 @@ fun TodayScreen(
                     below = { Box(Modifier.tourTarget("filters", 16.dp)) { FilterChips(state, filter) { filter = it } } },
                 )
             }
-            if (filter == TodayFilter.All || filter == TodayFilter.Today) run {
-                habitsSection(habits, onAdd = { newHabit = true }, onOpen = { openHabit = it }) { h ->
-                    if (!h.doneOn(LocalDate.now())) haptic.performHapticFeedback(HapticFeedbackType.ToggleOn) // rule 9: complete
-                    kairoApp.appScope.launch { kairoApp.habits.toggle(h) }
-                }
-            }
             // A blank day (nothing due, nothing done, nothing overdue): one calm empty page instead of
             // a 0/0 ring and empty headers (owner, 2026-11-21).
-            val blank = state.total == 0 && state.overdue.isEmpty() && state.completed.isEmpty()
+            val blank = state.total == 0 && state.overdue.isEmpty() && state.completed.isEmpty() && habits.isEmpty() &&
+                (filter != TodayFilter.All || (state.later.isEmpty() && state.noDate.isEmpty()))
             if (blank && (filter == TodayFilter.All || filter == TodayFilter.Today)) {
                 item(key = "blank") {
                     EmptyState(
@@ -243,6 +240,22 @@ fun TodayScreen(
                 taskGroup(state.today, state.lists, toggle, onOpen, selection = selection, entrance = entrance)
             }
 
+            if (filter == TodayFilter.All || filter == TodayFilter.Today) habitsSection(
+                habits, onAdd = { newHabit = true }, onOpen = { openHabit = it },
+            ) { h ->
+                if (!h.doneOn(LocalDate.now())) haptic.performHapticFeedback(HapticFeedbackType.ToggleOn) // rule 9: complete
+                kairoApp.appScope.launch { kairoApp.habits.toggle(h) }
+            }
+
+            if (all && state.later.isNotEmpty()) {
+                item(key = "h-later") { SectionHeader("Later · ${state.later.size}", MaterialTheme.colorScheme.primary) {} }
+                taskGroup(state.later, state.lists, toggle, onOpen, keyPrefix = "l", selection = selection, entrance = entrance)
+            }
+            if (all && state.noDate.isNotEmpty()) {
+                item(key = "h-nodate") { SectionHeader("No date · ${state.noDate.size}", MaterialTheme.colorScheme.primary) {} }
+                taskGroup(state.noDate, state.lists, toggle, onOpen, keyPrefix = "n", selection = selection, entrance = entrance)
+            }
+
             if (filter == TodayFilter.Upcoming) {
                 state.upcoming.groupBy { it.due!! }.forEach { (day, tasks) ->
                     item(key = "h-up-$day") {
@@ -254,7 +267,7 @@ fun TodayScreen(
                 }
             }
 
-            if (all) {
+            if (all && state.completed.isNotEmpty()) {
                 item(key = "completed-toggle") {
                     CompletedToggle(
                         count = state.completed.size, open = showCompleted,

@@ -80,9 +80,11 @@ class MainActivity : FragmentActivity() {
                 Box {
                     // While locked, the app underneath is hidden from TalkBack and other
                     // accessibility readers too, not just covered visually.
-                    Box(if (locked) Modifier.clearAndSetSemantics {} else Modifier) {
-                        KairoApp(action = pendingAction, onActionHandled = { pendingAction = null })
-                    }
+                    // Nothing of the app is composed while locked. Sheets and menus are separate
+                    // windows that would draw above the lock screen, so a widget's "add" could be
+                    // used without unlocking (auth bypass). The widget's action waits in
+                    // pendingAction and runs once unlocked.
+                    if (!locked) KairoApp(action = pendingAction, onActionHandled = { pendingAction = null })
                     // Ask as soon as the lock shows (only while we're in front).
                     LaunchedEffect(AppLock.locked) { if (AppLock.locked && s.appLock) AppLock.unlock(this@MainActivity) }
                     LockScreen(locked) { AppLock.unlock(this@MainActivity) }

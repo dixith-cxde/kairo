@@ -86,6 +86,8 @@ fun LazyListScope.habitsSection(habits: List<Habit>, onAdd: () -> Unit, onOpen: 
             val k = KairoTheme.colors
             val c = MaterialTheme.colorScheme
             val today = h.doneOn(LocalDate.now())
+            // One root per lazy item: two siblings here would be drawn on top of each other.
+            Column {
             SegmentedListItem(
                 onClick = { onOpen(h) },
                 shapes = ListItemDefaults.segmentedShapes(i, habits.size),
@@ -105,6 +107,7 @@ fun LazyListScope.habitsSection(habits: List<Habit>, onAdd: () -> Unit, onOpen: 
                 },
             ) { Text(h.name, color = c.onSurface) }
             if (i < habits.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+            }
         }
     }
 }
