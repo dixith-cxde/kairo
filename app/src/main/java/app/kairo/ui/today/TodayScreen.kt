@@ -95,6 +95,7 @@ data class TodayState(
 fun TodayScreen(
     state: TodayState,
     onToggle: (Task) -> Unit,
+    onOpen: (Task) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val k = KairoTheme.colors
@@ -155,7 +156,7 @@ fun TodayScreen(
                         TextButton(onClick = { /* Reschedule: step 7 */ }) { Text("Reschedule") }
                     }
                 }
-                taskGroup(state.overdue, state.lists, toggle, overdue = true)
+                taskGroup(state.overdue, state.lists, toggle, onOpen, overdue = true)
             }
 
             item(key = "h-today") {
@@ -163,12 +164,12 @@ fun TodayScreen(
                     Text("Sorted by time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            taskGroup(state.today, state.lists, toggle)
+            taskGroup(state.today, state.lists, toggle, onOpen)
 
             item(key = "completed-toggle") {
                 CompletedToggle(count = state.completed.size, open = showCompleted) { showCompleted = !showCompleted }
             }
-            if (showCompleted) taskGroup(state.completed, state.lists, toggle, keyPrefix = "c")
+            if (showCompleted) taskGroup(state.completed, state.lists, toggle, onOpen, keyPrefix = "c")
         }
     }
 }
@@ -255,6 +256,7 @@ private fun LazyListScope.taskGroup(
     tasks: List<Task>,
     lists: Map<Long, TaskList>,
     onToggle: (Task) -> Unit,
+    onOpen: (Task) -> Unit,
     overdue: Boolean = false,
     keyPrefix: String = "t",
 ) {
@@ -268,7 +270,7 @@ private fun LazyListScope.taskGroup(
                 fadeOutSpec = motion.fastEffectsSpec(),
             ),
         ) {
-            TaskRow(task, lists.getValue(task.listId), i, tasks.size, onToggle, overdue)
+            TaskRow(task, lists.getValue(task.listId), i, tasks.size, onToggle, onOpen, overdue)
             if (i < tasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
         }
     }
@@ -281,6 +283,7 @@ fun TaskRow(
     index: Int,
     count: Int,
     onToggle: (Task) -> Unit,
+    onOpen: (Task) -> Unit,
     overdue: Boolean = false,
 ) {
     val k = KairoTheme.colors
@@ -301,6 +304,7 @@ fun TaskRow(
         if (shownDone) c.onSurfaceVariant else c.onSurface, motion.defaultEffectsSpec(), label = "title",
     )
     SegmentedListItem(
+        onClick = { onOpen(task) },
         shapes = ListItemDefaults.segmentedShapes(index, count),
         colors = ListItemDefaults.segmentedColors(containerColor = k.item),
         leadingContent = {
@@ -422,8 +426,8 @@ fun fakeTodayState(): TodayState =
 
 @Preview(name = "Dark", showSystemUi = true)
 @Composable
-private fun TodayDark() = KairoTheme(darkTheme = true) { TodayScreen(fakeTodayState(), onToggle = {}) }
+private fun TodayDark() = KairoTheme(darkTheme = true) { TodayScreen(fakeTodayState(), onToggle = {}, onOpen = {}) }
 
 @Preview(name = "Light", showSystemUi = true)
 @Composable
-private fun TodayLight() = KairoTheme(darkTheme = false) { TodayScreen(fakeTodayState(), onToggle = {}) }
+private fun TodayLight() = KairoTheme(darkTheme = false) { TodayScreen(fakeTodayState(), onToggle = {}, onOpen = {}) }
