@@ -27,6 +27,10 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.kairo.ui.today.TodayScreen
+import app.kairo.ui.quickadd.QuickAddSheet
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import java.time.LocalDate
 import app.kairo.ui.today.TodayViewModel
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +68,9 @@ fun KairoApp() {
     }
 
     val app = LocalContext.current.applicationContext as KairoApplication
+    val scope = rememberCoroutineScope()
+    var showQuickAdd by rememberSaveable { mutableStateOf(false) }
+    val lists by app.repository.lists.collectAsStateWithLifecycle(initialValue = emptyList())
 
     // The floating nav hides while content scrolls down and returns on scroll up (canvas AppBars board).
     var navVisible by remember { mutableStateOf(true) }
@@ -105,9 +112,17 @@ fun KairoApp() {
         FloatingNavBar(
             selected = backStack.last(),
             onSelect = { navVisible = true; select(it) },
-            onCreate = { /* Quick add sheet: step 6 */ },
+            onCreate = { showQuickAdd = true },
             modifier = Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, navOffset.roundToPx()) },
         )
+        if (showQuickAdd) {
+            QuickAddSheet(
+                lists = lists,
+                defaultDue = if (backStack.last() == Tab.Today) LocalDate.now() else null,
+                onAdd = { task -> scope.launch { app.repository.add(task) } },
+                onDismiss = { showQuickAdd = false },
+            )
+        }
     }
 }
 
