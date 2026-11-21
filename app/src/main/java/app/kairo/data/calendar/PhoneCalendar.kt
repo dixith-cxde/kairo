@@ -116,7 +116,17 @@ class PhoneCalendar(private val context: Context) {
                 put(E.ALL_DAY, if (allDay) 1 else 0)
                 put(E.EVENT_TIMEZONE, if (allDay) "UTC" else ZoneId.systemDefault().id)
             }
-            context.contentResolver.insert(E.CONTENT_URI, values)?.let { ContentUris.parseId(it) }
+            val id = context.contentResolver.insert(E.CONTENT_URI, values)?.let { ContentUris.parseId(it) }
+            // Reminder on by default (owner, 2026-11-21): a notification 10 minutes before
+            // (all-day: at the start of the day).
+            if (id != null) runCatching {
+                context.contentResolver.insert(android.provider.CalendarContract.Reminders.CONTENT_URI, android.content.ContentValues().apply {
+                    put(android.provider.CalendarContract.Reminders.EVENT_ID, id)
+                    put(android.provider.CalendarContract.Reminders.MINUTES, if (allDay) 0 else 10)
+                    put(android.provider.CalendarContract.Reminders.METHOD, android.provider.CalendarContract.Reminders.METHOD_ALERT)
+                })
+            }
+            id
         }
 
     /** Instances (not Events) so repeating events expand into each occurrence. */

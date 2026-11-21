@@ -48,7 +48,7 @@ data class Task(
     val done: Boolean = false,
     val subtasksDone: Int = 0,
     val subtasksTotal: Int = 0,
-    val reminder: Boolean = false,
+    val reminder: Boolean = true, // on by default (owner, 2026-11-21)
     val notes: String = "",
     val completedAt: Long? = null, // epoch millis, for stats
     val archived: Boolean = false,

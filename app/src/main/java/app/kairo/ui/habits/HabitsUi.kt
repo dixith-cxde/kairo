@@ -118,7 +118,7 @@ fun HabitSheet(habit: Habit? = null, onDismiss: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     val askNotifications = rememberAskNotifications()
     var name by remember { mutableStateOf(habit?.name.orEmpty()) }
-    var remind by remember { mutableStateOf(habit?.reminderTime != null) }
+    var remind by remember { mutableStateOf(habit == null || habit.reminderTime != null) }
     val time = rememberTimePickerState(habit?.reminderTime?.hour ?: 9, habit?.reminderTime?.minute ?: 0)
     fun close() = scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
 

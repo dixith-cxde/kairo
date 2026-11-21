@@ -95,7 +95,7 @@ fun QuickAddSheet(
     var text by remember { mutableStateOf(initialText) }
     var pickedList by remember { mutableStateOf<TaskList?>(null) }
     var priorityOverride by remember { mutableStateOf<Priority?>(null) }
-    var reminder by remember { mutableStateOf(false) }
+    var reminder by remember { mutableStateOf(true) } // on by default (owner, 2026-11-21)
     var listMenu by remember { mutableStateOf(false) }
     var dateSheet by remember { mutableStateOf(false) }
     var dateOverride by remember { mutableStateOf<DateChoice?>(null) }

@@ -327,7 +327,21 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                 },
                 defaultListId = inList?.takeIf { it > 0 },
                 initialText = quickAddText,
-                onAdd = { task -> scope.launch { app.repository.add(task) } },
+                onAdd = { task ->
+                    scope.launch {
+                        app.repository.add(task)
+                        // Say where it went: a task for another day isn't on Today's main view.
+                        val today = LocalDate.now()
+                        val where = when (task.due) {
+                            null -> "Added to Inbox"
+                            today -> "Added for today"
+                            today.plusDays(1) -> "Added for tomorrow"
+                            else -> "Added for " + task.due.format(java.time.format.DateTimeFormatter.ofPattern("EEE, d MMM"))
+                        }
+                        snackbar.currentSnackbarData?.dismiss()
+                        snackbar.showSnackbar(where, duration = androidx.compose.material3.SnackbarDuration.Short)
+                    }
+                },
                 onDismiss = { sheet = null },
               )
             }

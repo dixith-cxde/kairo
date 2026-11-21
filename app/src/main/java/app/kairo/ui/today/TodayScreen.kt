@@ -293,7 +293,7 @@ fun TodayScreen(
     editHabit?.let { h -> HabitSheet(h, onDismiss = { editHabit = null }) }
     openHabit?.let { h -> HabitDetailSheet(h, onEdit = { editHabit = h; openHabit = null }, onDismiss = { openHabit = null }) }
     if (rescheduleOverdue) DateSheet(
-        initial = DateChoice(LocalDate.now(), null, false),
+        initial = DateChoice(LocalDate.now(), null, true),
         title = "Reschedule ${state.overdue.size} overdue",
         onDismiss = { rescheduleOverdue = false },
     ) { ch ->
