@@ -104,6 +104,8 @@ fun WelcomeScreen(onDone: () -> Unit) {
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val last = pager.currentPage == Pages.lastIndex
     BackHandler(enabled = pager.currentPage > 0) { scope.launch { pager.animateScrollToPage(pager.currentPage - 1, animationSpec = spatial) } }
+    // No Surface here, so set the text color ourselves (it defaulted to black on the dark screen).
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides c.onSurface) {
     Column(Modifier.fillMaxSize().background(k.bg).safeDrawingPadding()) {
         Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.weight(1f))
@@ -129,6 +131,7 @@ fun WelcomeScreen(onDone: () -> Unit) {
             }
         }
     }
+}
 }
 
 @Composable
@@ -206,6 +209,7 @@ fun TourOverlay(onDone: () -> Unit) {
     val r by animateFloatAsState(rect.right, spec, label = "r"); val b by animateFloatAsState(rect.bottom, spec, label = "b")
     val rad by animateFloatAsState(target.second + pad, spec, label = "rad")
     BackHandler { onDone() }
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides c.onSurface) {
     BoxWithConstraints(
         Modifier.fillMaxSize()
             // Blocks taps on the app underneath while the tour is up.
@@ -251,4 +255,5 @@ fun TourOverlay(onDone: () -> Unit) {
             }
         }
     }
+}
 }
