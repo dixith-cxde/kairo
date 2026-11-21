@@ -2,6 +2,8 @@
 
 package app.kairo.ui.lists
 
+import app.kairo.ui.common.LocalOpenSearch
+import app.kairo.ui.common.SearchPill
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
@@ -94,6 +96,7 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text("Lists") },
+                actions = { SearchPill(LocalOpenSearch.current, Modifier.padding(end = 12.dp)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,
             )

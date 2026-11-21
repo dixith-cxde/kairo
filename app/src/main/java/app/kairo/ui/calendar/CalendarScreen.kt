@@ -2,6 +2,8 @@
 
 package app.kairo.ui.calendar
 
+import app.kairo.ui.common.LocalOpenSearch
+import app.kairo.ui.common.SearchPill
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import android.Manifest
@@ -138,6 +140,7 @@ fun CalendarScreen(repo: TaskRepository, calendar: PhoneCalendar, onOpenTask: (T
             LargeFlexibleTopAppBar(
                 title = { Text(ym.format(DateTimeFormatter.ofPattern("MMMM yyyy"))) },
                 actions = {
+                    SearchPill(LocalOpenSearch.current)
                     IconButton(shapes = IconButtonDefaults.shapes(), onClick = { month = ym.minusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_left), "Previous month") }
                     IconButton(shapes = IconButtonDefaults.shapes(), onClick = { month = ym.plusMonths(1).toString() }) { Icon(painterResource(R.drawable.ic_chevron_right), "Next month") }
                 },

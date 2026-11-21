@@ -19,6 +19,8 @@ data class AppSettings(
     val wallpaperColor: Boolean = false,
     val seed: Seed = Seed.Default,
     val contrast: Contrast = Contrast.Standard,
+    val appLock: Boolean = false,
+    val lockAfterSec: Int = 0,               // 0 = every time, 60, 300 (same choices as Stash)
 )
 
 private val Context.store by preferencesDataStore("settings")
@@ -29,6 +31,8 @@ class SettingsStore(private val context: Context) {
     private val wallpaper = booleanPreferencesKey("wallpaper")
     private val seed = stringPreferencesKey("seed")
     private val contrast = stringPreferencesKey("contrast")
+    private val appLock = booleanPreferencesKey("appLock")
+    private val lockAfter = androidx.datastore.preferences.core.intPreferencesKey("lockAfter")
 
     val settings: Flow<AppSettings> = context.store.data.map { p: Preferences ->
         AppSettings(
@@ -36,6 +40,8 @@ class SettingsStore(private val context: Context) {
             wallpaperColor = p[wallpaper] ?: false,
             seed = p[seed]?.let(Seed::valueOf) ?: Seed.Default,
             contrast = p[contrast]?.let(Contrast::valueOf) ?: Contrast.Standard,
+            appLock = p[appLock] ?: false,
+            lockAfterSec = p[lockAfter] ?: 0,
         )
     }
 
@@ -44,4 +50,6 @@ class SettingsStore(private val context: Context) {
     /** Picking a seed turns wallpaper color off (canvas). */
     suspend fun setSeed(v: Seed) = context.store.edit { it[seed] = v.name; it[wallpaper] = false }
     suspend fun setContrast(v: Contrast) = context.store.edit { it[contrast] = v.name }
+    suspend fun setAppLock(v: Boolean) = context.store.edit { it[appLock] = v }
+    suspend fun setLockAfter(sec: Int) = context.store.edit { it[lockAfter] = sec }
 }

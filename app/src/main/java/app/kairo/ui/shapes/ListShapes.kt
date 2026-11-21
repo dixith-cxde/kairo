@@ -6,6 +6,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes
 import androidx.graphics.shapes.CornerRounding
 import androidx.graphics.shapes.RoundedPolygon
+import androidx.graphics.shapes.TransformResult
 import app.kairo.data.model.ListShape
 
 /** docs/03-design-system.md "Library shapes in use". Puffy, PuffyDiamond and Heart are banned (rule 6). */
@@ -13,7 +14,7 @@ import app.kairo.data.model.ListShape
 val ListShape.polygon: RoundedPolygon
     get() = when (this) {
         ListShape.Hexagon, ListShape.Arch -> Hexagon
-        ListShape.Triangle, ListShape.Sunny -> MaterialShapes.Triangle
+        ListShape.Triangle, ListShape.Sunny -> SoftTriangle
         ListShape.Square, ListShape.Cookie4 -> MaterialShapes.Square
         ListShape.Pentagon -> MaterialShapes.Pentagon
         ListShape.Gem -> MaterialShapes.Gem
@@ -21,6 +22,15 @@ val ListShape.polygon: RoundedPolygon
         ListShape.Cookie9 -> MaterialShapes.Cookie9Sided
         ListShape.Clover -> MaterialShapes.Clover4Leaf
     }
+
+/**
+ * Owner, 2026-11-21: the library triangle is too sharp and cramped for icons. This one has
+ * heavily rounded, smoothed corners ("buffed"), so it reads as a triangle but holds an initial.
+ */
+private val SoftTriangle: RoundedPolygon =
+    RoundedPolygon(numVertices = 3, rounding = CornerRounding(radius = 0.42f, smoothing = 0.8f))
+        .transformed { x, y -> TransformResult(y, -x) } // point up (vertex 0 starts at 3 o'clock)
+        .normalized()
 
 /** The library has no hexagon, so build one the same way MaterialShapes does: rounded, unit-sized. */
 private val Hexagon: RoundedPolygon = RoundedPolygon(numVertices = 6, rounding = CornerRounding(0.2f)).normalized()

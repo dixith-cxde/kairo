@@ -2,6 +2,8 @@
 
 package app.kairo.ui.today
 
+import app.kairo.ui.common.LocalOpenSearch
+import app.kairo.ui.common.SearchPill
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.foundation.background
@@ -58,6 +60,7 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItemDefaults
@@ -155,11 +158,13 @@ fun TodayScreen(
                 title = { Text("Today") },
                 subtitle = { Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))) },
                 actions = {
+                    SearchPill(LocalOpenSearch.current, Modifier.padding(end = 4.dp))
                     IconButton(shapes = IconButtonDefaults.shapes(), onClick = onFocus) {
                         Icon(painterResource(R.drawable.ic_timer), contentDescription = "Focus timer")
                     }
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = onSettings) {
-                        Icon(painterResource(R.drawable.ic_settings), contentDescription = "Settings")
+                    // Settings: filled gear on a tonal, press-morphing button.
+                    FilledTonalIconButton(onClick = onSettings, shapes = IconButtonDefaults.shapes()) {
+                        Icon(painterResource(R.drawable.ic_settings_filled), contentDescription = "Settings")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
@@ -436,7 +441,11 @@ private fun TaskMeta(task: Task, list: TaskList, overdue: Boolean) {
             Icon(painterResource(res), contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
 
         if (overdue) {
-            Text("Yesterday".takeIf { task.due == LocalDate.now().minusDays(1) } ?: task.due.toString(), style = style, color = c.error)
+            val days = task.due?.let { java.time.temporal.ChronoUnit.DAYS.between(it, LocalDate.now()) } ?: 0
+            Text(
+                when { days == 1L -> "Yesterday"; days in 2..6 -> "$days days ago"; else -> task.due?.format(DateTimeFormatter.ofPattern("EEE, d MMM")) ?: "" },
+                style = style, color = c.error,
+            )
             dot()
         } else if (task.time != null) {
             icon(R.drawable.ic_schedule)

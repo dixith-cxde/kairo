@@ -2,6 +2,8 @@
 
 package app.kairo.ui.money
 
+import app.kairo.ui.common.LocalOpenSearch
+import app.kairo.ui.common.SearchPill
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -92,6 +94,7 @@ fun MoneyScreen(
           Box {
             LargeFlexibleTopAppBar(
                 title = { Text("Money") },
+                actions = { SearchPill(LocalOpenSearch.current, Modifier.padding(end = 12.dp)) },
                 subtitle = { Text("Total ${Money.format(balances.sumOf { it.balancePaise })}") },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,

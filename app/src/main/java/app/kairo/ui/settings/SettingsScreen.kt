@@ -156,6 +156,42 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                 }
             }
 
+            Header("Privacy")
+            val activity = context as androidx.fragment.app.FragmentActivity
+            val snackbar = app.kairo.ui.common.LocalAppSnackbar.current
+            SegmentedListItem(
+                onClick = {},
+                shapes = ListItemDefaults.segmentedShapes(0, if (settings.appLock) 2 else 1),
+                colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+                leadingContent = { RoundIcon(R.drawable.ic_lock) },
+                supportingContent = { Text("Fingerprint, face or screen lock — handled by Android") },
+                trailingContent = {
+                    Switch(checked = settings.appLock, onCheckedChange = { on ->
+                        if (!on) { scope.launch { store.setAppLock(false) }; return@Switch }
+                        if (!app.kairo.lock.AppLock.canLock(activity)) {
+                            scope.launch { snackbar.showSnackbar("Set a screen lock on your phone first") }
+                            return@Switch
+                        }
+                        // Prove it's you before turning it on.
+                        app.kairo.lock.AppLock.authenticate(activity, "Turn on app lock") { ok -> if (ok) scope.launch { store.setAppLock(true) } }
+                    })
+                },
+            ) { Text("App lock") }
+            androidx.compose.animation.AnimatedVisibility(settings.appLock) {
+                Column {
+                    Gap()
+                    Column(
+                        Modifier.fillMaxWidth().background(k.item, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp)).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text("Lock after", style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
+                        Connected(listOf(0, 60, 300), settings.lockAfterSec, { when (it) { 0 -> "Immediately"; 60 -> "1 min"; else -> "5 min" } }) {
+                            scope.launch { store.setLockAfter(it) }
+                        }
+                    }
+                }
+            }
+
             Header("Reminders")
             val exact = alarms.canScheduleExactAlarms()
             SegmentedListItem(

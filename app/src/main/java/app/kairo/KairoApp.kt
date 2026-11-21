@@ -70,6 +70,8 @@ import app.kairo.ui.detail.TaskDetailScreen
 import app.kairo.ui.detail.TaskDetailViewModel
 import app.kairo.ui.nav.FloatingNavBar
 import app.kairo.ui.focus.FocusScreen
+import app.kairo.ui.search.SearchScreen
+import app.kairo.ui.common.LocalOpenSearch
 import app.kairo.ui.money.AccountScreen
 import app.kairo.ui.money.AddTransactionSheet
 import app.kairo.ui.money.BudgetsScreen
@@ -166,7 +168,10 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                 scaleOut(motion.slowSpatialSpec(), targetScale = 0.92f))
 
     val snackbar = remember { SnackbarHostState() }
-    CompositionLocalProvider(LocalKairoApp provides app, LocalAppSnackbar provides snackbar, LocalSelecting provides selecting) {
+    CompositionLocalProvider(
+        LocalKairoApp provides app, LocalAppSnackbar provides snackbar, LocalSelecting provides selecting,
+        LocalOpenSearch provides { open(Route.SearchRoute) },
+    ) {
     Box(Modifier.fillMaxSize().background(KairoTheme.colors.bg).nestedScroll(hideOnScroll)) {
         NavDisplay(
             backStack = backStack,
@@ -211,6 +216,12 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                         Route.InsightsRoute -> InsightsScreen(app.money, onBack = ::back)
                         Route.RecurringRoute -> RecurringScreen(app.money, onBack = ::back)
                         Route.FocusRoute -> FocusScreen(app, onBack = ::back)
+                        Route.SearchRoute -> SearchScreen(
+                            app, onBack = ::back,
+                            onOpenTask = { t -> open(Route.TaskRoute(t.id)) },
+                            onOpenList = { open(Route.ListRoute(it)) },
+                            onOpenAccount = { open(Route.AccountRoute(it)) },
+                        )
                         is Route.ListRoute -> {
                             val vm: ListDetailViewModel = viewModel(
                                 key = "list-${route.listId}",

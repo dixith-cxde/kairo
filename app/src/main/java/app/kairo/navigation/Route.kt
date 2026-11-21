@@ -11,6 +11,7 @@ sealed interface Route {
     data object InsightsRoute : Route
     data object RecurringRoute : Route
     data object FocusRoute : Route
+    data object SearchRoute : Route
 
     /** Saved as short strings ("tab:Today", "task:12") so the stack survives process death. */
     fun encode(): String = when (this) {
@@ -23,6 +24,7 @@ sealed interface Route {
         InsightsRoute -> "insights:"
         RecurringRoute -> "recurring:"
         FocusRoute -> "focus:"
+        SearchRoute -> "search:"
     }
 
     companion object {
@@ -37,6 +39,7 @@ sealed interface Route {
                 "insights" -> InsightsRoute
                 "recurring" -> RecurringRoute
                 "focus" -> FocusRoute
+                "search" -> SearchRoute
                 else -> TabRoute(Tab.valueOf(v))
             }
         }

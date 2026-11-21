@@ -5,6 +5,23 @@ package app.kairo.ui.money
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -85,32 +102,30 @@ fun AddTransactionSheet(
     var categoryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var accountId by rememberSaveable { mutableStateOf(accounts.firstOrNull()?.id) }
     var toAccountId by rememberSaveable { mutableStateOf(accounts.getOrNull(1)?.id) }
-    var note by rememberSaveable { mutableStateOf("") }
+    var note by rememberSaveable { mutableStateOf("") }   // title (optional)
+    var tags by rememberSaveable { mutableStateOf("") }
+    val amountFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { amountFocus.requestFocus() } // number keyboard straight away
     val success = remember { Animatable(0f) }
     val fastSpatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
 
     val paise = Money.parsePaise(amount)
     val cats = categories.filter { it.income == (kind == TxKind.Income) }
-    val canSave = paise > 0 && accountId != null &&
-        (if (kind == TxKind.Transfer) toAccountId != null && toAccountId != accountId else categoryId != null)
-
-    fun press(key: String) {
-        amount = when (key) {
-            "⌫" -> amount.dropLast(1)
-            "." -> if ("." in amount) amount else (amount.ifEmpty { "0" } + ".")
-            else -> if (amount.substringAfter('.', "").length >= 2 && "." in amount) amount
-                    else if (amount.length >= 9) amount else (if (amount == "0") key else amount + key)
-        }
+    // Income (e.g. salary) needs no category; expenses do, so budgets and insights stay meaningful.
+    val canSave = paise > 0 && accountId != null && when (kind) {
+        TxKind.Transfer -> toAccountId != null && toAccountId != accountId
+        TxKind.Expense -> categoryId != null
+        TxKind.Income -> true
     }
 
     fun save() {
         if (!canSave) return
         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
         scope.launch {
-            val tags = Regex("""#\w+""").findAll(note).joinToString(" ") { it.value }
-            val cleanNote = note.replace(Regex("""#\w+"""), "").trim()
+            val tagText = Regex("""\w+""").findAll(tags).joinToString(" ") { "#" + it.value }
+            val cleanNote = note.trim()
             if (kind == TxKind.Transfer) money.transfer(paise, accountId!!, toAccountId!!, LocalDate.now(), cleanNote)
-            else money.add(kind, paise, accountId!!, categoryId, LocalDate.now(), cleanNote, tags)
+            else money.add(kind, paise, accountId!!, categoryId, LocalDate.now(), cleanNote, tagText)
             // Scalloped success (Cookie12) blooms, then the sheet closes.
             success.snapTo(0f)
             success.animateTo(1f, fastSpatial)
@@ -120,7 +135,7 @@ fun AddTransactionSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Box {
-            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
                     TxKind.entries.forEachIndexed { i, kd ->
                         ToggleButton(
@@ -135,12 +150,26 @@ fun AddTransactionSheet(
                         ) { Text(kd.name) }
                     }
                 }
-                // Big amount with live ₹ grouping.
-                Text(
-                    if (amount.isEmpty()) Money.format(0) else Money.format(paise).let { if (amount.endsWith(".")) "$it." else it },
-                    style = MaterialTheme.typography.displayMediumEmphasized,
-                    color = if (paise == 0L) c.onSurfaceVariant else c.onSurface,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                // Big amount: system number keyboard, live ₹ Indian grouping while you type.
+                BasicTextField(
+                    value = amount,
+                    onValueChange = { v ->
+                        val clean = v.filter { it.isDigit() || it == '.' }
+                        val parts = clean.split('.')
+                        if (parts.size <= 2 && parts[0].length <= 9 && (parts.getOrNull(1)?.length ?: 0) <= 2) amount = clean
+                    },
+                    textStyle = MaterialTheme.typography.displayMediumEmphasized.copy(color = c.onSurface),
+                    cursorBrush = SolidColor(c.primary),
+                    singleLine = true,
+                    visualTransformation = RupeeGrouping,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).focusRequester(amountFocus),
+                    decorationBox = { inner ->
+                        Box {
+                            if (amount.isEmpty()) Text("₹0", style = MaterialTheme.typography.displayMediumEmphasized, color = c.onSurfaceVariant)
+                            inner()
+                        }
+                    },
                 )
 
                 if (kind == TxKind.Transfer) {
@@ -152,15 +181,17 @@ fun AddTransactionSheet(
                         AccountPicker("To", accounts, toAccountId, Modifier.weight(1f)) { toAccountId = it }
                     }
                 } else {
-                    // Categories: the picked one morphs from a circle into its own shape.
+                    // Categories: the picked one morphs from a circle into its own shape. Tap again to clear.
+                    Text(if (kind == TxKind.Income) "Category (optional)" else "Category",
+                        style = MaterialTheme.typography.labelLarge, color = c.onSurfaceVariant)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        cats.forEach { cat -> CategoryPick(cat, cat.id == categoryId) { categoryId = cat.id } }
+                        cats.forEach { cat -> CategoryPick(cat, cat.id == categoryId) { categoryId = if (categoryId == cat.id) null else cat.id } }
                     }
                     AccountPicker("Account", accounts, accountId, Modifier.fillMaxWidth()) { accountId = it }
                 }
-                OutlinedTextField(note, { note = it }, label = { Text("Note  #tags") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-
-                Keypad(::press)
+                // Normal keyboard for text. Filled fields, no underline (Expressive).
+                KairoField(note, { note = it }, "Title (optional)", KeyboardCapitalization.Sentences)
+                KairoField(tags, { tags = it }, "Tags (optional) · e.g. trip food", KeyboardCapitalization.None)
                 Button(
                     onClick = ::save,
                     enabled = canSave,
@@ -208,25 +239,52 @@ private fun AccountPicker(label: String, accounts: List<AccountEntity>, selected
     }
 }
 
-/** Custom keypad: big rounded keys, tabular digits. */
+
+/** Text field in Kairo's style: filled itemHigh, 12dp corners, no indicator line. */
 @Composable
-private fun Keypad(onKey: (String) -> Unit) {
-    val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫")
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        keys.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { key ->
-                    TextButton(
-                        shapes = ButtonDefaults.shapes(),
-                        onClick = { onKey(key) },
-                        colors = ButtonDefaults.textButtonColors(containerColor = KairoTheme.colors.itemHigh),
-                        modifier = Modifier.weight(1f).height(52.dp),
-                    ) {
-                        if (key == "⌫") Icon(painterResource(R.drawable.ic_backspace), "Delete digit")
-                        else Text(key, style = MaterialTheme.typography.titleLargeEmphasized)
-                    }
-                }
+private fun KairoField(value: String, onChange: (String) -> Unit, label: String, caps: KeyboardCapitalization) {
+    TextField(
+        value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(capitalization = caps, imeAction = ImeAction.Next),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = KairoTheme.colors.itemHigh, unfocusedContainerColor = KairoTheme.colors.itemHigh,
+            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/**
+ * Shows raw "123456.5" as "₹1,23,456.5" (Indian grouping, rule 11) while the field keeps plain
+ * digits. The offset map moves the cursor across the added ₹ and commas.
+ */
+private object RupeeGrouping : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val raw = text.text
+        val intPart = raw.substringBefore('.')
+        val frac = if ('.' in raw) "." + raw.substringAfter('.') else ""
+        val grouped = if (intPart.length <= 3) intPart else {
+            val last3 = intPart.takeLast(3)
+            val rest = intPart.dropLast(3).reversed().chunked(2).joinToString(",").reversed()
+            "$rest,$last3"
+        }
+        val out = if (raw.isEmpty()) "" else "₹$grouped$frac"
+        // original index -> transformed index
+        val o2t = IntArray(raw.length + 1)
+        var t = if (raw.isEmpty()) 0 else 1
+        var oi = 0
+        for (ch in grouped) { if (ch == ',') { t++; continue }; o2t[oi] = t; oi++; t++ }
+        o2t[oi] = t
+        for (i in frac.indices) { o2t[intPart.length + i] = t + i; o2t[intPart.length + i + 1] = t + i + 1 }
+        val mapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int) = o2t[offset.coerceIn(0, raw.length)].coerceAtMost(out.length)
+            override fun transformedToOriginal(offset: Int): Int {
+                var best = 0
+                for (i in 0..raw.length) if (o2t[i] <= offset) best = i
+                return best
             }
         }
+        return TransformedText(AnnotatedString(out), mapping)
     }
 }

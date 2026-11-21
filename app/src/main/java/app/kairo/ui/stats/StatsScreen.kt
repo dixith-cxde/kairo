@@ -2,6 +2,8 @@
 
 package app.kairo.ui.stats
 
+import app.kairo.ui.common.LocalOpenSearch
+import app.kairo.ui.common.SearchPill
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -156,6 +158,7 @@ fun StatsScreen(repo: TaskRepository) {
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text("Stats") },
+                actions = { SearchPill(LocalOpenSearch.current, Modifier.padding(end = 12.dp)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scroll,
             )
