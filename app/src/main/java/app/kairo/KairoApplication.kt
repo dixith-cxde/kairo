@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import app.kairo.data.TaskRepository
 import app.kairo.data.db.KairoDatabase
+import app.kairo.reminders.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -13,10 +14,16 @@ class KairoApplication : Application() {
     val appScope = CoroutineScope(SupervisorJob())
     val database by lazy { KairoDatabase.create(this) }
     val repository by lazy { TaskRepository(database) }
+    val reminders by lazy { ReminderScheduler(this) }
 
     override fun onCreate() {
         super.onCreate()
         val debug = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
-        appScope.launch { repository.seedIfEmpty(sampleTasks = debug) }
+        ReminderScheduler.createChannel(this)
+        appScope.launch {
+            repository.seedIfEmpty(sampleTasks = debug)
+            // Keep alarms in step with the database: any change to a task re-syncs its reminder.
+            repository.tasks.collect { reminders.sync(it) }
+        }
     }
 }

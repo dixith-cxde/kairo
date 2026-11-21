@@ -58,6 +58,7 @@ import app.kairo.R
 import app.kairo.data.model.Priority
 import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
+import app.kairo.reminders.rememberAskNotifications
 import app.kairo.ui.shapes.polygon
 import app.kairo.ui.theme.KairoTheme
 import kotlinx.coroutines.launch
@@ -81,6 +82,7 @@ fun QuickAddSheet(
     val haptic = LocalHapticFeedback.current
     val c = MaterialTheme.colorScheme
     val k = KairoTheme.colors
+    val askNotifications = rememberAskNotifications()
 
     var text by remember { mutableStateOf("") }
     var pickedList by remember { mutableStateOf<TaskList?>(null) }
@@ -183,7 +185,7 @@ fun QuickAddSheet(
             )
             FilterChip(
                 selected = reminder,
-                onClick = { reminder = !reminder },
+                onClick = { if (!reminder) askNotifications(); reminder = !reminder },
                 label = { Text("Remind") },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_notifications), null, Modifier.size(18.dp)) },
             )

@@ -68,6 +68,7 @@ import app.kairo.R
 import app.kairo.data.model.Priority
 import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
+import app.kairo.reminders.rememberAskNotifications
 import app.kairo.ui.shapes.polygon
 import app.kairo.ui.theme.KairoTheme
 import java.time.Duration
@@ -87,6 +88,7 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     val haptic = LocalHapticFeedback.current
+    val askNotifications = rememberAskNotifications()
 
     var pickDate by remember { mutableStateOf(false) }
     var pickTime by remember { mutableStateOf(false) }
@@ -172,8 +174,8 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                 Gap()
                 DetailRow(
                     2, rows, R.drawable.ic_notifications, "Reminder", if (t.reminder) "On" else "Off",
-                    trailing = { Switch(checked = t.reminder, onCheckedChange = { on -> vm.edit { it.copy(reminder = on) } }) },
-                ) { vm.edit { it.copy(reminder = !it.reminder) } }
+                    trailing = { Switch(checked = t.reminder, onCheckedChange = { on -> if (on) askNotifications(); vm.edit { it.copy(reminder = on) } }) },
+                ) { if (!t.reminder) askNotifications(); vm.edit { it.copy(reminder = !it.reminder) } }
                 Gap()
                 DetailRow(
                     3, rows,
@@ -220,7 +222,7 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                     .padding(bottom = 20.dp),
             ) {
                 IconButton(onClick = { pickDate = true }) { Icon(painterResource(R.drawable.ic_event), "Date") }
-                IconButton(onClick = { vm.edit { it.copy(reminder = !it.reminder) } }) {
+                IconButton(onClick = { if (!t.reminder) askNotifications(); vm.edit { it.copy(reminder = !it.reminder) } }) {
                     Icon(painterResource(R.drawable.ic_notifications), "Reminder")
                 }
                 IconButton(onClick = {
