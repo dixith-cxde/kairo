@@ -109,6 +109,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     // Which create sheet is open: "task", "Expense", "Income", "Transfer" (TxKind names), or null.
     var sheet by rememberSaveable { mutableStateOf<String?>(null) }
+    var quickAddText by rememberSaveable { mutableStateOf("") } // from the widget mic
     var createMenu by rememberSaveable { mutableStateOf(false) }
     var newListSignal by remember { mutableIntStateOf(0) }
     val lists by app.repository.lists.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -126,8 +127,15 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
 
     // Widget shortcuts.
     LaunchedEffect(action) {
+        when {
+            action == null -> {}
+            action.startsWith("${MainActivity.ACTION_QUICK_ADD}:") -> {
+                select(Tab.Today); quickAddText = action.substringAfter(':'); sheet = "task"
+            }
+            action.startsWith("task:") -> action.substringAfter(':').toLongOrNull()?.let { open(Route.TaskRoute(it)) }
+        }
         when (action) {
-            MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today); sheet = "task" }
+            MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today); quickAddText = ""; sheet = "task" }
             MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money); sheet = TxKind.Expense.name }
             MainActivity.ACTION_FOCUS -> { select(Tab.Today); open(Route.FocusRoute) }
         }
@@ -276,6 +284,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
             "task" -> QuickAddSheet(
                 lists = lists,
                 defaultDue = if (currentTab == Tab.Today) LocalDate.now() else null,
+                initialText = quickAddText,
                 onAdd = { task -> scope.launch { app.repository.add(task) } },
                 onDismiss = { sheet = null },
             )

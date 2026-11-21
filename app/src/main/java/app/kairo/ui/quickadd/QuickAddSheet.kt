@@ -80,6 +80,7 @@ import java.time.format.FormatStyle
 fun QuickAddSheet(
     lists: List<TaskList>,
     defaultDue: LocalDate?,
+    initialText: String = "",
     onAdd: (Task) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -90,7 +91,7 @@ fun QuickAddSheet(
     val k = KairoTheme.colors
     val askNotifications = rememberAskNotifications()
 
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(initialText) }
     var pickedList by remember { mutableStateOf<TaskList?>(null) }
     var priorityOverride by remember { mutableStateOf<Priority?>(null) }
     var reminder by remember { mutableStateOf(false) }

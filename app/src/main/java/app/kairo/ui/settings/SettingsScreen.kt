@@ -216,6 +216,9 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                 leadingContent = { RoundIcon(R.drawable.ic_event_available, tertiary = true) },
                 supportingContent = { Text("Read from this phone's calendars; no account. Allow it on the Calendar tab.") },
             ) { Text("Calendar events") }
+
+            Header("About")
+            AboutSection()
             Spacer(Modifier.height(32.dp))
         }
     }
@@ -227,6 +230,8 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
 )
 
 @Composable private fun Gap() = Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+
+@Composable internal fun SettingsRoundIcon(icon: Int, tertiary: Boolean = false) = RoundIcon(icon, tertiary)
 
 /** Icons in colored circles (Android 16 style). */
 @Composable

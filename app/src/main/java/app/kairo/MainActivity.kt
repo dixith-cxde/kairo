@@ -1,6 +1,8 @@
 package app.kairo
 
 import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.layout.Box
@@ -30,10 +32,24 @@ class MainActivity : FragmentActivity() {
     private var current: AppSettings? = null
     private var coldStartChecked = false
 
+    /** Quick add widget's mic: the system speech recognizer, then quick add with the words filled in. */
+    private val speech = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val words = r.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty()
+        pendingAction = if (words.isBlank()) ACTION_QUICK_ADD else "$ACTION_QUICK_ADD:$words"
+    }
+
+    private fun handle(action: String?) {
+        if (action != ACTION_VOICE_ADD) { pendingAction = action; return }
+        val ask = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Add a task")
+        runCatching { speech.launch(ask) }.onFailure { pendingAction = ACTION_QUICK_ADD } // no recognizer: just type
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) pendingAction = intent.getStringExtra(EXTRA_ACTION)
+        if (savedInstanceState == null) handle(intent.getStringExtra(EXTRA_ACTION))
         setContent {
             val app = application as KairoApplication
             val settings by app.settings.settings.collectAsStateWithLifecycle(initialValue = null)
@@ -72,7 +88,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        pendingAction = intent.getStringExtra(EXTRA_ACTION)
+        handle(intent.getStringExtra(EXTRA_ACTION))
     }
 
     companion object {
@@ -80,5 +96,8 @@ class MainActivity : FragmentActivity() {
         const val ACTION_QUICK_ADD = "quick_add"
         const val ACTION_ADD_EXPENSE = "add_expense"
         const val ACTION_FOCUS = "focus"
+        const val ACTION_VOICE_ADD = "voice_add"
+        /** "task:12" opens that task. */
+        fun taskAction(id: Long) = "task:$id"
     }
 }
