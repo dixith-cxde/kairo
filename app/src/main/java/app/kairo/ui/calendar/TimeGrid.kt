@@ -2,6 +2,11 @@
 
 package app.kairo.ui.calendar
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,7 +94,10 @@ private val HourHeight = 56.dp
 private val Gutter = 44.dp
 private const val MinBlockMinutes = 22 // a 30-min task still reads as a block, not a line
 
-/** Week view: swipe for weeks; header (tap a day to open it), all-day strip, scrollable hours. */
+/**
+ * Week view. Only the day-header row is a pager (swipe there for weeks, tap a day to open it); the
+ * all-day strip and the hours below follow the settled week and only scroll vertically.
+ */
 @Composable
 internal fun WeekView(
     pager: PagerState, weekAt: (Int) -> LocalDate, today: LocalDate, selected: LocalDate,
@@ -97,19 +105,23 @@ internal fun WeekView(
 ) {
     val k = KairoTheme.colors
     val now by rememberNow()
-    // One vertical scroll shared by every week, so swiping keeps the same hours in view.
     val scroll = rememberHourScroll(now)
-    HorizontalPager(pager, modifier, verticalAlignment = Alignment.Top) { page ->
-        val days = remember(page) { val s = weekAt(page); (0L..6L).map { s.plusDays(it) } }
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).clip(RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp)).background(k.item)) {
-            WeekHeader(days, today, selected, onPickDay)
-            AllDayStrip(days, data.allDay, maxPerDay = 2, onOpenTask)
-            HourScroll(scroll) { TimeGrid(days, today, now, data.timed, onOpenTask) }
+    fun daysOf(page: Int) = weekAt(page).let { s -> (0L..6L).map { s.plusDays(it) } }
+    Column(modifier.fillMaxSize().padding(horizontal = 16.dp).clip(RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp)).background(k.item)) {
+        HorizontalPager(pager, Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) { page ->
+            WeekHeader(remember(page) { daysOf(page) }, today, selected, onPickDay)
+        }
+        Follow(pager.settledPage) { page -> AllDayStrip(daysOf(page), data.allDay, maxPerDay = 2, onOpenTask) }
+        HourScroll(scroll) {
+            Follow(pager.settledPage) { page -> TimeGrid(daysOf(page), today, now, data.timed, onOpenTask) }
         }
     }
 }
 
-/** Day view: swipe for days; the Sunny day hero, all-day strip and one column of hours. */
+/**
+ * Day view. Only the Sunny day hero is a pager (swipe there for days); the all-day strip and the
+ * hours below follow the settled day and only scroll vertically.
+ */
 @Composable
 internal fun DayView(
     pager: PagerState, dayAt: (Int) -> LocalDate, today: LocalDate,
@@ -118,24 +130,41 @@ internal fun DayView(
     val k = KairoTheme.colors
     val now by rememberNow()
     val scroll = rememberHourScroll(now)
-    HorizontalPager(pager, modifier, verticalAlignment = Alignment.Top) { page ->
-        val d = dayAt(page)
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+    Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        HorizontalPager(pager, Modifier.fillMaxWidth(), pageSpacing = 16.dp, verticalAlignment = Alignment.Top) { page ->
+            val d = dayAt(page)
             DayHero(d, today, data.taskCount(d), data.eventCount(d))
-            Column(Modifier.weight(1f).clip(RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp)).background(k.item).padding(top = 8.dp)) {
-                AllDayStrip(listOf(d), data.allDay, maxPerDay = Int.MAX_VALUE, onOpenTask)
-                HourScroll(scroll) { TimeGrid(listOf(d), today, now, data.timed, onOpenTask) }
+        }
+        Column(Modifier.weight(1f).clip(RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp)).background(k.item).padding(top = 12.dp)) {
+            Follow(pager.settledPage) { page -> AllDayStrip(listOf(dayAt(page)), data.allDay, maxPerDay = Int.MAX_VALUE, onOpenTask) }
+            HourScroll(scroll) {
+                Follow(pager.settledPage) { page -> TimeGrid(listOf(dayAt(page)), today, now, data.timed, onOpenTask) }
             }
         }
     }
 }
 
+/** Cross-fades to the new week/day when the header pager settles; the size springs (motion scheme). */
+@Composable
+private fun Follow(page: Int, content: @Composable (Int) -> Unit) {
+    val motion = MaterialTheme.motionScheme
+    AnimatedContent(
+        targetState = page,
+        transitionSpec = {
+            (fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()))
+                .using(SizeTransform(clip = false) { _, _ -> motion.defaultSpatialSpec() })
+        },
+        label = "followPage",
+    ) { content(it) }
+}
+
+/** The one vertical scroller of the hour grid (shared across weeks/days, so the same hours stay in view). */
 @Composable
 private fun androidx.compose.foundation.layout.ColumnScope.HourScroll(scroll: ScrollState, content: @Composable () -> Unit) {
     Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
         Spacer(Modifier.height(8.dp))
         content()
-        Spacer(Modifier.height(120.dp)) // clear the floating nav
+        Spacer(Modifier.height(140.dp)) // clear the floating nav
     }
 }
 

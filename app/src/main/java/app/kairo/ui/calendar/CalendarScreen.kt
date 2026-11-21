@@ -376,13 +376,13 @@ private fun ViewMenu(view: CalView, onPick: (CalView) -> Unit, onToday: () -> Un
                 DropdownMenuItem(
                     text = { Text("Today") },
                     onClick = { onToday(); open = false },
-                    shapes = MenuDefaults.itemShapes(),
+                    shape = MenuDefaults.leadingItemShape,
                     leadingIcon = { Icon(painterResource(R.drawable.ic_event_available), null, Modifier.size(20.dp)) },
                 )
                 DropdownMenuItem(
                     text = { Text("Refresh") },
                     onClick = { onRefresh(); open = false },
-                    shapes = MenuDefaults.itemShapes(),
+                    shape = MenuDefaults.trailingItemShape,
                     leadingIcon = { Icon(painterResource(R.drawable.ic_repeat), null, Modifier.size(20.dp)) },
                 )
             }
