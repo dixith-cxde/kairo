@@ -15,6 +15,23 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import app.kairo.data.model.Task
+import app.kairo.ui.today.TodayScreen
+import app.kairo.ui.today.TodayState
+import app.kairo.ui.today.fakeTodayState
+import java.time.LocalDate
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.kairo.navigation.Tab
@@ -45,7 +62,25 @@ fun KairoApp() {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(KairoTheme.surfaces.bg)) {
+    var todayState by remember { mutableStateOf(fakeTodayState()) }
+
+    // The floating nav hides while content scrolls down and returns on scroll up (canvas AppBars board).
+    var navVisible by remember { mutableStateOf(true) }
+    val hideOnScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -4f) navVisible = false else if (available.y > 4f) navVisible = true
+                return Offset.Zero
+            }
+        }
+    }
+    val navOffset by animateDpAsState(
+        targetValue = if (navVisible) 0.dp else 140.dp,
+        animationSpec = motion.defaultSpatialSpec(),
+        label = "navOffset",
+    )
+
+    Box(Modifier.fillMaxSize().background(KairoTheme.colors.bg).nestedScroll(hideOnScroll)) {
         NavDisplay(
             backStack = backStack,
             onBack = { backStack.removeAt(backStack.lastIndex) },
@@ -53,15 +88,36 @@ fun KairoApp() {
             transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
             popTransitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
             predictivePopTransitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
-            entryProvider = { tab -> NavEntry(tab) { TabPlaceholder(tab, comingIn = tab.comingIn()) } },
+            entryProvider = { tab ->
+                NavEntry(tab) {
+                    when (tab) {
+                        Tab.Today -> TodayScreen(todayState, onToggle = { t ->
+                            // Fake toggle until Room (step 4).
+                            todayState = fakeToggle(todayState, t)
+                        })
+                        else -> TabPlaceholder(tab, comingIn = tab.comingIn())
+                    }
+                }
+            },
         )
         FloatingNavBar(
             selected = backStack.last(),
-            onSelect = ::select,
+            onSelect = { navVisible = true; select(it) },
             onCreate = { /* Quick add sheet: step 6 */ },
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, navOffset.roundToPx()) },
         )
     }
+}
+
+private fun fakeToggle(s: TodayState, t: Task): TodayState {
+    val flipped = t.copy(done = !t.done)
+    val all = (s.overdue + s.today + s.completed).map { if (it.id == t.id) flipped else it }
+    val today = LocalDate.now()
+    return s.copy(
+        overdue = all.filter { !it.done && it.due != null && it.due < today },
+        today = all.filter { !it.done && it.due == today }.sortedWith(compareBy(nullsLast()) { it.time }),
+        completed = all.filter { it.done },
+    )
 }
 
 private fun Tab.comingIn() = when (this) {

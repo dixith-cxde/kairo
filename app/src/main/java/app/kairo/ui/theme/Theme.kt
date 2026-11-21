@@ -13,7 +13,7 @@ fun KairoTheme(
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
-        LocalKairoSurfaces provides if (darkTheme) KairoDarkSurfaces else KairoLightSurfaces,
+        LocalKairoColors provides if (darkTheme) KairoDarkColorTokens else KairoLightColorTokens,
     ) {
         MaterialExpressiveTheme(
             colorScheme = if (darkTheme) KairoDarkColors else KairoLightColors,
@@ -24,11 +24,11 @@ fun KairoTheme(
     }
 }
 
-/** Kairo-only tokens, read like MaterialTheme: `KairoTheme.surfaces.navBg`. */
+/** Kairo-only tokens, read like MaterialTheme: `KairoTheme.colors.navBg`. */
 object KairoTheme {
-    val surfaces: KairoSurfaces
+    val colors: KairoColors
         @Composable @ReadOnlyComposable
-        get() = LocalKairoSurfaces.current
+        get() = LocalKairoColors.current
 }
 
-private val LocalKairoSurfaces = staticCompositionLocalOf { KairoDarkSurfaces }
+private val LocalKairoColors = staticCompositionLocalOf { KairoDarkColorTokens }

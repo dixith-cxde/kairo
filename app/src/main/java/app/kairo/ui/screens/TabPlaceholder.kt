@@ -20,7 +20,7 @@ fun TabPlaceholder(tab: Tab, comingIn: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(KairoTheme.surfaces.bg)
+            .background(KairoTheme.colors.bg)
             .statusBarsPadding()
             .padding(start = 24.dp, end = 24.dp, top = 64.dp),
     ) {

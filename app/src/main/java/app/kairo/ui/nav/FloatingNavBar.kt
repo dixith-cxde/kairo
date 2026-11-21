@@ -62,7 +62,7 @@ fun FloatingNavBar(
     onCreate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val surfaces = KairoTheme.surfaces
+    val surfaces = KairoTheme.colors
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -170,7 +170,7 @@ private fun CreateFab(onClick: () -> Unit) {
         interactionSource = interaction,
         modifier = Modifier
             .size(BarHeight)
-            .floatShadow(shape, KairoTheme.surfaces.floatShadow),
+            .floatShadow(shape, KairoTheme.colors.floatShadow),
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_add_bold),
