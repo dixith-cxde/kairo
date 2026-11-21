@@ -3,6 +3,19 @@
 package app.kairo.ui.today
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,10 +100,28 @@ fun TodayScreen(
     val k = KairoTheme.colors
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showCompleted by rememberSaveable { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+
+    // Completing shows "Completed · Undo". Unchecking a done task just flips it back.
+    val toggle: (Task) -> Unit = { t ->
+        onToggle(t)
+        if (!t.done) scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            val r = snackbar.showSnackbar("Completed “${t.title}”", actionLabel = "Undo", duration = SnackbarDuration.Short)
+            if (r == SnackbarResult.ActionPerformed) {
+                haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: undo
+                onToggle(t.copy(done = true))
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = k.bg,
+        // Above the floating nav (64dp + 20dp + gap).
+        snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding().padding(bottom = 92.dp)) },
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text("Today") },
@@ -124,7 +155,7 @@ fun TodayScreen(
                         TextButton(onClick = { /* Reschedule: step 7 */ }) { Text("Reschedule") }
                     }
                 }
-                taskGroup(state.overdue, state.lists, onToggle, overdue = true)
+                taskGroup(state.overdue, state.lists, toggle, overdue = true)
             }
 
             item(key = "h-today") {
@@ -132,12 +163,12 @@ fun TodayScreen(
                     Text("Sorted by time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            taskGroup(state.today, state.lists, onToggle)
+            taskGroup(state.today, state.lists, toggle)
 
             item(key = "completed-toggle") {
                 CompletedToggle(count = state.completed.size, open = showCompleted) { showCompleted = !showCompleted }
             }
-            if (showCompleted) taskGroup(state.completed, state.lists, onToggle, keyPrefix = "c")
+            if (showCompleted) taskGroup(state.completed, state.lists, toggle, keyPrefix = "c")
         }
     }
 }
@@ -228,8 +259,18 @@ private fun LazyListScope.taskGroup(
     keyPrefix: String = "t",
 ) {
     itemsIndexed(tasks, key = { _, t -> "$keyPrefix${t.id}" }) { i, task ->
-        TaskRow(task, lists.getValue(task.listId), i, tasks.size, onToggle, overdue)
-        if (i < tasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+        val motion = MaterialTheme.motionScheme
+        Column(
+            // A completed row fades out and the rows below slide up (collapse).
+            Modifier.animateItem(
+                fadeInSpec = motion.defaultEffectsSpec(),
+                placementSpec = motion.defaultSpatialSpec(),
+                fadeOutSpec = motion.fastEffectsSpec(),
+            ),
+        ) {
+            TaskRow(task, lists.getValue(task.listId), i, tasks.size, onToggle, overdue)
+            if (i < tasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+        }
     }
 }
 
@@ -250,13 +291,47 @@ fun TaskRow(
         Priority.Low -> k.prioLow
         Priority.None -> c.onSurfaceVariant
     }
+    val motion = MaterialTheme.motionScheme
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    // Hero moment #1 (rule 10): tick -> burst + strike, then the row leaves when the burst settles.
+    var shownDone by remember(task.id, task.done) { mutableStateOf(task.done) }
+    val burst = remember { Animatable(0f) }
+    val titleColor by animateColorAsState(
+        if (shownDone) c.onSurfaceVariant else c.onSurface, motion.defaultEffectsSpec(), label = "title",
+    )
     SegmentedListItem(
         shapes = ListItemDefaults.segmentedShapes(index, count),
         colors = ListItemDefaults.segmentedColors(containerColor = k.item),
         leadingContent = {
+          Box(contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .graphicsLayer {
+                        val v = burst.value
+                        scaleX = 0.4f + v; scaleY = 0.4f + v
+                        alpha = if (v == 0f) 0f else (1f - v).coerceIn(0f, 1f)
+                        rotationZ = v * 30f
+                    }
+                    .background(c.tertiary, MaterialShapes.SoftBurst.toShape()),
+            )
             Checkbox(
-                checked = task.done,
-                onCheckedChange = { onToggle(task) },
+                checked = shownDone,
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        shownDone = true
+                        haptic.performHapticFeedback(HapticFeedbackType.ToggleOn) // rule 9: complete
+                        scope.launch {
+                            burst.snapTo(0f)
+                            burst.animateTo(1f, motion.fastSpatialSpec())
+                            onToggle(task)
+                        }
+                    } else {
+                        shownDone = false
+                        onToggle(task)
+                    }
+                },
                 colors = CheckboxDefaults.colors(
                     checkedColor = c.primary,
                     uncheckedColor = prio,
@@ -266,14 +341,15 @@ fun TaskRow(
                     contentDescription = (if (task.done) "Mark not done: " else "Complete ") + task.title
                 },
             )
+          }
         },
         supportingContent = { TaskMeta(task, list, overdue) },
     ) {
         Text(
             task.title,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (task.done) c.onSurfaceVariant else c.onSurface,
-            textDecoration = if (task.done) TextDecoration.LineThrough else null,
+            color = titleColor,
+            textDecoration = if (shownDone) TextDecoration.LineThrough else null,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
