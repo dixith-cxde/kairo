@@ -175,20 +175,7 @@ fun AddTransactionSheet(
                 Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-                    TxKind.entries.forEachIndexed { i, kd ->
-                        ToggleButton(
-                            checked = kd == kind,
-                            onCheckedChange = { kind = kd; categoryId = null },
-                            shapes = when (i) {
-                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                TxKind.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                            },
-                            modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                        ) { Text(kd.name) }
-                    }
-                }
+                app.kairo.ui.common.ConnectedGroup(TxKind.entries, kind, { it.name }) { kind = it; categoryId = null }
                 // Big amount: system number keyboard, live ₹ Indian grouping while you type.
                 BasicTextField(
                     value = amount,

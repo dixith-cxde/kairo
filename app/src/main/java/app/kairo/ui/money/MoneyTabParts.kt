@@ -98,16 +98,7 @@ internal fun SummaryGroup(items: List<Summary>, modifier: Modifier = Modifier) {
 @Composable
 internal fun MoneyTabSwitcher(tab: MoneyTab, onSelect: (MoneyTab) -> Unit, modifier: Modifier = Modifier) {
     val tabs = MoneyTab.entries
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-        tabs.forEachIndexed { i, t ->
-            ToggleButton(
-                checked = t == tab,
-                onCheckedChange = { onSelect(t) },
-                shapes = connectedShape(i, tabs.size),
-                modifier = Modifier.weight(1f).semantics { role = Role.Tab },
-            ) { Text(t.label, maxLines = 1, softWrap = false) }
-        }
-    }
+    app.kairo.ui.common.ConnectedGroup(tabs, tab, { it.label }, modifier) { onSelect(it) }
 }
 
 /** Roomy Plan card: a meaningful shape badge, a title, a chevron, then its own content. */

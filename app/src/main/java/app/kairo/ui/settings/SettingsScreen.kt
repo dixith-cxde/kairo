@@ -289,21 +289,7 @@ private fun RoundIcon(icon: Int, tertiary: Boolean = false) {
 /** M3 Expressive connected button group for a small enum. */
 @Composable
 private fun <T> Connected(options: List<T>, selected: T, label: (T) -> String, enabled: Boolean = true, onPick: (T) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-        options.forEachIndexed { i, o ->
-            ToggleButton(
-                checked = o == selected,
-                onCheckedChange = { onPick(o) },
-                enabled = enabled,
-                shapes = when (i) {
-                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                },
-                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-            ) { Text(label(o), maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
-        }
-    }
+    app.kairo.ui.common.ConnectedGroup(options, selected, label, enabled = enabled, onPick = onPick)
 }
 
 private val Circle = RoundedPolygon.circle(numVertices = 12)

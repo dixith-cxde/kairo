@@ -164,20 +164,7 @@ fun StatsScreen(repo: TaskRepository) {
         ) {
             TabHeader("Stats", Modifier.fullBleed(), actions = { SearchPill(LocalOpenSearch.current) })
             // M3 Expressive connected button group.
-            Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-                Range.entries.forEachIndexed { i, r ->
-                    ToggleButton(
-                        checked = r == range,
-                        onCheckedChange = { range = r },
-                        shapes = when (i) {
-                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                            Range.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                        },
-                        modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                    ) { Text(r.label) }
-                }
-            }
+            app.kairo.ui.common.ConnectedGroup(Range.entries, range, { it.label }) { range = it }
 
             // Editorial total + morphing badge.
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {

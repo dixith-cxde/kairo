@@ -128,20 +128,7 @@ fun BillSheet(money: MoneyRepository, bill: RecurringEntity?, onDismiss: () -> U
                     Icon(painterResource(R.drawable.ic_delete), "Delete")
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-                RecurringKind.entries.forEachIndexed { i, kd ->
-                    ToggleButton(
-                        checked = kd == kind,
-                        onCheckedChange = { if (kd != kind) { kind = kd; categoryId = null } },
-                        shapes = when (i) {
-                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                            RecurringKind.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                        },
-                        modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                    ) { Text(kd.name) }
-                }
-            }
+            app.kairo.ui.common.ConnectedGroup(RecurringKind.entries, kind, { it.name }) { if (it != kind) { kind = it; categoryId = null } }
             KairoField(name, { name = it }, when (kind) { RecurringKind.Bill -> "Name · e.g. Rent"; RecurringKind.Subscription -> "Name · e.g. Netflix"
                 RecurringKind.Income -> "Name · e.g. Salary" }, KeyboardCapitalization.Words, ImeAction.Next) {}
             BasicTextField(
