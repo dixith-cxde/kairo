@@ -50,6 +50,10 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -106,6 +110,7 @@ data class TodayState(
     val overdue: List<Task>,
     val today: List<Task>,
     val completed: List<Task>,
+    val upcoming: List<Task>,
     val lists: Map<Long, TaskList>,
 ) {
     val total get() = today.size + completed.size
@@ -125,6 +130,8 @@ fun TodayScreen(
     val k = KairoTheme.colors
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showCompleted by rememberSaveable { mutableStateOf(false) }
+    var filter by rememberSaveable { mutableStateOf(TodayFilter.All) }
+    val everything = state.overdue + state.today + state.completed + state.upcoming
     val snackbar = LocalAppSnackbar.current
     val selection = rememberSelection()
     val entrance = rememberEntrance()
@@ -150,7 +157,7 @@ fun TodayScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = k.bg,
         bottomBar = {
-            TaskSelectionToolbar(selection, state.overdue + state.today + state.completed, state.lists.values.toList(), onOpen)
+            TaskSelectionToolbar(selection, everything, state.lists.values.toList(), onOpen)
         },
         topBar = {
           Box {
@@ -170,7 +177,7 @@ fun TodayScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
                 scrollBehavior = scrollBehavior,
             )
-            SelectionTopBar(selection, (state.overdue + state.today + state.completed).map { it.id })
+            SelectionTopBar(selection, everything.map { it.id })
           }
         },
     ) { padding ->
@@ -182,9 +189,11 @@ fun TodayScreen(
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
+            item(key = "chips") { FilterChips(state, filter) { filter = it } }
             item(key = "hero") { with(entrance) { HeroCard(state, Modifier.enter("hero", 0)) } }
 
-            if (state.overdue.isNotEmpty()) {
+            val all = filter == TodayFilter.All
+            if (state.overdue.isNotEmpty() && (all || filter == TodayFilter.Overdue)) {
                 item(key = "h-overdue") {
                     SectionHeader("Overdue · ${state.overdue.size}", MaterialTheme.colorScheme.error) {
                         TextButton(shapes = ButtonDefaults.shapes(), onClick = { rescheduleOverdue = true }) { Text("Reschedule") }
@@ -193,22 +202,52 @@ fun TodayScreen(
                 taskGroup(state.overdue, state.lists, toggle, onOpen, overdue = true, selection = selection, entrance = entrance)
             }
 
-            item(key = "h-today") {
-                SectionHeader("Today · ${state.today.size} left", MaterialTheme.colorScheme.primary) {
-                    Text("Sorted by time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (all || filter == TodayFilter.Today) {
+                item(key = "h-today") {
+                    SectionHeader("Today · ${state.today.size} left", MaterialTheme.colorScheme.primary) {
+                        Text("Sorted by time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                taskGroup(state.today, state.lists, toggle, onOpen, selection = selection, entrance = entrance)
+            }
+
+            if (filter == TodayFilter.Upcoming) {
+                state.upcoming.groupBy { it.due!! }.forEach { (day, tasks) ->
+                    item(key = "h-up-$day") {
+                        SectionHeader(upcomingLabel(day), MaterialTheme.colorScheme.primary) {
+                            Text("${tasks.size}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    taskGroup(tasks, state.lists, toggle, onOpen, keyPrefix = "u", selection = selection, entrance = entrance)
                 }
             }
-            taskGroup(state.today, state.lists, toggle, onOpen, selection = selection, entrance = entrance)
 
-            item(key = "completed-toggle") {
-                CompletedToggle(
-                    count = state.completed.size, open = showCompleted,
-                    groupSize = if (showCompleted) state.completed.size + 1 else 1,
-                ) { showCompleted = !showCompleted }
+            if (all) {
+                item(key = "completed-toggle") {
+                    CompletedToggle(
+                        count = state.completed.size, open = showCompleted,
+                        groupSize = if (showCompleted) state.completed.size + 1 else 1,
+                    ) { showCompleted = !showCompleted }
+                }
+                if (showCompleted) taskGroup(
+                    state.completed, state.lists, toggle, onOpen, keyPrefix = "c", selection = selection, entrance = entrance, indexOffset = 1,
+                )
+            } else if (filter == TodayFilter.Done) {
+                item(key = "h-done") { SectionHeader("Done today · ${state.completed.size}", MaterialTheme.colorScheme.primary) {} }
+                taskGroup(state.completed, state.lists, toggle, onOpen, keyPrefix = "c", selection = selection, entrance = entrance)
             }
-            if (showCompleted) taskGroup(
-                state.completed, state.lists, toggle, onOpen, keyPrefix = "c", selection = selection, entrance = entrance, indexOffset = 1,
-            )
+
+            val empty = when (filter) {
+                TodayFilter.All -> null
+                TodayFilter.Overdue -> "Nothing overdue".takeIf { state.overdue.isEmpty() }
+                TodayFilter.Today -> null // the Today header already says "0 left"
+                TodayFilter.Upcoming -> "Nothing in the next 7 days".takeIf { state.upcoming.isEmpty() }
+                TodayFilter.Done -> "Nothing done yet today".takeIf { state.completed.isEmpty() }
+            }
+            if (empty != null) item(key = "empty") {
+                Text(empty, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, top = 24.dp))
+            }
         }
     }
     if (rescheduleOverdue) DateSheet(
@@ -295,6 +334,47 @@ private fun HeroCard(state: TodayState, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** Which part of the day the list shows (chips at the top). */
+enum class TodayFilter(val label: String) { All("All"), Overdue("Overdue"), Today("Today"), Upcoming("Upcoming"), Done("Done") }
+
+/** M3 filter chips, one per section, each with its count. Scrolls sideways on narrow phones. */
+@Composable
+private fun FilterChips(state: TodayState, filter: TodayFilter, onPick: (TodayFilter) -> Unit) {
+    val c = MaterialTheme.colorScheme
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+    ) {
+        items(TodayFilter.entries, key = { it.name }) { f ->
+            val count = when (f) {
+                TodayFilter.All -> null
+                TodayFilter.Overdue -> state.overdue.size
+                TodayFilter.Today -> state.today.size
+                TodayFilter.Upcoming -> state.upcoming.size
+                TodayFilter.Done -> state.completed.size
+            }
+            val alert = f == TodayFilter.Overdue && state.overdue.isNotEmpty()
+            FilterChip(
+                selected = f == filter,
+                onClick = { onPick(f) },
+                label = { Text(if (count == null) f.label else "${f.label} $count") },
+                leadingIcon = if (f == filter) {
+                    { Icon(painterResource(R.drawable.ic_check), null, Modifier.size(FilterChipDefaults.IconSize)) }
+                } else null,
+                colors = FilterChipDefaults.filterChipColors(
+                    labelColor = if (alert) c.error else c.onSurfaceVariant,
+                    selectedContainerColor = if (alert) c.errorContainer else c.secondaryContainer,
+                    selectedLabelColor = if (alert) c.onErrorContainer else c.onSecondaryContainer,
+                    selectedLeadingIconColor = if (alert) c.onErrorContainer else c.onSecondaryContainer,
+                ),
+            )
+        }
+    }
+}
+
+private fun upcomingLabel(day: LocalDate): String =
+    if (day == LocalDate.now().plusDays(1)) "Tomorrow" else day.format(DateTimeFormatter.ofPattern("EEEE, d MMM"))
 
 @Composable
 private fun SectionHeader(title: String, color: Color, trailing: @Composable () -> Unit) {

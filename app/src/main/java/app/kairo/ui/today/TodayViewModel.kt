@@ -31,5 +31,8 @@ fun buildTodayState(tasks: List<Task>, lists: Map<Long, app.kairo.data.model.Tas
     today = tasks.filter { !it.done && it.due == today }.sortedWith(compareBy(nullsLast()) { it.time }),
     // Done tasks due today count toward today's ring.
     completed = tasks.filter { it.done && it.due == today },
+    // Next 7 days, for the Upcoming chip.
+    upcoming = tasks.filter { !it.done && it.due != null && it.due > today && it.due <= today.plusDays(7) }
+        .sortedWith(compareBy<Task>({ it.due }, { it.time ?: java.time.LocalTime.MAX })),
     lists = lists,
 )

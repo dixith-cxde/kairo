@@ -41,7 +41,7 @@ class KairoApplication : Application() {
         // Widgets follow the data: refresh shortly after tasks or money change.
         appScope.launch {
             // Content changes, or settings (palette, theme) so the widgets match the app.
-            combine(repository.tasks, money.transactions, settings.settings) { a, b, s -> Triple(a, b, s) }.collectLatest {
+            combine(repository.tasks, money.transactions, money.budgets, settings.settings) { a, b, c, s -> listOf(a, b, c, s) }.collectLatest {
                 delay(500)
                 updateAllWidgets(this@KairoApplication)
             }

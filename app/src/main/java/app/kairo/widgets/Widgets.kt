@@ -198,6 +198,7 @@ suspend fun updateAllWidgets(context: Context) {
     QuickAddWidget().updateAll(context)
     NextUpWidget().updateAll(context)
     StreakWidget().updateAll(context)
+    StatsWidget().updateAll(context)
 }
 
 /** Each widget loads its data once, then renders it for the home screen and for the picker preview. */
@@ -335,15 +336,17 @@ private class ProgressWidget : KairoWidget<ProgressData>() {
 
 // ───────── Money · text + action (2×2; 4×2) ─────────
 
-private class MoneyData(val spent: Long, val limit: Long?, val month: String)
+/** [hidden]: app lock is on, so amounts stay off the home screen. */
+private class MoneyData(val spent: Long, val limit: Long?, val month: String, val hidden: Boolean)
 
 private class MoneyWidget : KairoWidget<MoneyData>() {
     override suspend fun load(context: Context): MoneyData {
         val app = context.applicationContext as KairoApplication
         val ym = YearMonth.now()
         val spent = app.money.transactions.first().filter { it.kind == TxKind.Expense && YearMonth.from(it.date) == ym }.sumOf { it.amountPaise }
-        val limit = app.money.budgets.first().firstOrNull { it.categoryId == null }?.limitPaise
-        return MoneyData(spent, limit, ym.month.getDisplayName(JTextStyle.SHORT, Locale.getDefault()))
+        val limit = app.money.budgets.first().firstOrNull { it.overall }?.limitPaise
+        val hidden = app.settings.settings.first().appLock
+        return MoneyData(spent, limit, ym.month.getDisplayName(JTextStyle.SHORT, Locale.getDefault()), hidden)
     }
 
     @Composable
@@ -357,9 +360,11 @@ private class MoneyWidget : KairoWidget<MoneyData>() {
                 Text("Spent · ${d.month}", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = c.onSurfaceVariant))
             }
             Spacer(GlanceModifier.height(6.dp))
-            Text(Money.format(d.spent), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, color = c.onSurface), maxLines = 1,
+            Text(if (d.hidden) "₹ •••••" else Money.format(d.spent), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, color = c.onSurface), maxLines = 1,
                 modifier = GlanceModifier.padding(start = 4.dp))
-            if (d.limit != null && d.limit > 0) {
+            if (d.hidden) {
+                Text("Hidden · app lock is on", style = TextStyle(fontSize = 11.sp, color = c.onSurfaceVariant), modifier = GlanceModifier.padding(start = 4.dp))
+            } else if (d.limit != null && d.limit > 0) {
                 val frac = (d.spent.toFloat() / d.limit).coerceIn(0f, 1f)
                 val over = d.spent > d.limit
                 // Two-part bar like the canvas: used (primary, error when over) · 3dp gap · rest (secondary container).
@@ -515,6 +520,94 @@ private class StreakWidget : KairoWidget<Int>() {
     }
 }
 
+// ───────── Stats · week at a glance (4×2; 2×2 → 4×4) ─────────
+
+/** Same rules as the Stats tab (Week): tasks finished per day, change vs the 7 days before, streak, on time. */
+private class StatsData(
+    val total: Int, val change: Int?, val days: List<Pair<String, Int>>, val streak: Int, val onTime: Int?, val badge: Bitmap,
+)
+
+private class StatsWidget : KairoWidget<StatsData>() {
+    override suspend fun load(context: Context): StatsData {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now()
+        val start = today.minusDays(6)
+        val done = (context.applicationContext as KairoApplication).repository.tasks.first()
+            .filter { it.done && it.completedAt != null }
+            .map { it to Instant.ofEpochMilli(it.completedAt!!).atZone(zone).toLocalDate() }
+        val week = done.filter { !it.second.isBefore(start) && !it.second.isAfter(today) }
+        val prev = done.count { !it.second.isBefore(start.minusDays(7)) && it.second.isBefore(start) }
+        val days = (0..6).map { i -> start.plusDays(i.toLong()).let { d ->
+            d.dayOfWeek.getDisplayName(JTextStyle.NARROW, Locale.getDefault()) to week.count { it.second == d } } }
+        val doneDays = done.map { it.second }.toSet()
+        var d = if (today in doneDays) today else today.minusDays(1)
+        var streak = 0
+        while (d in doneDays) { streak++; d = d.minusDays(1) }
+        val dated = week.filter { it.first.due != null }
+        val onTime = if (dated.isEmpty()) null else dated.count { !it.second.isAfter(it.first.due) } * 100 / dated.size
+        return StatsData(
+            week.size, if (prev == 0) null else (week.size - prev) * 100 / prev, days, streak, onTime,
+            shapeBitmap(MaterialShapes.Cookie9Sided, px(context, 40.dp)), // the Stats badge's Week shape
+        )
+    }
+
+    @Composable
+    override fun Content(context: Context, d: StatsData, t: WTheme) {
+        val c = GlanceTheme.colors
+        val size = LocalSize.current
+        val wide = size.width >= 220.dp
+        val tall = size.height >= 150.dp
+        Column(GlanceModifier.card(t).padding(12.dp).clickable(openApp(context, MainActivity.ACTION_STATS))) {
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                ShapeIcon(d.badge, c.primaryContainer, R.drawable.ic_bar_chart, c.onPrimaryContainer, 40.dp, 20.dp)
+                Spacer(GlanceModifier.width(10.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("${d.total}", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp, color = c.onSurface), maxLines = 1)
+                        Spacer(GlanceModifier.width(6.dp))
+                        Text("done", style = TextStyle(fontSize = 14.sp, color = c.onSurfaceVariant), maxLines = 1)
+                    }
+                    Text(
+                        when { d.change == null -> "last 7 days"; d.change >= 0 -> "+${d.change}% vs last week"; else -> "${d.change}% vs last week" },
+                        style = TextStyle(fontSize = 12.sp, color = if ((d.change ?: 0) < 0) c.error else c.onSurfaceVariant), maxLines = 1,
+                    )
+                }
+            }
+            Spacer(GlanceModifier.height(8.dp))
+            if (wide) {
+                // Seven bars, oldest to today; today's in primary, the rest in primary container.
+                val max = (d.days.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
+                val barArea = (size.height.value - 24 - 40 - 8 - 16 - (if (tall) 28 else 0)).coerceAtLeast(16f)
+                Row(GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.Bottom) {
+                    d.days.forEachIndexed { i, (label, n) ->
+                        Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.Bottom) {
+                            val h = if (n == 0) 4f else (barArea * n / max).coerceAtLeast(8f)
+                            Box(
+                                GlanceModifier.width(14.dp).height(h.dp).cornerRadius(7.dp)
+                                    .background(if (n == 0) t.itemHigh else if (i == 6) c.primary else c.primaryContainer),
+                            ) {}
+                            Text(label, style = TextStyle(fontSize = 11.sp, fontWeight = if (i == 6) FontWeight.Bold else FontWeight.Normal,
+                                color = if (i == 6) c.primary else c.onSurfaceVariant))
+                        }
+                    }
+                }
+            } else Spacer(GlanceModifier.defaultWeight())
+            if (tall || !wide) {
+                Spacer(GlanceModifier.height(6.dp))
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Image(ImageProvider(R.drawable.ic_local_fire_department), null, GlanceModifier.size(16.dp), colorFilter = tint(c.tertiary))
+                    Spacer(GlanceModifier.width(4.dp))
+                    Text("${d.streak} day streak", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = c.onSurface), maxLines = 1)
+                    if (d.onTime != null && wide) {
+                        Spacer(GlanceModifier.defaultWeight())
+                        Text("${d.onTime}% on time", style = TextStyle(fontSize = 12.sp, color = c.onSurfaceVariant), maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ───────── receivers ─────────
 
 class TodayWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = TodayWidget() }
@@ -523,6 +616,7 @@ class MoneyWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWi
 class QuickAddWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = QuickAddWidget() }
 class NextUpWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = NextUpWidget() }
 class StreakWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = StreakWidget() }
+class StatsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = StatsWidget() }
 
 /** Picker previews from real content (Android 15+). Rate-limited by the system, so once per app version. */
 suspend fun publishWidgetPreviews(context: Context) {
@@ -533,7 +627,7 @@ suspend fun publishWidgetPreviews(context: Context) {
     val m = androidx.glance.appwidget.GlanceAppWidgetManager(context)
     val ok = listOf(
         TodayWidgetReceiver::class, ProgressWidgetReceiver::class, MoneyWidgetReceiver::class,
-        QuickAddWidgetReceiver::class, NextUpWidgetReceiver::class, StreakWidgetReceiver::class,
+        QuickAddWidgetReceiver::class, NextUpWidgetReceiver::class, StreakWidgetReceiver::class, StatsWidgetReceiver::class,
     ).all { runCatching { m.setWidgetPreviews(it) }.getOrNull() == androidx.glance.appwidget.GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS }
     if (ok) prefs.edit().putLong("previews", version).apply()
 }

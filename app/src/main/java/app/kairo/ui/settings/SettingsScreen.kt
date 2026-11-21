@@ -161,7 +161,7 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
             val snackbar = app.kairo.ui.common.LocalAppSnackbar.current
             SegmentedListItem(
                 onClick = {},
-                shapes = ListItemDefaults.segmentedShapes(0, if (settings.appLock) 2 else 1),
+                shapes = ListItemDefaults.segmentedShapes(0, if (settings.appLock) 3 else 2),
                 colors = ListItemDefaults.segmentedColors(containerColor = k.item),
                 leadingContent = { RoundIcon(R.drawable.ic_lock) },
                 supportingContent = { Text("Fingerprint, face or screen lock — handled by Android") },
@@ -181,16 +181,31 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
                 Column {
                     Gap()
                     Column(
-                        Modifier.fillMaxWidth().background(k.item, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp)).padding(16.dp),
+                        Modifier.fillMaxWidth().background(k.item, RoundedCornerShape(4.dp)).padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text("Lock after", style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
-                        Connected(listOf(0, 60, 300), settings.lockAfterSec, { when (it) { 0 -> "Immediately"; 60 -> "1 min"; else -> "5 min" } }) {
+                        Connected(listOf(0, 60, 300), settings.lockAfterSec, { when (it) { 0 -> "Now"; 60 -> "1 min"; else -> "5 min" } }) {
                             scope.launch { store.setLockAfter(it) }
                         }
+                        Text(
+                            "While locked, reminders hide task names on the lock screen and the Money widget hides amounts.",
+                            style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
+                        )
                     }
                 }
             }
+            Gap()
+            SegmentedListItem(
+                onClick = { scope.launch { store.setBlockScreenshots(!settings.blockScreenshots) } },
+                shapes = ListItemDefaults.segmentedShapes(if (settings.appLock) 2 else 1, if (settings.appLock) 3 else 2),
+                colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+                leadingContent = { RoundIcon(R.drawable.ic_visibility_off) },
+                supportingContent = { Text("No screenshots, screen recording or recents preview") },
+                trailingContent = {
+                    Switch(checked = settings.blockScreenshots, onCheckedChange = { scope.launch { store.setBlockScreenshots(it) } })
+                },
+            ) { Text("Block screenshots") }
 
             Header("Reminders")
             val exact = alarms.canScheduleExactAlarms()
@@ -258,7 +273,7 @@ private fun <T> Connected(options: List<T>, selected: T, label: (T) -> String, e
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
                 modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-            ) { Text(label(o)) }
+            ) { Text(label(o), maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
         }
     }
 }

@@ -84,12 +84,13 @@ class ReminderReceiver : BroadcastReceiver() {
         app.appScope.launch {
             try {
                 val task = app.repository.task(id).first()
-                if (task != null && !task.done) notify(context, task)
+                if (task != null && !task.done) notify(context, task, private = app.settings.settings.first().appLock)
             } finally { pending.finish() }
         }
     }
 
-    private fun notify(context: Context, task: Task) {
+    /** [private]: app lock is on, so the lock screen shows "Task reminder" instead of the task's name. */
+    private fun notify(context: Context, task: Task, private: Boolean) {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
@@ -112,6 +113,13 @@ class ReminderReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .addAction(0, "Done", action(ReminderScheduler.ACTION_DONE))
             .addAction(0, "Snooze 10 min", action(ReminderScheduler.ACTION_SNOOZE))
+            .apply {
+                if (private) setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(
+                    NotificationCompat.Builder(context, ReminderScheduler.CHANNEL)
+                        .setSmallIcon(R.drawable.ic_task_alt).setContentTitle("Task reminder")
+                        .setContentText("Unlock to see it").setCategory(NotificationCompat.CATEGORY_REMINDER).build(),
+                )
+            }
             .build()
         NotificationManagerCompat.from(context).notify(task.id.toInt(), n)
     }

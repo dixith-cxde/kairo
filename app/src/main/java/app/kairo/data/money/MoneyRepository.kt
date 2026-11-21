@@ -53,6 +53,18 @@ class MoneyRepository(db: KairoDatabase) {
 
     suspend fun delete(tx: TransactionEntity) = dao.deleteTx(tx.id)
 
+    /** One budget per scope: saving a scope that already has one updates it instead of adding a twin. */
+    suspend fun saveBudget(existing: List<BudgetEntity>, b: BudgetEntity) {
+        val twin = existing.firstOrNull { it.id != b.id && it.categoryId == b.categoryId && it.accountId == b.accountId }
+        when {
+            twin != null -> { dao.updateBudget(twin.copy(limitPaise = b.limitPaise)); if (b.id != 0L) dao.deleteBudget(b.id) }
+            b.id == 0L -> dao.insertBudget(b)
+            else -> dao.updateBudget(b)
+        }
+    }
+    suspend fun deleteBudget(id: Long) = dao.deleteBudget(id)
+    suspend fun restoreBudget(b: BudgetEntity) = dao.insertBudget(b)
+
     suspend fun addAccount(name: String, type: AccountType, color: ListColor, openingPaise: Long): Long =
         dao.insertAccount(AccountEntity(name = name.trim(), type = type, color = color, openingPaise = openingPaise, position = dao.maxPosition() + 1))
     suspend fun updateAccount(a: AccountEntity) = dao.updateAccount(a.copy(name = a.name.trim()))

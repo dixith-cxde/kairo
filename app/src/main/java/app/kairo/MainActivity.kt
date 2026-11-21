@@ -11,6 +11,9 @@ import app.kairo.data.settings.AppSettings
 import app.kairo.lock.AppLock
 import app.kairo.lock.LockScreen
 import android.os.Build
+import android.view.WindowManager
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -58,7 +61,14 @@ class MainActivity : FragmentActivity() {
             // Cold start with the lock on: covered before the first frame.
             if (!coldStartChecked) { coldStartChecked = true; if (s.appLock) AppLock.locked = true }
             // Hide app content from the recents screenshot while the lock is on (Android 13+).
-            LaunchedEffect(s.appLock) { if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(!s.appLock) }
+            // "Block screenshots" (or the lock on Android 12, which has no recents-only switch) uses
+            // FLAG_SECURE: no screenshots, screen recordings, casting or recents preview.
+            LaunchedEffect(s.appLock, s.blockScreenshots) {
+                if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(!s.appLock)
+                val secure = s.blockScreenshots || (s.appLock && Build.VERSION.SDK_INT < 33)
+                if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
             val dark = when (s.theme) {
                 ThemeMode.System -> isSystemInDarkTheme()
                 ThemeMode.Light -> false
@@ -66,11 +76,16 @@ class MainActivity : FragmentActivity() {
             }
             val context = LocalContext.current
             KairoTheme(darkTheme = dark, colorScheme = remember(s, dark) { kairoScheme(context, s, dark) }) {
+                val locked = AppLock.locked && s.appLock
                 Box {
-                    KairoApp(action = pendingAction, onActionHandled = { pendingAction = null })
+                    // While locked, the app underneath is hidden from TalkBack and other
+                    // accessibility readers too, not just covered visually.
+                    Box(if (locked) Modifier.clearAndSetSemantics {} else Modifier) {
+                        KairoApp(action = pendingAction, onActionHandled = { pendingAction = null })
+                    }
                     // Ask as soon as the lock shows (only while we're in front).
                     LaunchedEffect(AppLock.locked) { if (AppLock.locked && s.appLock) AppLock.unlock(this@MainActivity) }
-                    LockScreen(AppLock.locked && s.appLock) { AppLock.unlock(this@MainActivity) }
+                    LockScreen(locked) { AppLock.unlock(this@MainActivity) }
                 }
             }
         }
@@ -97,6 +112,7 @@ class MainActivity : FragmentActivity() {
         const val ACTION_ADD_EXPENSE = "add_expense"
         const val ACTION_FOCUS = "focus"
         const val ACTION_VOICE_ADD = "voice_add"
+        const val ACTION_STATS = "stats"
         /** "task:12" opens that task. */
         fun taskAction(id: Long) = "task:$id"
     }

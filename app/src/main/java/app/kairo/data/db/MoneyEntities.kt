@@ -56,12 +56,16 @@ data class TransactionEntity(
     val recurringId: Long? = null,
 )
 
+/** A monthly spending limit: overall (both ids null), for one category, or for one account (v5). */
 @Entity(tableName = "budgets")
 data class BudgetEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val categoryId: Long? = null,  // null = overall monthly budget
+    val categoryId: Long? = null,
     val limitPaise: Long,
-)
+    @androidx.room.ColumnInfo(defaultValue = "NULL") val accountId: Long? = null,
+) {
+    val overall get() = categoryId == null && accountId == null
+}
 
 @Entity(tableName = "recurring")
 data class RecurringEntity(
@@ -94,12 +98,15 @@ interface MoneyDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :id") suspend fun txCount(id: Long): Int
     @Query("SELECT COALESCE(MAX(position), -1) FROM accounts") suspend fun maxPosition(): Int
     /** All or nothing: the account, its transactions (both legs of its transfers) and its bills. */
-    @Transaction suspend fun deleteAccount(id: Long) { deleteAccountTxs(id); deleteAccountRecurring(id); deleteAccountRow(id) }
+    @Transaction suspend fun deleteAccount(id: Long) { deleteAccountTxs(id); deleteAccountRecurring(id); deleteAccountBudgets(id); deleteAccountRow(id) }
     @Insert suspend fun insertCategory(c: CategoryEntity): Long
     @Insert suspend fun insertTx(t: TransactionEntity): Long
     @Update suspend fun updateTx(t: TransactionEntity)
     @Query("DELETE FROM transactions WHERE id = :id OR transferPeerId = :id") suspend fun deleteTx(id: Long)
     @Insert suspend fun insertBudget(b: BudgetEntity): Long
+    @Update suspend fun updateBudget(b: BudgetEntity)
+    @Query("DELETE FROM budgets WHERE id = :id") suspend fun deleteBudget(id: Long)
+    @Query("DELETE FROM budgets WHERE accountId = :id") suspend fun deleteAccountBudgets(id: Long)
     @Insert suspend fun insertRecurring(r: RecurringEntity): Long
     @Update suspend fun updateRecurring(r: RecurringEntity)
     @Query("SELECT COUNT(*) FROM accounts") suspend fun accountCount(): Int

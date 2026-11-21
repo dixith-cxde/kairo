@@ -17,7 +17,7 @@ android {
         applicationId = "app.kairo"
         minSdk = 31   // Android 12: dynamic color, widget checkboxes
         targetSdk = 37
-        versionCode = 1
+        versionCode = 2
         versionName = "0.1.0"
     }
 

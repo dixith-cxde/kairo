@@ -7,6 +7,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -142,67 +143,139 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
 fun BudgetsScreen(money: MoneyRepository, onBack: () -> Unit) {
     val txs by money.transactions.collectAsStateWithLifecycle(initialValue = emptyList())
     val cats by money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
+    val accounts by money.accounts.collectAsStateWithLifecycle(initialValue = emptyList())
     val budgets by money.budgets.collectAsStateWithLifecycle(initialValue = emptyList())
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+    val snackbar = app.kairo.ui.common.LocalAppSnackbar.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    // The drawer: null = closed; id 0 = new budget; otherwise the budget being edited.
+    var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     val ym = YearMonth.now()
-    val spentBy = remember(txs) {
-        txs.filter { it.kind == TxKind.Expense && YearMonth.from(it.date) == ym }.groupBy { it.categoryId }
-            .mapValues { (_, l) -> l.sumOf { it.amountPaise } }
-    }
-    val spent = spentBy.values.sum()
-    val overall = budgets.firstOrNull { it.categoryId == null }
+    val month = remember(txs) { txs.filter { it.kind == TxKind.Expense && YearMonth.from(it.date) == ym } }
+    val spentByCat = remember(month) { month.groupBy { it.categoryId }.mapValues { (_, l) -> l.sumOf { it.amountPaise } } }
+    val spentByAcc = remember(month) { month.groupBy { it.accountId }.mapValues { (_, l) -> l.sumOf { it.amountPaise } } }
+    val spent = month.sumOf { it.amountPaise }
+    val overall = budgets.firstOrNull { it.overall }
     val daysLeft = ym.lengthOfMonth() - LocalDate.now().dayOfMonth + 1
-    DetailScaffold("Budgets", onBack) { padding ->
+
+    fun delete(b: app.kairo.data.db.BudgetEntity) {
+        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm) // rule 9: delete
+        scope.launch {
+            money.deleteBudget(b.id)
+            snackbar.currentSnackbarData?.dismiss()
+            val r = snackbar.showSnackbar("Budget deleted", actionLabel = "Undo", duration = androidx.compose.material3.SnackbarDuration.Short)
+            if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm) // rule 9: undo
+                money.restoreBudget(b)
+            }
+        }
+    }
+
+    editingId?.let { id ->
+        BudgetSheet(
+            money, budget = budgets.firstOrNull { it.id == id }, budgets = budgets,
+            categories = cats.filter { !it.income }, accounts = accounts,
+            onDismiss = { editingId = null }, onDelete = { editingId = null; delete(it) },
+        )
+    }
+
+    DetailScaffold("Budgets", onBack, actions = {
+        IconButton(shapes = IconButtonDefaults.shapes(), onClick = { editingId = 0L }) { Icon(painterResource(R.drawable.ic_add), "Add budget") }
+    }) { padding ->
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 48.dp)) {
-            overall?.let { b ->
-                item(key = "jar") {
-                    val left = b.limitPaise - spent
-                    val fill = (left.toFloat() / b.limitPaise).coerceIn(0f, 1f)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+            item(key = "jar") {
+                if (overall != null) {
+                    val left = overall.limitPaise - spent
+                    val fill = (left.toFloat() / overall.limitPaise).coerceIn(0f, 1f)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp))
+                            .clickable(onClickLabel = "Edit monthly budget") { editingId = overall.id }.padding(vertical = 12.dp),
+                    ) {
                         LiquidJar(fill, Modifier.size(200.dp))
                         Text(
-                            if (left >= 0) "${Money.format(left)} left of ${Money.format(b.limitPaise)}"
-                            else "${Money.format(-left)} over ${Money.format(b.limitPaise)}",
+                            if (left >= 0) "${Money.format(left)} left of ${Money.format(overall.limitPaise)}"
+                            else "${Money.format(-left)} over ${Money.format(overall.limitPaise)}",
                             style = MaterialTheme.typography.titleLargeEmphasized,
                             color = if (left >= 0) c.onSurface else c.error,
                             modifier = Modifier.padding(top = 16.dp),
                         )
-                        if (left > 0) Text(
-                            "$daysLeft days to go · ≈ ${Money.format(left / daysLeft / 100 * 100)} a day",
+                        Text(
+                            if (left > 0) "$daysLeft days to go · ≈ ${Money.format(left / daysLeft / 100 * 100)} a day · tap to edit" else "Tap to edit",
                             style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant,
                         )
                     }
-                }
-            }
-            val rows = budgets.filter { it.categoryId != null }
-            rows.forEachIndexed { i, b ->
-                val cat = cats.firstOrNull { it.id == b.categoryId } ?: return@forEachIndexed
-                val s = spentBy[b.categoryId] ?: 0
-                val over = s > b.limitPaise
-                item(key = "b${b.id}") {
-                    Column {
-                        SegmentedListItem(
-                            shapes = ListItemDefaults.segmentedShapes(i, rows.size),
-                            colors = ListItemDefaults.segmentedColors(containerColor = if (over) c.errorContainer else k.item),
-                            leadingContent = { CategoryBadge(cat) },
-                            supportingContent = {
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("${Money.format(s)} of ${Money.format(b.limitPaise)}",
-                                        color = if (over) c.onErrorContainer else c.onSurfaceVariant)
-                                    LinearWavyProgressIndicator(
-                                        progress = { (s.toFloat() / b.limitPaise).coerceIn(0f, 1f) },
-                                        color = if (over) c.error else k.accent(cat.color),
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                            },
-                        ) { Text(cat.name, color = if (over) c.onErrorContainer else c.onSurface) }
-                        if (i < rows.lastIndex) SegGap()
+                } else {
+                    Column(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(k.item).padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text("No monthly budget", style = MaterialTheme.typography.titleMediumEmphasized)
+                        Text("Spent ${Money.format(spent)} so far in ${ym.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())}.",
+                            style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
+                        FilledTonalButton(onClick = { editingId = 0L }, shapes = ButtonDefaults.shapes()) { Text("Set a monthly budget") }
                     }
                 }
             }
+            @Composable
+            fun BudgetRow(i: Int, n: Int, name: String, used: Long, b: app.kairo.data.db.BudgetEntity, accent: Color, badge: @Composable () -> Unit) {
+                val over = used > b.limitPaise
+                Column {
+                    SegmentedListItem(
+                        onClick = { editingId = b.id },
+                        shapes = ListItemDefaults.segmentedShapes(i, n),
+                        colors = ListItemDefaults.segmentedColors(containerColor = if (over) c.errorContainer else k.item),
+                        leadingContent = badge,
+                        supportingContent = {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    if (over) "${Money.format(used - b.limitPaise)} over · ${Money.format(used)} of ${Money.format(b.limitPaise)}"
+                                    else "${Money.format(used)} of ${Money.format(b.limitPaise)} · ${Money.format(b.limitPaise - used)} left",
+                                    color = if (over) c.onErrorContainer else c.onSurfaceVariant,
+                                )
+                                LinearWavyProgressIndicator(
+                                    progress = { (used.toFloat() / b.limitPaise).coerceIn(0f, 1f) },
+                                    color = if (over) c.error else accent,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        },
+                    ) { Text(name, color = if (over) c.onErrorContainer else c.onSurface) }
+                    if (i < n - 1) SegGap()
+                }
+            }
+            val catRows = budgets.filter { it.categoryId != null }.mapNotNull { b -> cats.firstOrNull { it.id == b.categoryId }?.let { b to it } }
+            if (catRows.isNotEmpty()) item(key = "h-cat") { SectionTitle("By category") }
+            catRows.forEachIndexed { i, (b, cat) ->
+                item(key = "b${b.id}") { BudgetRow(i, catRows.size, cat.name, spentByCat[cat.id] ?: 0, b, k.accent(cat.color)) { CategoryBadge(cat) } }
+            }
+            val accRows = budgets.filter { it.accountId != null }.mapNotNull { b -> accounts.firstOrNull { it.id == b.accountId }?.let { b to it } }
+            if (accRows.isNotEmpty()) item(key = "h-acc") { SectionTitle("By account") }
+            accRows.forEachIndexed { i, (b, acc) ->
+                item(key = "b${b.id}") { BudgetRow(i, accRows.size, acc.name, spentByAcc[acc.id] ?: 0, b, k.accent(acc.color)) { AccountBadge(acc) } }
+            }
+            if (catRows.isEmpty() && accRows.isEmpty()) item(key = "hint") {
+                Text("Add a budget for a category (Food, Shopping…) or for one account with +.",
+                    style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, top = 20.dp))
+            }
         }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) = Text(
+    text, style = MaterialTheme.typography.titleSmallEmphasized, color = MaterialTheme.colorScheme.primary,
+    modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 8.dp),
+)
+
+/** An account's mark: its type icon on its color, in Cookie4 (same as the account drawer). */
+@Composable
+internal fun AccountBadge(a: app.kairo.data.db.AccountEntity, size: Int = 40) {
+    val k = KairoTheme.colors
+    Box(Modifier.size(size.dp).background(k.container(a.color), MaterialShapes.Cookie4Sided.toShape()), contentAlignment = Alignment.Center) {
+        Icon(painterResource(accountIcon(a.type)), null, tint = k.onContainer(a.color), modifier = Modifier.size((size / 2).dp))
     }
 }
 

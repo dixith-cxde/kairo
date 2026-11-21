@@ -47,6 +47,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import kotlin.math.PI
+import kotlin.math.floor
+import kotlin.math.roundToInt
+import kotlin.math.sin
 import app.kairo.R
 import app.kairo.navigation.Tab
 import app.kairo.ui.theme.KairoTheme
@@ -67,6 +73,7 @@ private val PillHeight = 48.dp
 @Composable
 fun FloatingNavBar(
     selected: Tab,
+    position: () -> Float,
     onSelect: (Tab) -> Unit,
     onCreate: () -> Unit,
     modifier: Modifier = Modifier,
@@ -98,23 +105,19 @@ fun FloatingNavBar(
             val gap = 4.dp
             val count = Tab.entries.size
             val slot = (maxWidth - gap * (count - 1)) / count
-            // One pill that travels between slots on the expressive spatial spring (it overshoots a
-            // little and settles: the Stash "bouncy" feel), instead of fading in place.
-            // The pill's two edges chase the new tab on different springs: the leading edge on
-            // fastSpatial, the trailing edge on slowSpatial. The pill stretches toward the tab,
-            // then the back catches up and both settle with a little bounce (liquid feel).
-            val target = (slot + gap) * selected.ordinal
-            val dir = remember { mutableStateOf(1) }
-            val prev = remember { mutableStateOf(selected.ordinal) }
-            if (prev.value != selected.ordinal) { dir.value = if (selected.ordinal > prev.value) 1 else -1; prev.value = selected.ordinal }
-            val fast = motion.fastSpatialSpec<androidx.compose.ui.unit.Dp>()
-            val slow = motion.slowSpatialSpec<androidx.compose.ui.unit.Dp>()
-            val left by animateDpAsState(target, if (dir.value < 0) fast else slow, label = "pillLeft")
-            val right by animateDpAsState(target + slot, if (dir.value > 0) fast else slow, label = "pillRight")
+            // One pill that rides the pager: it follows your finger while you swipe, and the pager's
+            // spatial spring (tap a tab) carries it with a little overshoot. Between two tabs it
+            // stretches toward the next one and shrinks back as it lands (the liquid feel).
             Box(
                 Modifier
-                    .offset { IntOffset(left.roundToPx(), 0) }
-                    .size(width = (right - left).coerceAtLeast(PillHeight), height = PillHeight)
+                    .layout { measurable, constraints ->
+                        val pos = position()
+                        val step = (slot + gap).toPx()
+                        val stretch = step * 0.5f * sin(PI.toFloat() * (pos - floor(pos)))
+                        val w = (slot.toPx() + stretch).roundToInt().coerceAtLeast(PillHeight.roundToPx())
+                        val p = measurable.measure(Constraints.fixed(w, PillHeight.roundToPx()))
+                        layout(p.width, p.height) { p.place((step * pos - stretch / 2).roundToInt(), 0) }
+                    }
                     .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(PillHeight / 2)),
             )
             Row(

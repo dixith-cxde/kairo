@@ -27,6 +27,9 @@ import app.kairo.ui.common.LocalSelecting
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -86,7 +89,6 @@ import app.kairo.ui.lists.ListDetailViewModel
 import app.kairo.ui.lists.ListsScreen
 import app.kairo.ui.lists.ListsViewModel
 import app.kairo.ui.quickadd.QuickAddSheet
-import app.kairo.ui.screens.TabPlaceholder
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.today.TodayScreen
 import app.kairo.ui.today.TodayViewModel
@@ -115,12 +117,19 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     val lists by app.repository.lists.collectAsStateWithLifecycle(initialValue = emptyList())
 
     val top = backStack.last()
-    val currentTab = backStack.filterIsInstance<Route.TabRoute>().last().tab
+    // The five tabs live side by side in one pager (new in this step): a swipe drags the next tab
+    // in under your finger and lets go on a fling, like Google's own apps, instead of jumping on a
+    // detected gesture. The back stack only holds the pager (at the bottom) and screens above it.
+    val pager = rememberPagerState { Tab.entries.size }
+    val currentTab = Tab.entries[pager.currentPage]
 
-    fun select(tab: Tab) {
-        backStack.clear() // atomic within this event; NavDisplay never sees an empty stack
-        backStack.add(Route.TabRoute(Tab.Today))
-        if (tab != Tab.Today) backStack.add(Route.TabRoute(tab))
+    fun popToTabs() { while (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
+    fun select(tab: Tab, animate: Boolean = true) {
+        popToTabs()
+        scope.launch {
+            if (animate) pager.animateScrollToPage(tab.ordinal, animationSpec = motion.defaultSpatialSpec())
+            else pager.scrollToPage(tab.ordinal)
+        }
     }
     fun open(route: Route) = backStack.add(route)
     fun back() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
@@ -130,14 +139,15 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         when {
             action == null -> {}
             action.startsWith("${MainActivity.ACTION_QUICK_ADD}:") -> {
-                select(Tab.Today); quickAddText = action.substringAfter(':'); sheet = "task"
+                select(Tab.Today, animate = false); quickAddText = action.substringAfter(':'); sheet = "task"
             }
             action.startsWith("task:") -> action.substringAfter(':').toLongOrNull()?.let { open(Route.TaskRoute(it)) }
         }
         when (action) {
-            MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today); quickAddText = ""; sheet = "task" }
-            MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money); sheet = TxKind.Expense.name }
-            MainActivity.ACTION_FOCUS -> { select(Tab.Today); open(Route.FocusRoute) }
+            MainActivity.ACTION_QUICK_ADD -> { select(Tab.Today, animate = false); quickAddText = ""; sheet = "task" }
+            MainActivity.ACTION_ADD_EXPENSE -> { select(Tab.Money, animate = false); sheet = TxKind.Expense.name }
+            MainActivity.ACTION_FOCUS -> { select(Tab.Today, animate = false); open(Route.FocusRoute) }
+            MainActivity.ACTION_STATS -> select(Tab.Stats, animate = false)
         }
         if (action != null) onActionHandled()
     }
@@ -175,6 +185,10 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                 fadeOut(motion.defaultEffectsSpec()) +
                 scaleOut(motion.slowSpatialSpec(), targetScale = 0.92f))
 
+    BackHandler(enabled = backStack.size == 1 && pager.currentPage != 0) { select(Tab.Today) }
+    // The nav comes back whenever the tab changes.
+    LaunchedEffect(pager.currentPage) { navVisible = true }
+
     val snackbar = remember { SnackbarHostState() }
     CompositionLocalProvider(
         LocalKairoApp provides app, LocalAppSnackbar provides snackbar, LocalSelecting provides selecting,
@@ -190,26 +204,14 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
             entryProvider = { route ->
                 NavEntry(route, contentKey = route.encode()) {
                     when (route) {
-                        is Route.TabRoute -> when (route.tab) {
-                            Tab.Today -> {
-                                val vm: TodayViewModel = viewModel(factory = viewModelFactory { initializer { TodayViewModel(app.repository) } })
-                                val state by vm.state.collectAsStateWithLifecycle()
-                                state?.let { TodayScreen(it, onToggle = vm::toggle, onOpen = { t -> open(Route.TaskRoute(t.id)) }, onSettings = { open(Route.SettingsRoute) }, onFocus = { open(Route.FocusRoute) }) }
-                            }
-                            Tab.Lists -> {
-                                val vm: ListsViewModel = viewModel(factory = viewModelFactory { initializer { ListsViewModel(app.repository) } })
-                                ListsScreen(vm, onOpenList = { id -> open(Route.ListRoute(id)) }, newListSignal = newListSignal)
-                            }
-                            Tab.Calendar -> CalendarScreen(app.repository, app.phoneCalendar, onOpenTask = { t -> open(Route.TaskRoute(t.id)) })
-                            Tab.Stats -> StatsScreen(app.repository)
-                            Tab.Money -> MoneyScreen(
-                                app.money,
-                                onAccount = { open(Route.AccountRoute(it)) },
-                                onBudgets = { open(Route.BudgetsRoute) },
-                                onInsights = { open(Route.InsightsRoute) },
-                                onRecurring = { open(Route.RecurringRoute) },
-                            )
-                            else -> TabPlaceholder(route.tab, comingIn = route.tab.comingIn())
+                        is Route.TabRoute -> HorizontalPager(
+                            state = pager,
+                            // No tab swiping while a screen is selecting rows (its toolbar owns the gestures).
+                            userScrollEnabled = selecting.value == 0,
+                            key = { Tab.entries[it].name },
+                            modifier = Modifier.fillMaxSize(),
+                        ) { page ->
+                            TabPage(Tab.entries[page], app, newListSignal, ::open)
                         }
                         is Route.TaskRoute -> {
                             val vm: TaskDetailViewModel = viewModel(
@@ -249,6 +251,7 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
         )
         FloatingNavBar(
             selected = currentTab,
+            position = { pager.currentPage + pager.currentPageOffsetFraction },
             onSelect = { navVisible = true; select(it) },
             onCreate = { createMenu = !createMenu },
             menuOpen = createMenu,
@@ -300,15 +303,35 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     }
 }
 
-private fun Tab.comingIn() = when (this) {
-    Tab.Today -> ""
-    Tab.Lists -> "Coming in step 8"
-    Tab.Calendar -> "Coming in step 10"
-    Tab.Money -> "Coming in step 14"
-    Tab.Stats -> "Coming in step 11"
+/** One tab's screen inside the pager. */
+@Composable
+private fun TabPage(tab: Tab, app: KairoApplication, newListSignal: Int, open: (Route) -> Unit) {
+    when (tab) {
+        Tab.Today -> {
+            val vm: TodayViewModel = viewModel(factory = viewModelFactory { initializer { TodayViewModel(app.repository) } })
+            val state by vm.state.collectAsStateWithLifecycle()
+            state?.let { TodayScreen(it, onToggle = vm::toggle, onOpen = { t -> open(Route.TaskRoute(t.id)) }, onSettings = { open(Route.SettingsRoute) }, onFocus = { open(Route.FocusRoute) }) }
+        }
+        Tab.Lists -> {
+            val vm: ListsViewModel = viewModel(factory = viewModelFactory { initializer { ListsViewModel(app.repository) } })
+            ListsScreen(vm, onOpenList = { id -> open(Route.ListRoute(id)) }, newListSignal = newListSignal)
+        }
+        Tab.Calendar -> CalendarScreen(app.repository, app.phoneCalendar, onOpenTask = { t -> open(Route.TaskRoute(t.id)) })
+        Tab.Money -> MoneyScreen(
+            app.money,
+            onAccount = { open(Route.AccountRoute(it)) },
+            onBudgets = { open(Route.BudgetsRoute) },
+            onInsights = { open(Route.InsightsRoute) },
+            onRecurring = { open(Route.RecurringRoute) },
+        )
+        Tab.Stats -> StatsScreen(app.repository)
+    }
 }
 
+/** Saved stacks from before the pager could hold a second tab route; keep only the bottom one. */
 private val StackSaver = listSaver<SnapshotStateList<Route>, String>(
     save = { stack -> stack.map { it.encode() } },
-    restore = { saved -> saved.map(Route::decode).toMutableStateList() },
+    restore = { saved ->
+        saved.map(Route::decode).filterIndexed { i, r -> i == 0 || r !is Route.TabRoute }.toMutableStateList()
+    },
 )

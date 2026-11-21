@@ -80,7 +80,7 @@ fun MoneyScreen(
     val thisMonth = remember(txs) { txs.filter { YearMonth.from(it.date) == month } }
     val income = thisMonth.filter { it.kind == TxKind.Income }.sumOf { it.amountPaise }
     val spent = thisMonth.filter { it.kind == TxKind.Expense }.sumOf { it.amountPaise }
-    val overall = budgets.firstOrNull { it.categoryId == null }
+    val overall = budgets.firstOrNull { it.overall }
     val catMap = remember(cats) { cats.associateBy { it.id } }
     val accMap = remember(balances) { balances.associate { it.account.id to it.account } }
     val recent = remember(txs) { txs.filter { !(it.kind == TxKind.Transfer && it.amountPaise > 0) }.take(20).groupBy { it.date } }

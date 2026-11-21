@@ -21,6 +21,7 @@ data class AppSettings(
     val contrast: Contrast = Contrast.Standard,
     val appLock: Boolean = false,
     val lockAfterSec: Int = 0,               // 0 = every time, 60, 300 (same choices as Stash)
+    val blockScreenshots: Boolean = false,   // FLAG_SECURE: no screenshots, recordings or recents preview
 )
 
 private val Context.store by preferencesDataStore("settings")
@@ -33,6 +34,7 @@ class SettingsStore(private val context: Context) {
     private val contrast = stringPreferencesKey("contrast")
     private val appLock = booleanPreferencesKey("appLock")
     private val lockAfter = androidx.datastore.preferences.core.intPreferencesKey("lockAfter")
+    private val secure = booleanPreferencesKey("blockScreenshots")
 
     val settings: Flow<AppSettings> = context.store.data.map { p: Preferences ->
         AppSettings(
@@ -42,6 +44,7 @@ class SettingsStore(private val context: Context) {
             contrast = p[contrast]?.let(Contrast::valueOf) ?: Contrast.Standard,
             appLock = p[appLock] ?: false,
             lockAfterSec = p[lockAfter] ?: 0,
+            blockScreenshots = p[secure] ?: false,
         )
     }
 
@@ -52,4 +55,5 @@ class SettingsStore(private val context: Context) {
     suspend fun setContrast(v: Contrast) = context.store.edit { it[contrast] = v.name }
     suspend fun setAppLock(v: Boolean) = context.store.edit { it[appLock] = v }
     suspend fun setLockAfter(sec: Int) = context.store.edit { it[lockAfter] = sec }
+    suspend fun setBlockScreenshots(v: Boolean) = context.store.edit { it[secure] = v }
 }
