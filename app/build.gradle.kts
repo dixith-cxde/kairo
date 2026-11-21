@@ -5,6 +5,12 @@ plugins {
     alias(libs.plugins.room)
 }
 
+// Release signing reads ../keystore.properties (git-ignored; see docs/build/release.md).
+// Without it, release builds come out unsigned.
+val keystoreProps = java.util.Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 android {
     namespace = "app.kairo"
     // Compose UI 1.13 needs compile SDK 37.1+. compileSdk only decides which APIs we can call;
@@ -21,8 +27,18 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (keystoreProps.isNotEmpty()) create("release") {
+            storeFile = file(keystoreProps.getProperty("storeFile"))
+            storePassword = keystoreProps.getProperty("storePassword")
+            keyAlias = keystoreProps.getProperty("keyAlias")
+            keyPassword = keystoreProps.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
