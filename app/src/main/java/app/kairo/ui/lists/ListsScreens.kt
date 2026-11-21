@@ -2,6 +2,8 @@
 
 package app.kairo.ui.lists
 
+import app.kairo.ui.common.TabHeader
+import app.kairo.ui.common.fullBleed
 import app.kairo.ui.common.LocalOpenSearch
 import app.kairo.ui.common.SearchPill
 import androidx.compose.material3.ButtonDefaults
@@ -91,21 +93,16 @@ fun ListsScreen(vm: ListsViewModel, onOpenList: (Long) -> Unit, newListSignal: I
     androidx.compose.runtime.LaunchedEffect(newListSignal) { if (newListSignal > 0) creating = true }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         containerColor = k.bg,
-        topBar = {
-            LargeFlexibleTopAppBar(
-                title = { Text("Lists") },
-                actions = { SearchPill(LocalOpenSearch.current, Modifier.padding(end = 12.dp)) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
-                scrollBehavior = scroll,
-            )
-        },
-    ) { padding ->
+    ) { _ ->
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 4.dp, bottom = 120.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 140.dp),
             modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            item(key = "header") {
+                TabHeader("Lists", Modifier.fullBleed(), actions = { SearchPill(LocalOpenSearch.current) })
+            }
             // Smart lists: 2×2 tiles, Cookie4 icons, big tabular counts.
             item(key = "smart") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

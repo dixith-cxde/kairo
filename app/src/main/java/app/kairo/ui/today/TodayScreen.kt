@@ -97,6 +97,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.kairo.R
 import app.kairo.ui.common.EmptyState
+import app.kairo.ui.common.TabHeader
+import app.kairo.ui.common.fullBleed
+import app.kairo.ui.onboarding.tourTarget
 import app.kairo.data.model.Priority
 import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
@@ -155,42 +158,37 @@ fun TodayScreen(
     }
 
     Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier,
         containerColor = k.bg,
         bottomBar = {
             TaskSelectionToolbar(selection, everything, state.lists.values.toList(), onOpen)
         },
-        topBar = {
-          Box {
-            LargeFlexibleTopAppBar(
-                title = { Text("Today") },
-                subtitle = { Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))) },
-                actions = {
-                    SearchPill(LocalOpenSearch.current, Modifier.padding(end = 4.dp))
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = onFocus) {
-                        Icon(painterResource(R.drawable.ic_timer), contentDescription = "Focus timer")
-                    }
-                    // Settings: filled gear on a tonal, press-morphing button.
-                    FilledTonalIconButton(onClick = onSettings, shapes = IconButtonDefaults.shapes()) {
-                        Icon(painterResource(R.drawable.ic_settings_filled), contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
-                scrollBehavior = scrollBehavior,
-            )
-            SelectionTopBar(selection, everything.map { it.id })
-          }
-        },
-    ) { padding ->
+    ) { _ ->
+      Box(Modifier.fillMaxSize()) {
         LazyColumn(
             contentPadding = PaddingValues(
                 start = 16.dp, end = 16.dp,
-                top = padding.calculateTopPadding() + 4.dp,
-                bottom = 120.dp, // clear the floating nav
+                bottom = 140.dp, // clear the floating nav
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
-            item(key = "chips") { FilterChips(state, filter) { filter = it } }
+            item(key = "header") {
+                TabHeader(
+                    title = "Today",
+                    subtitle = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM")),
+                    modifier = Modifier.fullBleed(),
+                    actions = {
+                        SearchPill(LocalOpenSearch.current, Modifier.tourTarget("search", 20.dp))
+                        FilledTonalIconButton(onClick = onFocus, shapes = IconButtonDefaults.shapes(), modifier = Modifier.tourTarget("focus", 24.dp)) {
+                            Icon(painterResource(R.drawable.ic_timer), contentDescription = "Focus timer")
+                        }
+                        FilledTonalIconButton(onClick = onSettings, shapes = IconButtonDefaults.shapes(), modifier = Modifier.tourTarget("settings", 24.dp)) {
+                            Icon(painterResource(R.drawable.ic_settings_filled), contentDescription = "Settings")
+                        }
+                    },
+                    below = { Box(Modifier.tourTarget("filters", 16.dp)) { FilterChips(state, filter) { filter = it } } },
+                )
+            }
             // A blank day (nothing due, nothing done, nothing overdue): one calm empty page instead of
             // a 0/0 ring and empty headers (owner, 2026-11-21).
             val blank = state.total == 0 && state.overdue.isEmpty() && state.completed.isEmpty()
@@ -204,7 +202,7 @@ fun TodayScreen(
                 }
                 return@LazyColumn
             }
-            item(key = "hero") { with(entrance) { HeroCard(state, Modifier.enter("hero", 0)) } }
+            item(key = "hero") { with(entrance) { HeroCard(state, Modifier.enter("hero", 0).tourTarget("hero", 32.dp)) } }
 
             val all = filter == TodayFilter.All
             if (state.overdue.isNotEmpty() && (all || filter == TodayFilter.Overdue)) {
@@ -269,6 +267,9 @@ fun TodayScreen(
                 )
             }
         }
+        // Selection bar floats over the header instead of pushing the list down.
+        SelectionTopBar(selection, everything.map { it.id }, Modifier.align(Alignment.TopCenter))
+      }
     }
     if (rescheduleOverdue) DateSheet(
         initial = DateChoice(LocalDate.now(), null, false),

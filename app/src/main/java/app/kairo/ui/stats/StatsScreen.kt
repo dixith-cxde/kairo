@@ -2,6 +2,8 @@
 
 package app.kairo.ui.stats
 
+import app.kairo.ui.common.TabHeader
+import app.kairo.ui.common.fullBleed
 import app.kairo.ui.common.LocalOpenSearch
 import app.kairo.ui.common.SearchPill
 import androidx.compose.animation.core.Animatable
@@ -153,22 +155,14 @@ fun StatsScreen(repo: TaskRepository) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         containerColor = k.bg,
-        topBar = {
-            LargeFlexibleTopAppBar(
-                title = { Text("Stats") },
-                actions = { SearchPill(LocalOpenSearch.current, Modifier.padding(end = 12.dp)) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = k.bg, scrolledContainerColor = k.bg),
-                scrollBehavior = scroll,
-            )
-        },
-    ) { padding ->
+    ) { _ ->
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 140.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            TabHeader("Stats", Modifier.fullBleed(), actions = { SearchPill(LocalOpenSearch.current) })
             // M3 Expressive connected button group.
             Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
                 Range.entries.forEachIndexed { i, r ->
