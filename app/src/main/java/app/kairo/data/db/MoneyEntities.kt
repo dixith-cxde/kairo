@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import app.kairo.data.model.ListColor
 import app.kairo.data.model.ListShape
@@ -84,6 +85,16 @@ interface MoneyDao {
     @Query("SELECT * FROM recurring ORDER BY nextDue") fun recurring(): Flow<List<RecurringEntity>>
 
     @Insert suspend fun insertAccount(a: AccountEntity): Long
+    @Update suspend fun updateAccount(a: AccountEntity)
+    @Query("DELETE FROM accounts WHERE id = :id") suspend fun deleteAccountRow(id: Long)
+    /** This account's rows plus the other leg of any transfer touching it. */
+    @Query("DELETE FROM transactions WHERE accountId = :id OR id IN (SELECT transferPeerId FROM transactions WHERE accountId = :id AND transferPeerId IS NOT NULL)")
+    suspend fun deleteAccountTxs(id: Long)
+    @Query("DELETE FROM recurring WHERE accountId = :id") suspend fun deleteAccountRecurring(id: Long)
+    @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :id") suspend fun txCount(id: Long): Int
+    @Query("SELECT COALESCE(MAX(position), -1) FROM accounts") suspend fun maxPosition(): Int
+    /** All or nothing: the account, its transactions (both legs of its transfers) and its bills. */
+    @Transaction suspend fun deleteAccount(id: Long) { deleteAccountTxs(id); deleteAccountRecurring(id); deleteAccountRow(id) }
     @Insert suspend fun insertCategory(c: CategoryEntity): Long
     @Insert suspend fun insertTx(t: TransactionEntity): Long
     @Update suspend fun updateTx(t: TransactionEntity)

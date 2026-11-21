@@ -13,8 +13,6 @@ import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.AssistChip
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.text.BasicTextField
@@ -40,6 +38,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -52,7 +52,6 @@ import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialShapes
@@ -116,6 +115,7 @@ fun AddTransactionSheet(
     var note by rememberSaveable { mutableStateOf("") }   // title (optional)
     var tags by rememberSaveable { mutableStateOf("") }
     var newCategory by rememberSaveable { mutableStateOf(false) }
+    var newAccountFor by rememberSaveable { mutableStateOf<String?>(null) } // "from" | "to" | null
     val amountFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { amountFocus.requestFocus() } // number keyboard straight away
     val success = remember { Animatable(0f) }
@@ -174,11 +174,7 @@ fun AddTransactionSheet(
                 // Big amount: system number keyboard, live ₹ Indian grouping while you type.
                 BasicTextField(
                     value = amount,
-                    onValueChange = { v ->
-                        val clean = v.filter { it.isDigit() || it == '.' }
-                        val parts = clean.split('.')
-                        if (parts.size <= 2 && parts[0].length <= 9 && (parts.getOrNull(1)?.length ?: 0) <= 2) amount = clean
-                    },
+                    onValueChange = { v -> cleanAmount(v)?.let { amount = it } },
                     textStyle = MaterialTheme.typography.displayMediumEmphasized.copy(color = c.onSurface),
                     cursorBrush = SolidColor(c.primary),
                     singleLine = true,
@@ -195,27 +191,21 @@ fun AddTransactionSheet(
 
                 if (kind == TxKind.Transfer) {
                     // Transfer: From card, swap, To card — each a dropdown of accounts with balances.
-                    AccountSelect("From", accounts, accountId) { accountId = it }
+                    AccountSelect("From", accounts, accountId, onNew = { newAccountFor = "from" }) { accountId = it }
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         FilledTonalIconButton(onClick = { val a = accountId; accountId = toAccountId; toAccountId = a }, shapes = IconButtonDefaults.shapes()) {
                             Icon(painterResource(R.drawable.ic_swap_vert), "Swap accounts")
                         }
                     }
-                    AccountSelect("To", accounts, toAccountId) { toAccountId = it }
+                    AccountSelect("To", accounts, toAccountId, onNew = { newAccountFor = "to" }) { toAccountId = it }
                 } else {
-                    // Categories as selectable chips; tap again to clear; make your own.
-                    Text(if (kind == TxKind.Income) "Category (optional)" else "Category",
-                        style = MaterialTheme.typography.titleSmallEmphasized, color = c.primary)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        cats.forEach { cat -> CategoryChip(cat, cat.id == categoryId) { categoryId = if (categoryId == cat.id) null else cat.id } }
-                        AssistChip(
-                            onClick = { newCategory = true },
-                            label = { Text("New category") },
-                            leadingIcon = { Icon(painterResource(R.drawable.ic_add), null, Modifier.size(18.dp)) },
-                            shape = CircleShape,
-                        )
-                    }
-                    AccountSelect("Account", accounts, accountId) { accountId = it }
+                    // Category: a compact dropdown card (same pattern as Account, one size down).
+                    CategorySelect(
+                        if (kind == TxKind.Income) "Category (optional)" else "Category",
+                        cats, categoryId, optional = kind == TxKind.Income,
+                        onNew = { newCategory = true },
+                    ) { categoryId = it }
+                    AccountSelect("Account", accounts, accountId, onNew = { newAccountFor = "from" }) { accountId = it }
                 }
                 // Normal keyboard for text. The keyboard's ✓ on the last field saves.
                 KairoField(note, { note = it }, "Title (optional)", KeyboardCapitalization.Sentences, ImeAction.Next) {}
@@ -240,33 +230,86 @@ fun AddTransactionSheet(
         scope.launch { categoryId = money.addCategory(name, icon, color, kind == TxKind.Income) }
         newCategory = false
     }
+    newAccountFor?.let { slot ->
+        AccountSheet(money, null, canDelete = false, onDismiss = { newAccountFor = null },
+            onSaved = { id -> if (slot == "to") toAccountId = id else accountId = id })
+    }
 }
 
-/** A category as a selectable chip: its own shape + icon, its color when picked. */
+/**
+ * Category as a compact card (one size down from the Account card: 28dp badge, 8dp padding) that
+ * opens the Expressive grouped menu: categories with their own shapes, then "New category".
+ */
 @Composable
-private fun CategoryChip(cat: CategoryEntity, selected: Boolean, onClick: () -> Unit) {
+private fun CategorySelect(
+    label: String, cats: List<CategoryEntity>, selected: Long?, optional: Boolean,
+    onNew: () -> Unit, onPick: (Long?) -> Unit,
+) {
     val k = KairoTheme.colors
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(cat.name) },
-        leadingIcon = {
-            Box(Modifier.size(22.dp).background(if (selected) k.accent(cat.color) else k.container(cat.color), cat.shape.polygon.toShape()),
-                contentAlignment = Alignment.Center) {
-                Icon(painterResource(categoryIcon(cat.icon)), null, Modifier.size(14.dp),
-                    tint = if (selected) MaterialTheme.colorScheme.surface else k.onContainer(cat.color))
+    val c = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf(false) }
+    val cat = cats.firstOrNull { it.id == selected }
+    Box {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.itemHigh)
+                .clickable(role = Role.Button) { open = true }.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (cat != null) CategoryBadge(cat, size = 28)
+            else Box(Modifier.size(28.dp).background(c.surfaceContainerHighest, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(painterResource(R.drawable.ic_category), null, tint = c.onSurfaceVariant, modifier = Modifier.size(16.dp))
             }
-        },
-        shape = CircleShape,
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = k.container(cat.color), selectedLabelColor = k.onContainer(cat.color),
-        ),
+            Text(label, style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+            Text(cat?.name ?: "Choose", style = MaterialTheme.typography.titleSmallEmphasized,
+                color = if (cat != null) c.onSurface else c.onSurfaceVariant, modifier = Modifier.weight(1f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 1)
+            Icon(painterResource(R.drawable.ic_expand_more), null, tint = c.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
+        DropdownMenuPopup(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 2)) {
+                if (optional) SelectableDropdownMenuItem(
+                    selected = selected == null,
+                    onClick = { onPick(null); open = false },
+                    text = { Text("None") },
+                    shapes = MenuDefaults.itemShapes(),
+                )
+                cats.forEach { ct ->
+                    SelectableDropdownMenuItem(
+                        selected = ct.id == selected,
+                        onClick = { onPick(ct.id); open = false },
+                        text = { Text(ct.name) },
+                        shapes = MenuDefaults.itemShapes(),
+                        leadingIcon = {
+                            Box(Modifier.size(24.dp).background(k.container(ct.color), ct.shape.polygon.toShape()), contentAlignment = Alignment.Center) {
+                                Icon(painterResource(categoryIcon(ct.icon)), null, tint = k.onContainer(ct.color), modifier = Modifier.size(14.dp))
+                            }
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.height(MenuDefaults.GroupSpacing))
+            DropdownMenuGroup(shapes = MenuDefaults.groupShape(1, 2)) {
+                NewItem("New category") { open = false; onNew() }
+            }
+        }
+    }
+}
+
+/** The "+ New …" item at the bottom of a grouped menu. */
+@Composable
+private fun NewItem(label: String, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = onClick,
+        shape = MenuDefaults.standaloneItemShape, // the only item in its group
+        leadingIcon = { Icon(painterResource(R.drawable.ic_add), null, Modifier.size(20.dp)) },
     )
 }
 
 /** Account as a card-like field that opens an Expressive grouped menu (name + balance). */
 @Composable
-private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected: Long?, onPick: (Long) -> Unit) {
+private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected: Long?, onNew: () -> Unit, onPick: (Long) -> Unit) {
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     var open by remember { mutableStateOf(false) }
@@ -288,7 +331,7 @@ private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected
             Icon(painterResource(R.drawable.ic_expand_more), null, tint = c.onSurfaceVariant)
         }
         DropdownMenuPopup(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
+            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 2)) {
                 accounts.forEach { a ->
                     SelectableDropdownMenuItem(
                         selected = a.id == selected,
@@ -298,6 +341,10 @@ private fun AccountSelect(label: String, accounts: List<AccountEntity>, selected
                         leadingIcon = { Icon(painterResource(accountIcon(a.type)), null, tint = k.accent(a.color), modifier = Modifier.size(20.dp)) },
                     )
                 }
+            }
+            Spacer(Modifier.height(MenuDefaults.GroupSpacing))
+            DropdownMenuGroup(shapes = MenuDefaults.groupShape(1, 2)) {
+                NewItem("New account") { open = false; onNew() }
             }
         }
     }
@@ -354,11 +401,16 @@ private fun NewCategorySheet(income: Boolean, onDismiss: () -> Unit, onCreate: (
 
 /** Text field in Kairo's style: filled itemHigh, 12dp corners, no indicator line. */
 @Composable
-private fun KairoField(value: String, onChange: (String) -> Unit, label: String, caps: KeyboardCapitalization, ime: ImeAction, onDone: () -> Unit) {
+internal fun KairoField(
+    value: String, onChange: (String) -> Unit, label: String, caps: KeyboardCapitalization, ime: ImeAction,
+    keyboardType: KeyboardType = KeyboardType.Text, transformation: VisualTransformation = VisualTransformation.None,
+    onDone: () -> Unit,
+) {
     TextField(
         value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true,
         shape = RoundedCornerShape(12.dp),
-        keyboardOptions = KeyboardOptions(capitalization = caps, imeAction = ime),
+        visualTransformation = transformation,
+        keyboardOptions = KeyboardOptions(capitalization = caps, imeAction = ime, keyboardType = keyboardType),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = KairoTheme.colors.itemHigh, unfocusedContainerColor = KairoTheme.colors.itemHigh,
@@ -372,7 +424,7 @@ private fun KairoField(value: String, onChange: (String) -> Unit, label: String,
  * Shows raw "123456.5" as "₹1,23,456.5" (Indian grouping, rule 11) while the field keeps plain
  * digits. The offset map moves the cursor across the added ₹ and commas.
  */
-private object RupeeGrouping : VisualTransformation {
+internal object RupeeGrouping : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val raw = text.text
         val intPart = raw.substringBefore('.')

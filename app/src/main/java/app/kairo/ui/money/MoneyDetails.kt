@@ -73,13 +73,18 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 @Composable
-private fun DetailScaffold(title: String, onBack: () -> Unit, content: @Composable (PaddingValues) -> Unit) {
+private fun DetailScaffold(
+    title: String, onBack: () -> Unit,
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit,
+) {
     Scaffold(
         containerColor = KairoTheme.colors.bg,
         topBar = {
             TopAppBar(
                 title = { Text(title, style = MaterialTheme.typography.titleLargeEmphasized) },
                 navigationIcon = { IconButton(shapes = IconButtonDefaults.shapes(), onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") } },
+                actions = actions,
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = KairoTheme.colors.bg),
             )
         },
@@ -94,11 +99,15 @@ fun AccountScreen(money: MoneyRepository, accountId: Long, onBack: () -> Unit) {
     val balances by money.balances.collectAsStateWithLifecycle(initialValue = emptyList())
     val txs by money.transactions.collectAsStateWithLifecycle(initialValue = emptyList())
     val cats by money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
+    var editing by rememberSaveable { mutableStateOf(false) }
     val b = balances.firstOrNull { it.account.id == accountId } ?: return
     val k = KairoTheme.colors
     val catMap = remember(cats) { cats.associateBy { it.id } }
     val mine = remember(txs) { txs.filter { it.accountId == accountId }.groupBy { it.date } }
-    DetailScaffold(b.account.name, onBack) { padding ->
+    if (editing) AccountSheet(money, b.account, canDelete = balances.size > 1, onDismiss = { editing = false }, onDeleted = onBack)
+    DetailScaffold(b.account.name, onBack, actions = {
+        IconButton(shapes = IconButtonDefaults.shapes(), onClick = { editing = true }) { Icon(painterResource(R.drawable.ic_edit), "Edit account") }
+    }) { padding ->
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = 48.dp)) {
             item(key = "hero") {
                 Column(

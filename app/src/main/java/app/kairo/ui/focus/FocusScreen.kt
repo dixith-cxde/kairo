@@ -71,6 +71,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -144,15 +146,15 @@ fun FocusScreen(app: KairoApplication, onBack: () -> Unit) {
             // The clock, in one of three views. Tap it while paused/reset to change the timing.
             val prefs = remember { app.getSharedPreferences("focus", android.content.Context.MODE_PRIVATE) }
             var view by remember { mutableStateOf(ClockView.valueOf(prefs.getString("view", ClockView.Ring.name)!!)) }
-            val timeText = "%d:%02d".format(left / 60_000, left / 1000 % 60)
+            val timeText = clockText(left)
             val caption = when (s.phase) {
-                Phase.Idle -> "${s.focusMin} min focus · ${s.sessions} sessions"
-                Phase.Focus -> "of ${s.focusMin} min · session ${s.session} of ${s.sessions}"
-                Phase.Break -> "Break · ${s.breakMin} min"
+                Phase.Idle -> "${minText(s.focusMin)} focus · ${s.sessions} sessions"
+                Phase.Focus -> "of ${minText(s.focusMin)} · session ${s.session} of ${s.sessions}"
+                Phase.Break -> "Break · ${minText(s.breakMin)}"
             }
             val clockMod = Modifier
                 .clickable(enabled = !s.running, role = Role.Button, onClickLabel = "Change timer") { tune = true }
-                .semantics { contentDescription = "${left / 60_000} minutes ${left / 1000 % 60} seconds left" }
+                .semantics { contentDescription = "${minText((left / 60_000).toInt())} ${left / 1000 % 60} seconds left" }
             val viewSpring = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
             AnimatedContent(
                 view,
@@ -226,7 +228,7 @@ fun FocusScreen(app: KairoApplication, onBack: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(painterResource(R.drawable.ic_schedule), null, Modifier.size(18.dp), tint = c.onSurfaceVariant)
                 Text("Focused today: ", style = MaterialTheme.typography.labelLarge, color = c.onSurfaceVariant)
-                Text(if (todayMin >= 60) "${todayMin / 60} h ${todayMin % 60} min" else "$todayMin min",
+                Text(minText(todayMin),
                     style = MaterialTheme.typography.labelLargeEmphasized, color = c.onSurface)
             }
         }
@@ -301,8 +303,9 @@ private fun LiquidClock(p: Float, time: String, caption: String, bg: androidx.co
 @Composable
 private fun MinimalClock(p: Float, time: String, caption: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier) {
     Column(modifier.height(300.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(time, style = MaterialTheme.typography.displayLargeEmphasized.copy(fontSize = 96.sp, lineHeight = 100.sp),
-            maxLines = 1, softWrap = false)
+        Text(time, style = MaterialTheme.typography.displayLargeEmphasized.copy(lineHeight = 100.sp),
+            maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(40.sp, 96.sp),
+            modifier = Modifier.fillMaxWidth(0.9f), textAlign = TextAlign.Center)
         Text(caption, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         androidx.compose.material3.LinearWavyProgressIndicator(progress = { p }, color = accent,
             modifier = Modifier.padding(top = 24.dp).fillMaxWidth(0.8f).height(12.dp))
@@ -311,8 +314,11 @@ private fun MinimalClock(p: Float, time: String, caption: String, accent: androi
 
 @Composable
 private fun ClockText(time: String, caption: String, color: androidx.compose.ui.graphics.Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(time, style = MaterialTheme.typography.displayLargeEmphasized.copy(fontSize = 72.sp, lineHeight = 76.sp), color = color)
+    // Width of the space inside the 256dp ring; auto-size keeps "4:59:59" inside it.
+    Column(Modifier.size(width = 210.dp, height = 120.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text(time, style = MaterialTheme.typography.displayLargeEmphasized.copy(lineHeight = 76.sp), color = color,
+            maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(32.sp, 72.sp),
+            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Text(caption, style = MaterialTheme.typography.labelLarge, color = color)
     }
 }
@@ -352,7 +358,8 @@ private fun FocusSettingsSheet(focusMin: Int, breakMin: Int, sessions: Int, onDi
                     }
                 }
             }
-            SliderRow("Focus", f, 5f..120f, 22, "${f.toInt()} min") { f = it; push() }
+            // 5 min to 5 h in 5-min steps: 60 values, so 58 steps between the two ends.
+            SliderRow("Focus", f, 5f..300f, 58, minText(f.toInt())) { f = it; push() }
             SliderRow("Break", b, 1f..30f, 28, "${b.toInt()} min") { b = it; push() }
             SliderRow("Sessions", n, 1f..8f, 6, "${n.toInt()}") { n = it; push() }
             Text("Tip: tap the clock while it's paused to come back here.", style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
@@ -368,9 +375,22 @@ private fun SliderRow(label: String, value: Float, range: ClosedFloatingPointRan
             Text(valueText, style = MaterialTheme.typography.headlineSmallEmphasized)
         }
         androidx.compose.material3.Slider(
-            value = value, onValueChange = { onChange(kotlin.math.round(it)) },
+            value = value.coerceIn(range), onValueChange = { onChange(kotlin.math.round(it)) },
             valueRange = range, steps = steps,
         )
     }
 }
 
+
+/** "25:00" under an hour, "1:40:00" past it. */
+private fun clockText(ms: Long): String {
+    val t = ms / 1000
+    return if (t >= 3600) "%d:%02d:%02d".format(t / 3600, t / 60 % 60, t % 60) else "%d:%02d".format(t / 60, t % 60)
+}
+
+/** "45 min", "2 h", "1 h 40 min". */
+private fun minText(min: Int) = when {
+    min < 60 -> "$min min"
+    min % 60 == 0 -> "${min / 60} h"
+    else -> "${min / 60} h ${min % 60} min"
+}

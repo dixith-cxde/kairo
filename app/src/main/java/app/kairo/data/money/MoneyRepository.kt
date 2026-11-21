@@ -52,6 +52,13 @@ class MoneyRepository(db: KairoDatabase) {
     }
 
     suspend fun delete(tx: TransactionEntity) = dao.deleteTx(tx.id)
+
+    suspend fun addAccount(name: String, type: AccountType, color: ListColor, openingPaise: Long): Long =
+        dao.insertAccount(AccountEntity(name = name.trim(), type = type, color = color, openingPaise = openingPaise, position = dao.maxPosition() + 1))
+    suspend fun updateAccount(a: AccountEntity) = dao.updateAccount(a.copy(name = a.name.trim()))
+    suspend fun transactionCount(accountId: Long) = dao.txCount(accountId)
+    /** Removes the account, its transactions (both legs of its transfers) and its bills. */
+    suspend fun deleteAccount(id: Long) = dao.deleteAccount(id)
     suspend fun addCategory(name: String, icon: String, color: ListColor, income: Boolean): Long {
         val shapes = ListShape.choices
         return dao.insertCategory(CategoryEntity(name = name.trim(), icon = icon, color = color,

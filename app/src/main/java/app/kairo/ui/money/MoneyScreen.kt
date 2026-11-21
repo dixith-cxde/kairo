@@ -33,6 +33,9 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -85,6 +88,7 @@ fun MoneyScreen(
     val selection = rememberSelection()
     val entrance = rememberEntrance()
     val spin by slowSpin(50_000)
+    var addAccount by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -111,7 +115,8 @@ fun MoneyScreen(
             // Always present (even before data loads), so the list doesn't anchor below it.
             item(key = "accounts") {
                 if (balances.isEmpty()) { androidx.compose.foundation.layout.Spacer(Modifier.height(150.dp)); return@item }
-                val state = rememberCarouselState { balances.size }
+                // Accounts, then one "Add account" card at the end.
+                val state = rememberCarouselState { balances.size + 1 }
                 HorizontalMultiBrowseCarousel(
                     state = state,
                     preferredItemWidth = 220.dp,
@@ -119,6 +124,28 @@ fun MoneyScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     modifier = Modifier.fillMaxWidth().height(150.dp),
                 ) { i ->
+                    if (i == balances.size) {
+                        val info = carouselItemDrawInfo
+                        Box(
+                            Modifier.fillMaxSize().maskClip(RoundedCornerShape(28.dp)).background(k.item)
+                                .clickable(role = Role.Button, onClickLabel = "Add account") { addAccount = true },
+                        ) {
+                            Column(
+                                Modifier.fillMaxSize().graphicsLayer { translationX = info.maskRect.left }.padding(16.dp),
+                                verticalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Box(Modifier.size(40.dp).background(c.primary, MaterialShapes.Cookie4Sided.toShape()), contentAlignment = Alignment.Center) {
+                                    Icon(painterResource(R.drawable.ic_add_bold), null, tint = c.onPrimary, modifier = Modifier.size(22.dp))
+                                }
+                                Text("Add account", style = MaterialTheme.typography.titleMediumEmphasized, color = c.onSurface, maxLines = 1,
+                                    modifier = Modifier.graphicsLayer {
+                                        val open = ((info.size - info.minSize) / (info.maxSize - info.minSize).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                                        alpha = ((open - 0.5f) * 2f).coerceIn(0f, 1f)
+                                    })
+                            }
+                        }
+                        return@HorizontalMultiBrowseCarousel
+                    }
                     val b = balances[i]
                     val acc = b.account
                     val info = carouselItemDrawInfo
@@ -224,6 +251,7 @@ fun MoneyScreen(
             }
         }
     }
+    if (addAccount) AccountSheet(money, null, canDelete = false, onDismiss = { addAccount = false })
 }
 
 @Composable
