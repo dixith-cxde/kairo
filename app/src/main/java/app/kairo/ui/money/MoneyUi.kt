@@ -1,0 +1,100 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
+package app.kairo.ui.money
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import app.kairo.R
+import app.kairo.data.db.AccountEntity
+import app.kairo.data.db.CategoryEntity
+import app.kairo.data.db.TransactionEntity
+import app.kairo.data.db.TxKind
+import app.kairo.data.money.Money
+import app.kairo.ui.shapes.polygon
+import app.kairo.ui.theme.KairoTheme
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
+fun categoryIcon(name: String): Int = when (name) {
+    "restaurant" -> R.drawable.ic_restaurant
+    "shopping_cart" -> R.drawable.ic_shopping_cart
+    "directions_car" -> R.drawable.ic_directions_car
+    "shopping_bag" -> R.drawable.ic_shopping_bag
+    "receipt_long" -> R.drawable.ic_receipt_long
+    "medical_services" -> R.drawable.ic_medical_services
+    "sports_esports" -> R.drawable.ic_sports_esports
+    "payments" -> R.drawable.ic_payments
+    "savings" -> R.drawable.ic_savings
+    else -> R.drawable.ic_category
+}
+
+/** A category's own shape in its container color, with its icon (rule 7). */
+@Composable
+fun CategoryBadge(c: CategoryEntity?, size: Int = 40) {
+    val k = KairoTheme.colors
+    if (c == null) {
+        Box(Modifier.size(size.dp).background(MaterialTheme.colorScheme.secondaryContainer, androidx.compose.foundation.shape.CircleShape),
+            contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_swap_vert), null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size((size / 2).dp))
+        }
+        return
+    }
+    Box(Modifier.size(size.dp).background(k.container(c.color), c.shape.polygon.toShape()), contentAlignment = Alignment.Center) {
+        Icon(painterResource(categoryIcon(c.icon)), null, tint = k.onContainer(c.color), modifier = Modifier.size((size / 2).dp))
+    }
+}
+
+/** Signed amount as shown: expense −₹, income +₹, transfer legs by sign. */
+fun TransactionEntity.signedPaise(): Long = when (kind) {
+    TxKind.Expense -> -amountPaise
+    TxKind.Income -> amountPaise
+    TxKind.Transfer -> amountPaise
+}
+
+@Composable
+fun TxRow(tx: TransactionEntity, cat: CategoryEntity?, account: AccountEntity?, index: Int, count: Int, onClick: () -> Unit = {}) {
+    val c = MaterialTheme.colorScheme
+    val signed = tx.signedPaise()
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        colors = ListItemDefaults.segmentedColors(containerColor = KairoTheme.colors.item),
+        leadingContent = { CategoryBadge(cat) },
+        supportingContent = {
+            Text(listOfNotNull(if (tx.kind == TxKind.Transfer) "Transfer" else cat?.name, account?.name).joinToString(" · ") +
+                if (tx.tags.isNotBlank()) " · ${tx.tags}" else "")
+        },
+        trailingContent = {
+            Text(
+                Money.format(signed, sign = true),
+                style = MaterialTheme.typography.titleSmallEmphasized,
+                color = if (signed > 0) c.tertiary else c.onSurface,
+            )
+        },
+    ) { Text(tx.note.ifBlank { cat?.name ?: "Transaction" }, style = MaterialTheme.typography.bodyLarge) }
+}
+
+private val DayFmt = DateTimeFormatter.ofPattern("EEEE, d MMMM")
+
+fun dayLabel(d: LocalDate): String {
+    val t = LocalDate.now()
+    return when (d) { t -> "Today"; t.minusDays(1) -> "Yesterday"; else -> d.format(DayFmt) }
+}
+
+@Composable fun SegGap() = Spacer(Modifier.height(ListItemDefaults.SegmentedGap))

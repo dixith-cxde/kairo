@@ -6,6 +6,10 @@ sealed interface Route {
     data class TaskRoute(val taskId: Long) : Route
     data class ListRoute(val listId: Long) : Route
     data object SettingsRoute : Route
+    data class AccountRoute(val accountId: Long) : Route
+    data object BudgetsRoute : Route
+    data object InsightsRoute : Route
+    data object RecurringRoute : Route
 
     /** Saved as short strings ("tab:Today", "task:12") so the stack survives process death. */
     fun encode(): String = when (this) {
@@ -13,6 +17,10 @@ sealed interface Route {
         is TaskRoute -> "task:$taskId"
         is ListRoute -> "list:$listId"
         SettingsRoute -> "settings:"
+        is AccountRoute -> "account:$accountId"
+        BudgetsRoute -> "budgets:"
+        InsightsRoute -> "insights:"
+        RecurringRoute -> "recurring:"
     }
 
     companion object {
@@ -22,6 +30,10 @@ sealed interface Route {
                 "task" -> TaskRoute(v.toLong())
                 "list" -> ListRoute(v.toLong())
                 "settings" -> SettingsRoute
+                "account" -> AccountRoute(v.toLong())
+                "budgets" -> BudgetsRoute
+                "insights" -> InsightsRoute
+                "recurring" -> RecurringRoute
                 else -> TabRoute(Tab.valueOf(v))
             }
         }

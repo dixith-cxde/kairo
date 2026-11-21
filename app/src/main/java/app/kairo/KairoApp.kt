@@ -40,6 +40,12 @@ import app.kairo.navigation.Tab
 import app.kairo.ui.detail.TaskDetailScreen
 import app.kairo.ui.detail.TaskDetailViewModel
 import app.kairo.ui.nav.FloatingNavBar
+import app.kairo.ui.money.AccountScreen
+import app.kairo.ui.money.AddTransactionSheet
+import app.kairo.ui.money.BudgetsScreen
+import app.kairo.ui.money.InsightsScreen
+import app.kairo.ui.money.MoneyScreen
+import app.kairo.ui.money.RecurringScreen
 import app.kairo.ui.settings.SettingsScreen
 import app.kairo.ui.stats.StatsScreen
 import app.kairo.ui.calendar.CalendarScreen
@@ -126,6 +132,13 @@ fun KairoApp() {
                             }
                             Tab.Calendar -> CalendarScreen(app.repository, app.phoneCalendar, onOpenTask = { t -> open(Route.TaskRoute(t.id)) })
                             Tab.Stats -> StatsScreen(app.repository)
+                            Tab.Money -> MoneyScreen(
+                                app.money,
+                                onAccount = { open(Route.AccountRoute(it)) },
+                                onBudgets = { open(Route.BudgetsRoute) },
+                                onInsights = { open(Route.InsightsRoute) },
+                                onRecurring = { open(Route.RecurringRoute) },
+                            )
                             else -> TabPlaceholder(route.tab, comingIn = route.tab.comingIn())
                         }
                         is Route.TaskRoute -> {
@@ -136,6 +149,10 @@ fun KairoApp() {
                             TaskDetailScreen(vm, lists = lists, onBack = ::back)
                         }
                         Route.SettingsRoute -> SettingsScreen(app.settings, onBack = ::back)
+                        is Route.AccountRoute -> AccountScreen(app.money, route.accountId, onBack = ::back)
+                        Route.BudgetsRoute -> BudgetsScreen(app.money, onBack = ::back)
+                        Route.InsightsRoute -> InsightsScreen(app.money, onBack = ::back)
+                        Route.RecurringRoute -> RecurringScreen(app.money, onBack = ::back)
                         is Route.ListRoute -> {
                             val vm: ListDetailViewModel = viewModel(
                                 key = "list-${route.listId}",
@@ -153,7 +170,12 @@ fun KairoApp() {
             onCreate = { showQuickAdd = true },
             modifier = Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, navOffset.roundToPx()) },
         )
-        if (showQuickAdd) {
+        if (showQuickAdd && currentTab == Tab.Money) {
+            // On the Money tab, + adds a transaction (FAB menu with both comes later).
+            val accounts by app.money.accounts.collectAsStateWithLifecycle(initialValue = emptyList())
+            val categories by app.money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
+            if (accounts.isNotEmpty()) AddTransactionSheet(app.money, accounts, categories, onDismiss = { showQuickAdd = false })
+        } else if (showQuickAdd) {
             QuickAddSheet(
                 lists = lists,
                 defaultDue = if (currentTab == Tab.Today) LocalDate.now() else null,
