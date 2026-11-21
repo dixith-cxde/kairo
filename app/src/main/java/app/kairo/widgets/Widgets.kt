@@ -17,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -659,6 +660,77 @@ private class ActionsWidget : KairoWidget<Unit>() {
     }
 }
 
+// ───────── Timer · the Focus timer with start/pause and stop (2×2) ─────────
+
+/**
+ * Same timer as the Focus tab (FocusController). The clock is a native Chronometer inside the
+ * widget, so it counts down on the home screen by itself; the widget is only redrawn when the
+ * timer starts, pauses, stops or changes phase.
+ */
+private class TimerWidget : KairoWidget<app.kairo.focus.FocusState>() {
+    override suspend fun load(context: Context) = (context.applicationContext as KairoApplication).focus.state.value
+
+    @Composable
+    override fun Content(context: Context, d: app.kairo.focus.FocusState, t: WTheme) {
+        val c = GlanceTheme.colors
+        val size = LocalSize.current
+        val label = when (d.phase) {
+            app.kairo.focus.Phase.Idle -> "Focus"
+            app.kairo.focus.Phase.Focus -> "Focus · ${d.session} of ${d.sessions}"
+            app.kairo.focus.Phase.Break -> "Break"
+        }
+        val clock = android.widget.RemoteViews(context.packageName, R.layout.widget_timer_clock).apply {
+            val left = d.leftMs()
+            setChronometer(R.id.clock, android.os.SystemClock.elapsedRealtime() + left, null, d.running)
+            setChronometerCountDown(R.id.clock, true)
+            setTextColor(R.id.clock, (if (d.phase == app.kairo.focus.Phase.Break) c.tertiary else c.onSurface).getColor(context).toArgb())
+            setTextViewTextSize(R.id.clock, android.util.TypedValue.COMPLEX_UNIT_SP, (minOf(size.width.value, size.height.value) / 4f).coerceIn(28f, 56f))
+        }
+        Column(GlanceModifier.card(t).padding(12.dp)) {
+            Text(label, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = c.onSurfaceVariant), maxLines = 1,
+                modifier = GlanceModifier.clickable(openApp(context, MainActivity.ACTION_FOCUS)))
+            Box(GlanceModifier.fillMaxWidth().defaultWeight().clickable(openApp(context, MainActivity.ACTION_FOCUS)), contentAlignment = Alignment.Center) {
+                androidx.glance.appwidget.AndroidRemoteViews(clock)
+            }
+            Row(GlanceModifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Start / pause: the one solid primary action.
+                Box(
+                    GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(24.dp).background(c.primary)
+                        .clickable(actionRunCallback<TimerToggle>()),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(ImageProvider(if (d.running) R.drawable.ic_pause_filled else R.drawable.ic_play_arrow_filled),
+                        if (d.running) "Pause" else "Start", GlanceModifier.size(26.dp), colorFilter = tint(c.onPrimary))
+                }
+                Spacer(GlanceModifier.width(6.dp))
+                Box(
+                    GlanceModifier.size(48.dp).cornerRadius(24.dp).background(c.secondaryContainer)
+                        .clickable(actionRunCallback<TimerStop>()),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(ImageProvider(R.drawable.ic_stop_filled), "Stop", GlanceModifier.size(24.dp), colorFilter = tint(c.onSecondaryContainer))
+                }
+            }
+        }
+    }
+}
+
+class TimerToggle : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val f = (context.applicationContext as KairoApplication).focus
+        if (f.state.value.running) f.pause() else f.start()
+    }
+}
+
+class TimerStop : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        (context.applicationContext as KairoApplication).focus.stop()
+    }
+}
+
+/** Called by FocusController whenever the timer changes. */
+suspend fun updateTimerWidget(context: Context) = TimerWidget().updateAll(context)
+
 // ───────── receivers ─────────
 
 class TodayWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = TodayWidget() }
@@ -669,6 +741,7 @@ class NextUpWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppW
 class StreakWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = StreakWidget() }
 class StatsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = StatsWidget() }
 class ActionsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = ActionsWidget() }
+class TimerWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = TimerWidget() }
 
 /**
  * Picker previews from real content (Android 15+). The system rate-limits these calls, so each
@@ -685,6 +758,7 @@ suspend fun publishWidgetPreviews(context: Context) {
     listOf(
         TodayWidgetReceiver::class, ProgressWidgetReceiver::class, MoneyWidgetReceiver::class, QuickAddWidgetReceiver::class,
         NextUpWidgetReceiver::class, StreakWidgetReceiver::class, StatsWidgetReceiver::class, ActionsWidgetReceiver::class,
+        TimerWidgetReceiver::class,
     ).forEach { r ->
         val key = "preview-${r.simpleName}"
         if (prefs.getLong(key, -1) == version) return@forEach

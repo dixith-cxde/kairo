@@ -13,7 +13,7 @@ import androidx.room.TypeConverters
         AccountEntity::class, CategoryEntity::class, TransactionEntity::class, BudgetEntity::class, RecurringEntity::class,
         app.kairo.focus.FocusSessionEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // v2 adds the Money tables
@@ -21,6 +21,7 @@ import androidx.room.TypeConverters
         AutoMigration(from = 3, to = 4), // v4 adds focus_sessions
         AutoMigration(from = 4, to = 5), // v5 adds budgets.accountId (per-account budgets)
         AutoMigration(from = 5, to = 6), // v6 makes tasks.listId optional
+        AutoMigration(from = 6, to = 7), // v7 adds tasks.repeat
     ],
 )
 @TypeConverters(Converters::class)

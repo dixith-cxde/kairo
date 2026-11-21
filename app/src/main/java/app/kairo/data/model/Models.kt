@@ -52,4 +52,5 @@ data class Task(
     val notes: String = "",
     val completedAt: Long? = null, // epoch millis, for stats
     val archived: Boolean = false,
+    val repeat: Repeat? = null,
 )

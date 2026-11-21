@@ -247,11 +247,35 @@ fun SettingsScreen(store: SettingsStore, onBack: () -> Unit) {
             }
             SegmentedListItem(
                 onClick = { pick.launch(arrayOf("text/*", "text/csv", "text/comma-separated-values", "application/octet-stream")) },
-                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                shapes = ListItemDefaults.segmentedShapes(0, 2),
                 colors = ListItemDefaults.segmentedColors(containerColor = k.item),
-                leadingContent = { RoundIcon(R.drawable.ic_account_balance_wallet) },
+                leadingContent = { RoundIcon(R.drawable.ic_download) },
                 supportingContent = { Text(importing ?: "CSV from Ivy Wallet (Settings → Export to CSV). Safe to run twice.") },
             ) { Text("Import from Ivy Wallet") }
+
+            Gap()
+            var exporting by remember { mutableStateOf<String?>(null) }
+            // CreateDocument opens the system "Save as" screen; we get back a Uri to write into.
+            val save = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv"),
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                exporting = "Exporting…"
+                scope.launch {
+                    exporting = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val (csv, rows) = app.kairo.data.money.IvyImport.export(kairo.money)
+                        context.contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use { it.write(csv) }
+                        "Saved $rows transactions"
+                    } }.getOrElse { "Couldn't export: ${it.message}" }
+                }
+            }
+            SegmentedListItem(
+                onClick = { save.launch("kairo-ivy-${java.time.LocalDate.now()}.csv") },
+                shapes = ListItemDefaults.segmentedShapes(1, 2),
+                colors = ListItemDefaults.segmentedColors(containerColor = k.item),
+                leadingContent = { RoundIcon(R.drawable.ic_drive_file_move) },
+                supportingContent = { Text(exporting ?: "Ivy Wallet CSV with all transactions. Opens in Ivy, Kairo or a spreadsheet.") },
+            ) { Text("Export as Ivy Wallet CSV") }
 
             Header("Calendar")
             SegmentedListItem(

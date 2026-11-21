@@ -96,6 +96,7 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
 
     var pickDate by remember { mutableStateOf(false) }
     var pickTime by remember { mutableStateOf(false) }
+    var pickRepeat by remember { mutableStateOf(false) }
     var listMenu by remember { mutableStateOf(false) }
     var title by remember(t.id) { mutableStateOf(t.title) }
     var notes by remember(t.id) { mutableStateOf(t.notes) }
@@ -163,18 +164,20 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                 }
 
                 Spacer(Modifier.height(20.dp))
-                val rows = 4
+                val rows = 5
                 DetailRow(0, rows, R.drawable.ic_event, "Date", t.due?.format(DateFmt) ?: "No date") { pickDate = true }
                 Gap()
                 DetailRow(1, rows, R.drawable.ic_schedule, "Time", t.time?.format(TimeFmt) ?: "No time") { pickTime = true }
                 Gap()
+                DetailRow(2, rows, R.drawable.ic_repeat, "Repeat", t.repeat?.label() ?: "Doesn't repeat") { pickRepeat = true }
+                Gap()
                 DetailRow(
-                    2, rows, R.drawable.ic_notifications, "Reminder", if (t.reminder) "On" else "Off",
+                    3, rows, R.drawable.ic_notifications, "Reminder", if (t.reminder) "On" else "Off",
                     trailing = { Switch(checked = t.reminder, onCheckedChange = { on -> if (on) askNotifications(); vm.edit { it.copy(reminder = on) } }) },
                 ) { if (!t.reminder) askNotifications(); vm.edit { it.copy(reminder = !it.reminder) } }
                 Gap()
                 DetailRow(
-                    3, rows,
+                    4, rows,
                     if (t.priority == Priority.High) R.drawable.ic_flag_filled else R.drawable.ic_flag,
                     "Priority", if (t.priority == Priority.None) "None" else t.priority.name,
                 ) { vm.edit { it.copy(priority = Priority.entries[(it.priority.ordinal + 1) % Priority.entries.size]) } }
@@ -226,6 +229,14 @@ fun TaskDetailScreen(vm: TaskDetailViewModel, lists: List<TaskList>, onBack: () 
                     vm.delete(onBack)
                 }) { Icon(painterResource(R.drawable.ic_delete), "Delete") }
             }
+        }
+    }
+
+    if (pickRepeat) {
+        app.kairo.ui.common.RepeatSheet(t.repeat, t.due, onDismiss = { pickRepeat = false }) { r ->
+            // A repeating task needs a date to repeat from: with none, start on the first day the rule hits.
+            vm.edit { it.copy(repeat = r, due = it.due ?: r?.next(null)) }
+            pickRepeat = false
         }
     }
 

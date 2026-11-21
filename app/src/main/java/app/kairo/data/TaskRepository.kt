@@ -6,6 +6,7 @@ import app.kairo.data.db.TaskEntity
 import app.kairo.data.model.ListColor
 import app.kairo.data.model.ListShape
 import app.kairo.data.model.Priority
+import app.kairo.data.model.Repeat
 import app.kairo.data.model.Task
 import app.kairo.data.model.TaskList
 import kotlinx.coroutines.flow.Flow
@@ -34,16 +35,36 @@ class TaskRepository(private val db: KairoDatabase, scope: CoroutineScope) {
 
     fun task(id: Long): Flow<Task?> = db.tasks().observe(id).map { it?.toModel() }
 
-    suspend fun setDone(task: Task, done: Boolean) =
+    suspend fun setDone(task: Task, done: Boolean) {
         db.tasks().setDone(task.id, done, if (done) System.currentTimeMillis() else null)
+        repeatAfter(listOf(task.toEntity()), done)
+    }
+
+    /**
+     * Repeating tasks: completing one adds the next occurrence (same title, list, time, notes and
+     * rule; new due date). Un-completing it removes that next one again if it's still untouched,
+     * so Undo and a mis-tap leave no duplicate.
+     */
+    private suspend fun repeatAfter(rows: List<TaskEntity>, done: Boolean) {
+        for (e in rows) {
+            val rule = Repeat.decode(e.repeat) ?: continue
+            val next = e.copy(id = 0, due = rule.next(e.due), done = false, completedAt = null, subtasksDone = 0,
+                archived = false, createdAt = System.currentTimeMillis())
+            val twin = db.tasks().findOpen(e.title, e.listId, e.repeat, next.due)
+            if (done && twin == null) db.tasks().insert(next)
+            if (!done && twin != null) db.tasks().delete(twin)
+        }
+    }
 
     suspend fun add(task: Task): Long = db.tasks().insert(task.toEntity())
     suspend fun update(task: Task) = db.tasks().update(task.toEntity())
     suspend fun delete(task: Task) = db.tasks().delete(task.id)
 
     // Bulk actions for multi-select.
-    suspend fun setDone(ids: List<Long>, done: Boolean) =
+    suspend fun setDone(ids: List<Long>, done: Boolean) {
         db.tasks().setDoneAll(ids, done, if (done) System.currentTimeMillis() else null)
+        repeatAfter(db.tasks().get(ids), done)
+    }
     suspend fun setArchived(ids: List<Long>, archived: Boolean) = db.tasks().setArchived(ids, archived)
     suspend fun move(ids: List<Long>, listId: Long?) = db.tasks().move(ids, listId)
     suspend fun reschedule(ids: List<Long>, due: LocalDate?, time: LocalTime?, reminder: Boolean) =
@@ -111,10 +132,11 @@ class TaskRepository(private val db: KairoDatabase, scope: CoroutineScope) {
     )
 }
 
-fun TaskEntity.toModel() = Task(id, title, listId, due, time, priority, done, subtasksDone, subtasksTotal, reminder, notes, completedAt, archived)
+fun TaskEntity.toModel() = Task(id, title, listId, due, time, priority, done, subtasksDone, subtasksTotal, reminder, notes, completedAt, archived, Repeat.decode(repeat))
 fun Task.toEntity() = TaskEntity(
     id = id, title = title, listId = listId, notes = notes, due = due, time = time, priority = priority, done = done,
     completedAt = if (done) (completedAt ?: System.currentTimeMillis()) else null,
     subtasksDone = subtasksDone, subtasksTotal = subtasksTotal, reminder = reminder, archived = archived,
+    repeat = repeat?.encode().orEmpty(),
 )
 fun ListEntity.toModel() = TaskList(id, name, shape, color, position)

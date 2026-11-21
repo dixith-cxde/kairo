@@ -555,6 +555,7 @@ private fun TaskMeta(task: Task, list: TaskList, overdue: Boolean) {
             dot(); icon(R.drawable.ic_checklist)
             Text("${task.subtasksDone}/${task.subtasksTotal}", style = style, color = c.onSurfaceVariant)
         }
+        if (task.repeat != null) { dot(); icon(R.drawable.ic_repeat) }
         if (task.reminder) { dot(); icon(R.drawable.ic_notifications) }
         if (task.priority == Priority.High) { dot(); icon(R.drawable.ic_flag_filled, k.prioHigh) }
     }

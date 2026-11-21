@@ -8,7 +8,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Imports an Ivy Wallet CSV export (Settings → Export to CSV in Ivy):
+ * Imports (and exports) an Ivy Wallet CSV (Settings → Export to CSV in Ivy):
  * Date, Title, Category, Account, Amount, Currency, Type, Transfer Amount, Transfer Currency,
  * To Account, Receive Amount, Receive Currency, Description, Due Date, ID.
  * Accounts and categories are matched by name (case-insensitive) or created. Rows already imported
@@ -75,6 +75,55 @@ object IvyImport {
         }
         return Result(added, skipped, newAcc, newCat)
     }
+
+    /**
+     * Writes every transaction as an Ivy Wallet CSV with the same 15 columns Ivy exports, so the file
+     * imports back into Ivy or into Kairo. Kairo keeps dates without a time, so every row uses 12:00.
+     * A transfer is one row (the sending leg) with To Account and Receive Amount filled.
+     * IDs are stable UUIDs derived from Kairo's row id, so re-exports keep the same IDs.
+     */
+    suspend fun export(money: MoneyRepository): Pair<String, Int> {
+        val accounts = money.accounts.first().associateBy { it.id }
+        val cats = money.categories.first().associateBy { it.id }
+        val txs = money.transactions.first()
+        val byId = txs.associateBy { it.id }
+        val date = DateTimeFormatter.ofPattern("M/d/yyyy")
+        fun amt(p: Long) = kotlin.math.abs(p).let { "${it / 100}.${(it % 100).toString().padStart(2, '0')}" }
+        fun cell(s: String) = if (s.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"" + s.replace("\"", "\"\"") + "\"" else s
+        val sb = StringBuilder(HEADER.joinToString(",")).append("\r\n")
+        var rows = 0
+        for (t in txs.sortedWith(compareBy({ it.date }, { it.id }))) {
+            val acc = accounts[t.accountId]
+            val cur = acc?.currency ?: "INR"
+            val row = when (t.kind) {
+                TxKind.Expense, TxKind.Income -> listOf(
+                    "${t.date.format(date)} 12:00", t.note, t.categoryId?.let { cats[it]?.name }.orEmpty(), acc?.name.orEmpty(),
+                    amt(t.amountPaise), cur, if (t.kind == TxKind.Income) "INCOME" else "EXPENSE",
+                    "", "", "", "", "", "", "", uuid(t.id),
+                )
+                TxKind.Transfer -> {
+                    // Only the sending leg (negative amount); the receiving leg is the same transfer.
+                    if (t.amountPaise > 0 && t.transferPeerId != null) continue
+                    val peer = t.transferPeerId?.let { byId[it] }
+                    val to = peer?.let { accounts[it.accountId] }
+                    val toCur = to?.currency ?: cur
+                    listOf(
+                        "${t.date.format(date)} 12:00", t.note, "", acc?.name.orEmpty(),
+                        amt(t.amountPaise), cur, "TRANSFER",
+                        amt(t.amountPaise), cur, to?.name.orEmpty(), amt(peer?.amountPaise ?: t.amountPaise), toCur,
+                        "", "", uuid(t.id),
+                    )
+                }
+            }
+            row.joinTo(sb, ",") { cell(it) }; sb.append("\r\n"); rows++
+        }
+        return sb.toString() to rows
+    }
+
+    private val HEADER = listOf("Date", "Title", "Category", "Account", "Amount", "Currency", "Type", "Transfer Amount",
+        "Transfer Currency", "To Account", "Receive Amount", "Receive Currency", "Description", "Due Date", "ID")
+
+    private fun uuid(id: Long) = java.util.UUID.nameUUIDFromBytes("kairo-tx-$id".toByteArray()).toString()
 
     private fun key(d: LocalDate, acc: Long, k: TxKind, paise: Long, note: String) = "$d|$acc|$k|$paise|${note.trim().lowercase()}"
 

@@ -17,6 +17,7 @@ import androidx.room.Query
 import app.kairo.KairoApplication
 import app.kairo.MainActivity
 import app.kairo.R
+import app.kairo.widgets.updateTimerWidget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -131,6 +132,7 @@ class FocusController(private val app: KairoApplication) {
             .putInt("focusMin", s.focusMin).putInt("breakMin", s.breakMin).putLong("taskId", s.taskId ?: -1)
             .putLong("phaseStartedAt", phaseStartedAt)
             .apply()
+        app.appScope.launch { runCatching { updateTimerWidget(app) } }
         val alarms = app.getSystemService(AlarmManager::class.java)
         if (s.running) {
             if (alarms.canScheduleExactAlarms()) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, s.endAt, alarmIntent())

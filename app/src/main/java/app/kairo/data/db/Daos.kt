@@ -25,6 +25,9 @@ interface TaskDao {
     suspend fun delete(id: Long)
 
     @Query("SELECT * FROM tasks WHERE id IN (:ids)") suspend fun get(ids: List<Long>): List<TaskEntity>
+    /** The open next occurrence of a repeating task, if it was already added. */
+    @Query("SELECT id FROM tasks WHERE done = 0 AND title = :title AND listId IS :listId AND repeat = :repeat AND due IS :due LIMIT 1")
+    suspend fun findOpen(title: String, listId: Long?, repeat: String, due: java.time.LocalDate?): Long?
     @Query("DELETE FROM tasks WHERE id IN (:ids)") suspend fun deleteAll(ids: List<Long>)
     @Query("UPDATE tasks SET archived = :archived WHERE id IN (:ids)") suspend fun setArchived(ids: List<Long>, archived: Boolean)
     @Query("UPDATE tasks SET listId = :listId WHERE id IN (:ids)") suspend fun move(ids: List<Long>, listId: Long?)

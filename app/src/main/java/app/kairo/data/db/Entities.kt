@@ -40,4 +40,5 @@ data class TaskEntity(
     val reminder: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(defaultValue = "0") val archived: Boolean = false, // v3
+    @ColumnInfo(defaultValue = "") val repeat: String = "", // v7: Repeat.encode(), "" = doesn't repeat
 )
