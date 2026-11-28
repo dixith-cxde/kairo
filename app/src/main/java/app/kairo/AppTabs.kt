@@ -7,6 +7,8 @@ import app.kairo.navigation.Tab
 import app.kairo.ui.calendar.CalendarScreen
 import app.kairo.ui.calendar.CalendarsDrawerContent
 import app.kairo.ui.calendar.EventPage
+import app.kairo.ui.finance.FinanceAction
+import app.kairo.ui.finance.FinanceDrawerContent
 import app.kairo.ui.finance.FinanceScreen
 import app.kairo.ui.finance.TxPage
 import app.kairo.ui.finance.ReportScreen
@@ -62,6 +64,7 @@ internal fun TabPage(
         Tab.Finance -> FinanceScreen(
             app.money, onSearch = { open(Route.SearchRoute) }, onVoice = onVoice,
             onAccount = { open(Route.SettingsRoute) }, onReports = { open(Route.ReportRoute) }, onOpenTx = { open(Route.TxRoute(it)) }, onBills = { open(Route.RecurringRoute) },
+            onMenu = onDrawer,
         )
         Tab.Focus -> FocusScreen(app, onBack = onFocusBack)
     }
@@ -104,28 +107,40 @@ internal fun AppNav(
 internal fun KairoDrawer(
     state: androidx.compose.material3.DrawerState,
     tab: Tab,
-    onNewList: () -> Unit, onEditLists: () -> Unit, onTasks: () -> Unit, onArchived: () -> Unit,
+    onNewList: () -> Unit, onEditLists: () -> Unit, onTasks: () -> Unit, onArchived: (Long) -> Unit,
+    onFinance: (FinanceAction) -> Unit,
     content: @Composable () -> Unit,
 ) {
     // Back closes an open drawer first (otherwise the shell's Back took you to the Tasks tab).
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.activity.compose.BackHandler(enabled = state.isOpen) { scope.launch { state.close() } }
-    DrawerHost(state, tab, onNewList, onEditLists, onTasks, onArchived, content)
+    DrawerHost(state, tab, onNewList, onEditLists, onTasks, onArchived, onFinance, content)
 }
 
 @Composable
 private fun DrawerHost(
     state: androidx.compose.material3.DrawerState, tab: Tab,
-    onNewList: () -> Unit, onEditLists: () -> Unit, onTasks: () -> Unit, onArchived: () -> Unit, content: @Composable () -> Unit,
+    onNewList: () -> Unit, onEditLists: () -> Unit, onTasks: () -> Unit, onArchived: (Long) -> Unit,
+    onFinance: (FinanceAction) -> Unit, content: @Composable () -> Unit,
 ) = androidx.compose.material3.ModalNavigationDrawer(
     drawerState = state,
     gesturesEnabled = state.isOpen,
     drawerContent = {
         if (tab == Tab.Calendar) CalendarsDrawerContent()
+        else if (tab == Tab.Finance) FinanceDrawerContent(onFinance)
         else ListsDrawerContent(onNewList, onEditLists, onTasks, onArchived)
     },
     content = content,
 )
+
+/** Finance drawer → a page or a sheet ("account", "ivy", "export" in [CreateSheets]). */
+internal fun financeAction(a: FinanceAction, open: (Route) -> Unit, sheet: (String) -> Unit) = when (a) {
+    FinanceAction.Bills -> open(Route.RecurringRoute)
+    FinanceAction.Reports -> open(Route.ReportRoute)
+    FinanceAction.AddAccount -> sheet("account")
+    FinanceAction.Import -> sheet("ivy")
+    FinanceAction.Export -> sheet("export")
+}
 
 /** v2 pages with their own bottom toolbar or main button: the floating nav steps aside on these. */
 internal fun fullPage(r: Route) = r is Route.HabitRoute || r is Route.EventRoute || r is Route.TxRoute || r == Route.ReportRoute || r == Route.RecurringRoute

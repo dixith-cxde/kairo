@@ -198,17 +198,31 @@ private fun timeText(context: Context, t: LocalTime, ampm: Boolean): String =
  */
 suspend fun updateAllWidgets(context: Context, tasks: Boolean = true, money: Boolean = true, theme: Boolean = true) {
     if (tasks || theme) {
-        TodayWidget().updateAll(context)
-        ProgressWidget().updateAll(context)
-        NextUpWidget().updateAll(context)
-        StreakWidget().updateAll(context)
+        TodayWidget().redraw(context, TodayWidgetReceiver::class.java)
+        ProgressWidget().redraw(context, ProgressWidgetReceiver::class.java)
+        NextUpWidget().redraw(context, NextUpWidgetReceiver::class.java)
+        StreakWidget().redraw(context, StreakWidgetReceiver::class.java)
     }
-    if (money || theme) MoneyWidget().updateAll(context)
-    if (tasks || money || theme) StatsWidget().updateAll(context)
+    if (money || theme) MoneyWidget().redraw(context, MoneyWidgetReceiver::class.java)
+    if (tasks || money || theme) StatsWidget().redraw(context, StatsWidgetReceiver::class.java)
     if (theme) {
-        QuickAddWidget().updateAll(context)
-        ActionsWidget().updateAll(context)
+        QuickAddWidget().redraw(context, QuickAddWidgetReceiver::class.java)
+        ActionsWidget().redraw(context, ActionsWidgetReceiver::class.java)
+        TimerWidget().redraw(context, TimerWidgetReceiver::class.java)
     }
+}
+
+/**
+ * Redraws only the widgets placed from [receiver], with ids asked from Android itself. Glance's own
+ * updateAll() looks the ids up in its stored receiver map; when that map went stale (reinstalls,
+ * moved widgets), a Timer update could draw the timer into a Today or Stats widget, so widgets
+ * seemed to "turn into" the timer after a while (owner report, 2026-11-28).
+ */
+private suspend fun GlanceAppWidget.redraw(context: Context, receiver: Class<*>) {
+    val ids = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetIds(android.content.ComponentName(context, receiver))
+    if (ids.isEmpty()) return
+    val m = androidx.glance.appwidget.GlanceAppWidgetManager(context)
+    ids.forEach { id -> runCatching { update(context, m.getGlanceIdBy(id)) } }
 }
 
 /** Each widget loads its data once, then renders it for the home screen and for the picker preview. */
@@ -729,7 +743,7 @@ class TimerStop : ActionCallback {
 }
 
 /** Called by FocusController whenever the timer changes. */
-suspend fun updateTimerWidget(context: Context) = TimerWidget().updateAll(context)
+suspend fun updateTimerWidget(context: Context) = TimerWidget().redraw(context, TimerWidgetReceiver::class.java)
 
 // ───────── receivers ─────────
 

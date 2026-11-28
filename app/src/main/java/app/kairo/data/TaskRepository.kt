@@ -32,6 +32,8 @@ class TaskRepository(private val db: KairoDatabase, scope: CoroutineScope) {
     /** Everything the app shows; archived tasks are hidden except in the Archived smart list. */
     val tasks: Flow<List<Task>> = all.map { l -> l.filter { !it.archived } }.share(scope)
     val archived: Flow<List<Task>> = all.map { l -> l.filter { it.archived } }
+    /** Trash (canvas): deleted tasks, newest first, with when each was deleted. */
+    val trash: Flow<List<Pair<Task, Long>>> = db.tasks().observeTrash().map { l -> l.map { it.toModel() to (it.deletedAt ?: 0L) } }
     val lists: Flow<List<TaskList>> = db.lists().observeAll().map { it.map(ListEntity::toModel) }.share(scope)
 
     fun task(id: Long): Flow<Task?> = db.tasks().observe(id).map { it?.toModel() }
@@ -71,9 +73,14 @@ class TaskRepository(private val db: KairoDatabase, scope: CoroutineScope) {
     suspend fun reschedule(ids: List<Long>, due: LocalDate?, time: LocalTime?, reminder: Boolean) =
         db.tasks().reschedule(ids, due, time, reminder)
     suspend fun duplicate(task: Task): Long = db.tasks().insert(task.toEntity().copy(id = 0, done = false, completedAt = null))
-    /** Deletes and returns the rows, so Undo can put them back exactly. */
-    suspend fun deleteAll(ids: List<Long>): List<TaskEntity> = db.tasks().get(ids).also { db.tasks().deleteAll(ids) }
+    /** Moves to Trash and returns the rows as they were, so Undo can put them back exactly. */
+    suspend fun deleteAll(ids: List<Long>): List<TaskEntity> = db.tasks().get(ids).also { db.tasks().setDeleted(ids, System.currentTimeMillis()) }
     suspend fun restore(rows: List<TaskEntity>) = db.tasks().insertAll(rows)
+    suspend fun restoreFromTrash(ids: List<Long>) = db.tasks().setDeleted(ids, null)
+    /** Delete forever (Trash only). */
+    suspend fun purge(ids: List<Long>) = db.tasks().deleteAll(ids)
+    /** Trash keeps tasks 30 days; runs on app start. */
+    suspend fun purgeOldTrash() = db.tasks().purgeBefore(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000)
 
     suspend fun addList(list: TaskList): Long = db.lists().insert(ListEntity(name = list.name, shape = list.shape, color = list.color))
     suspend fun updateList(list: TaskList) = db.lists().update(ListEntity(list.id, list.name, list.shape, list.color, list.position))

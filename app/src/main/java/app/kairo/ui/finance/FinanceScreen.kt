@@ -70,7 +70,7 @@ import java.util.Locale
  * ‹ › move by month. Tap an account tile to see its activity.
  */
 @Composable
-fun FinanceScreen(money: MoneyRepository, onSearch: () -> Unit, onVoice: () -> Unit, onAccount: () -> Unit, onReports: () -> Unit, onOpenTx: (Long) -> Unit = {}, onBills: () -> Unit = {}) {
+fun FinanceScreen(money: MoneyRepository, onSearch: () -> Unit, onVoice: () -> Unit, onAccount: () -> Unit, onReports: () -> Unit, onOpenTx: (Long) -> Unit = {}, onBills: () -> Unit = {}, onMenu: () -> Unit = {}) {
     val app = LocalKairoApp.current
     val c = MaterialTheme.colorScheme
     val k = KairoTheme.colors
@@ -120,7 +120,7 @@ fun FinanceScreen(money: MoneyRepository, onSearch: () -> Unit, onVoice: () -> U
 
     Box(Modifier.fillMaxSize().background(k.bg)) {
         Column(Modifier.fillMaxSize()) {
-            TabSearchBar("Search in finance", onSearch = onSearch, onVoice = onVoice, onMenu = null, onAccount = onAccount)
+            TabSearchBar("Search in finance", onSearch = onSearch, onVoice = onVoice, onMenu = onMenu, onAccount = onAccount)
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 168.dp)) {
                 item(key = "head") {
                     Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 8.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -63,6 +64,7 @@ enum class RowKind { Due, Rest, Archived }
 fun HabitRow(
     h: Habit, day: LocalDate, today: LocalDate, kind: RowKind, index: Int, count: Int,
     onTap: () -> Unit, onSwipe: (Boolean) -> Unit, onOpen: () -> Unit,
+    selected: Boolean = false, selecting: Boolean = false, onSelect: (() -> Unit)? = null, handle: Modifier? = null,
 ) {
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
@@ -76,17 +78,19 @@ fun HabitRow(
         bottomStart = if (index == count - 1) big else small, bottomEnd = if (index == count - 1) big else small,
     )
     ExpressiveSwipe(
-        enabled = kind == RowKind.Due,
+        enabled = kind == RowKind.Due && !selecting,
         rightIcon = R.drawable.ic_check, rightLabel = "Done", leftIcon = R.drawable.ic_close, leftLabel = "Not done",
         onRight = { onSwipe(true) }, onLeft = { onSwipe(false) },
     ) {
         SegmentedListItem(
-            onClick = onOpen,
-            shapes = ListItemDefaults.shapes(shape = shape, pressedShape = RoundedCornerShape(big)),
+            selected = selected,
+            onClick = { if (selecting && onSelect != null) onSelect() else onOpen() },
+            onLongClick = onSelect, onLongClickLabel = "Select",
+            shapes = ListItemDefaults.shapes(shape = shape, selectedShape = RoundedCornerShape(big), pressedShape = RoundedCornerShape(big)),
             colors = selectableRowColors(),
             contentPadding = PaddingValues(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
             modifier = Modifier.heightIn(min = 72.dp),
-            leadingContent = { ShapeCheck(h, day, done, no, enabled = !dim, modifier = Modifier.alpha(if (dim) 0.5f else 1f), onTap = onTap) },
+            leadingContent = { ShapeCheck(h, day, done, no, enabled = !dim && !selecting, modifier = Modifier.alpha(if (dim) 0.5f else 1f), onTap = onTap) },
             supportingContent = {
                 val (icon, text) = meta(h, day, today, kind, done, no)
                 Row(Modifier.alpha(if (dim) 0.5f else 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -95,7 +99,11 @@ fun HabitRow(
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             },
-            trailingContent = { Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(20.dp), tint = c.onSurfaceVariant) },
+            trailingContent = {
+                // While selecting, the handle drags the row to reorder (canvas habits select board).
+                if (handle != null) Icon(painterResource(R.drawable.ic_drag_indicator), "Drag to reorder " + h.name, handle.size(40.dp).padding(8.dp), tint = c.onSurfaceVariant)
+                else Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(20.dp), tint = c.onSurfaceVariant)
+            },
         ) {
             Text(h.name, style = MaterialTheme.typography.bodyLarge, color = if (no) c.onSurfaceVariant else c.onSurface,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.alpha(if (dim) 0.5f else 1f))

@@ -65,5 +65,6 @@ class KairoApplication : Application() {
             }
         }
         appScope.launch { runCatching { app.kairo.widgets.publishWidgetPreviews(this@KairoApplication) } }
+        appScope.launch { runCatching { repository.purgeOldTrash() } } // Trash keeps tasks 30 days
     }
 }

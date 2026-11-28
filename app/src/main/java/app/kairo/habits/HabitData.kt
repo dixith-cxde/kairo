@@ -70,8 +70,20 @@ data class HabitCheckEntity(
     @ColumnInfo(defaultValue = "0") val value: Double = 0.0,
 )
 
+/** One short note per habit per day (canvas habit page "Note for today", owner 2026-11-26). v11. */
+@Entity(
+    tableName = "habit_notes",
+    primaryKeys = ["habitId", "date"],
+    foreignKeys = [ForeignKey(HabitEntity::class, ["id"], ["habitId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("habitId")],
+)
+data class HabitNoteEntity(val habitId: Long, val date: LocalDate, val text: String)
+
 @Dao
 interface HabitDao {
+    @Query("SELECT * FROM habit_notes WHERE habitId = :id ORDER BY date DESC") fun notes(id: Long): Flow<List<HabitNoteEntity>>
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putNote(n: HabitNoteEntity)
+    @Query("DELETE FROM habit_notes WHERE habitId = :id AND date = :date") suspend fun clearNote(id: Long, date: LocalDate)
     @Query("SELECT * FROM habits ORDER BY position, id") fun habits(): Flow<List<HabitEntity>>
     @Query("SELECT * FROM habit_checks") fun checks(): Flow<List<HabitCheckEntity>>
     @Query("SELECT * FROM habits WHERE id = :id") suspend fun get(id: Long): HabitEntity?

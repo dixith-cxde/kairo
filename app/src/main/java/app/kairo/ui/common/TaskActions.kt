@@ -42,7 +42,7 @@ fun deleteTaskWithUndo(app: app.kairo.KairoApplication, snackbar: androidx.compo
     scope.launch {
         val rows = app.repository.deleteAll(listOf(task.id))
         snackbar.currentSnackbarData?.dismiss()
-        val r = snackbar.showSnackbar("Deleted “${task.title}”", actionLabel = "Undo", duration = SnackbarDuration.Short)
+        val r = snackbar.showSnackbar("Moved to trash", actionLabel = "Undo", duration = SnackbarDuration.Short)
         if (r == SnackbarResult.ActionPerformed) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); app.repository.restore(rows) }
     }
 }

@@ -8,14 +8,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks ORDER BY due IS NULL, due, time IS NULL, time, createdAt")
+    @Query("SELECT * FROM tasks WHERE deletedAt IS NULL ORDER BY due IS NULL, due, time IS NULL, time, createdAt")
     fun observeAll(): Flow<List<TaskEntity>>
+    @Query("SELECT * FROM tasks WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC") fun observeTrash(): Flow<List<TaskEntity>>
+    @Query("UPDATE tasks SET deletedAt = :at WHERE id IN (:ids)") suspend fun setDeleted(ids: List<Long>, at: Long?)
+    @Query("DELETE FROM tasks WHERE deletedAt IS NOT NULL AND deletedAt < :before") suspend fun purgeBefore(before: Long)
 
     @Query("SELECT * FROM tasks WHERE id = :id")
     fun observe(id: Long): Flow<TaskEntity?>
 
     @Insert suspend fun insert(task: TaskEntity): Long
-    @Insert suspend fun insertAll(tasks: List<TaskEntity>)
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE) suspend fun insertAll(tasks: List<TaskEntity>)
     @Update suspend fun update(task: TaskEntity)
 
     @Query("UPDATE tasks SET done = :done, completedAt = :at WHERE id = :id")

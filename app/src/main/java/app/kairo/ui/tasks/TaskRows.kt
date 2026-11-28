@@ -105,8 +105,6 @@ fun TaskRowV2(
     val k = KairoTheme.colors
     val c = MaterialTheme.colorScheme
     val selected = task.id in selection
-    var options by remember { mutableStateOf(false) }
-    if (options) TaskOptionsSheet(task, onOpen, toggle, onDismiss = { options = false })
     val titleColor by animateColorAsState(if (task.done) c.onSurfaceVariant else c.onSurface, MaterialTheme.motionScheme.defaultEffectsSpec(), label = "title")
     val big = 28.dp; val small = 8.dp
     val shape = RoundedCornerShape(
@@ -136,9 +134,7 @@ fun TaskRowV2(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (task.priority == Priority.High && !task.done)
                         Icon(painterResource(R.drawable.ic_flag_filled), "High priority", tint = c.error, modifier = Modifier.size(20.dp))
-                    if (!selection.active) IconButton(onClick = { options = true }, shapes = IconButtonDefaults.shapes()) {
-                        Icon(painterResource(R.drawable.ic_more_vert), "More actions for ${task.title}", tint = c.onSurfaceVariant)
-                    }
+                    if (!selection.active) TaskRowMenu(task, onOpen, toggle)
                 }
             },
         ) {

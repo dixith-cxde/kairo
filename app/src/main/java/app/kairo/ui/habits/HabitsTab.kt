@@ -2,6 +2,14 @@
 
 package app.kairo.ui.habits
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.Alignment
+import app.kairo.ui.common.SelectionTopBar
+import app.kairo.ui.common.rememberSelection
+import app.kairo.ui.common.rememberReorder
+import app.kairo.ui.common.reorderHandle
+import app.kairo.ui.common.reorderItem
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -78,6 +86,11 @@ fun HabitsTab(
     var adding by remember { mutableStateOf(false) }
     var open by remember { mutableStateOf<Habit?>(null) }
     var edit by remember { mutableStateOf<Habit?>(null) }
+    val selection = rememberSelection()
+    val listState = rememberLazyListState()
+    val reorder = rememberReorder(listState)
+    // While selecting, the list shows your own order (drag handles reorder it), as on the canvas.
+    val order = remember { mutableStateListOf<Long>() }
     val habits = all ?: return
     val day = LocalDate.ofEpochDay(picked)
     val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).plusWeeks(weekOff.toLong())
@@ -89,7 +102,9 @@ fun HabitsTab(
     val rank = remember(picked, ids) { active.associate { it.id to if (it.done(day)) 1 else if (it.dropped(day)) 2 else 0 } }
     val due = active.filter { it.scheduled(day) }.sortedBy { rank[it.id] ?: 0 }
     val rest = active.filter { !it.scheduled(day) }
-    val list = due + rest
+    if (!selection.active || order.isEmpty()) { order.clear(); order.addAll(active.map { it.id }) }
+    val byId = active.associateBy { it.id }
+    val list = if (selection.active) order.mapNotNull { byId[it] } else due + rest
 
     /** Runs a change to one day and offers Undo (rule 9: haptics on complete and undo). */
     fun act(h: Habit, message: String, completes: Boolean, change: suspend () -> Unit) {
@@ -131,9 +146,10 @@ fun HabitsTab(
         act(h, msg, completes = done) { app.habits.swipe(h, day, done) }
     }
 
-    Column(Modifier.fillMaxSize().background(KairoTheme.colors.bg)) {
+    Box(Modifier.fillMaxSize().background(KairoTheme.colors.bg)) {
+    Column(Modifier.fillMaxSize()) {
         TabSearchBar("Search in habits", onSearch = onSearch, onVoice = onVoice, onMenu = null, onAccount = onAccount)
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 168.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 168.dp)) {
             if (active.isEmpty()) {
                 item(key = "empty") {
                     EmptyState(
@@ -157,9 +173,17 @@ fun HabitsTab(
                 }
                 itemsIndexed(list, key = { _, h -> "h${h.id}" }) { i, h ->
                     val motion = MaterialTheme.motionScheme
-                    Column(Modifier.animateItem(placementSpec = motion.defaultSpatialSpec(), fadeInSpec = motion.defaultEffectsSpec(), fadeOutSpec = motion.fastEffectsSpec())) {
+                    val key = "h${h.id}"
+                    Column((if (reorder.dragging == key) Modifier.reorderItem(reorder, key) else Modifier.animateItem(placementSpec = motion.defaultSpatialSpec(), fadeInSpec = motion.defaultEffectsSpec(), fadeOutSpec = motion.fastEffectsSpec()))) {
                         HabitRow(h, day, today, if (h.scheduled(day)) RowKind.Due else RowKind.Rest, i, list.size,
-                            onTap = { onTap(h) }, onSwipe = { onSwipe(h, it) }, onOpen = { onOpenHabit(h.id) })
+                            onTap = { onTap(h) }, onSwipe = { onSwipe(h, it) }, onOpen = { onOpenHabit(h.id) },
+                            selected = h.id in selection, selecting = selection.active, onSelect = { selection.toggle(h.id) },
+                            handle = if (!selection.active) null else Modifier.reorderHandle(reorder, key, canSwap = { (it as? String)?.startsWith("h") == true },
+                                onMove = { from, to ->
+                                    val a = order.indexOf((from as String).drop(1).toLong()); val b = order.indexOf((to as String).drop(1).toLong())
+                                    if (a >= 0 && b >= 0) order.add(b, order.removeAt(a))
+                                },
+                                onDone = { val ids = order.toList(); scope.launch { app.habits.reorder(ids, habits) } }))
                         if (i < list.lastIndex) Spacer(Modifier.height(3.dp))
                     }
                 }
@@ -169,11 +193,15 @@ fun HabitsTab(
                 if (archOpen) itemsIndexed(archived, key = { _, h -> "a${h.id}" }) { i, h ->
                     Column(Modifier.animateItem()) {
                         Spacer(Modifier.height(3.dp))
-                        HabitRow(h, day, today, RowKind.Archived, i + 1, archived.size + 1, onTap = {}, onSwipe = {}, onOpen = { onOpenHabit(h.id) })
+                        HabitRow(h, day, today, RowKind.Archived, i + 1, archived.size + 1, onTap = {}, onSwipe = {}, onOpen = { onOpenHabit(h.id) },
+                            selected = h.id in selection, selecting = selection.active, onSelect = { selection.toggle(h.id) })
                     }
                 }
             }
         }
+    }
+    SelectionTopBar(selection, active.map { it.id }, Modifier.align(Alignment.TopCenter))
+    HabitSelectionToolbar(selection, habits, day, onEdit = { edit = it }, modifier = Modifier.align(Alignment.BottomCenter))
     }
     if (adding || newHabit) HabitSheet(onDismiss = { adding = false; onNewHabitDone() })
     edit?.let { h -> HabitSheet(h, onDismiss = { edit = null }) }

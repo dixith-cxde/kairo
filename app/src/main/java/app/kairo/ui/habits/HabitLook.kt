@@ -2,7 +2,18 @@
 
 package app.kairo.ui.habits
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.toShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import app.kairo.ui.theme.KairoTheme
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -72,3 +83,11 @@ object HabitLook {
 }
 
 private fun Color.luminance(): Float = 0.2126f * red + 0.7152f * green + 0.0722f * blue
+
+/** A habit's shape in its colour with its icon (search results, pickers). */
+@Composable
+fun HabitBadge(h: app.kairo.habits.Habit, size: Dp = 36.dp) {
+    Box(Modifier.size(size).background(KairoTheme.colors.accent(h.color), HabitLook.polygon(h.shapeName).toShape()), contentAlignment = Alignment.Center) {
+        HabitLook.icon(h.icon, true)?.let { Icon(painterResource(it), null, Modifier.size(size * 0.5f), tint = HabitLook.onColor()) }
+    }
+}

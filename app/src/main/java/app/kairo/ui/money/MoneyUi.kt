@@ -91,7 +91,8 @@ fun accountIcon(t: app.kairo.data.db.AccountType) = when (t) {
     app.kairo.data.db.AccountType.Bank -> R.drawable.ic_account_balance
     app.kairo.data.db.AccountType.Cash -> R.drawable.ic_payments
     app.kairo.data.db.AccountType.Card -> R.drawable.ic_credit_card
-    app.kairo.data.db.AccountType.Wallet -> R.drawable.ic_savings
+    app.kairo.data.db.AccountType.Wallet -> R.drawable.ic_account_balance_wallet
+    app.kairo.data.db.AccountType.UPI -> R.drawable.ic_qr_code_2
 }
 
 @Composable

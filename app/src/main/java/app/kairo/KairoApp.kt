@@ -5,6 +5,8 @@ package app.kairo
 import app.kairo.ui.calendar.EventPage
 import app.kairo.ui.habits.HabitPage
 import app.kairo.ui.lists.SmartList
+import app.kairo.ui.lists.TRASH_ID
+import app.kairo.ui.lists.TrashScreen
 import app.kairo.ui.lists.EditListsScreen
 
 import androidx.compose.runtime.setValue
@@ -200,7 +202,8 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
     KairoDrawer(
         drawer, currentTab,
         onNewList = { closeDrawer { sheet = "list" } }, onEditLists = { closeDrawer { open(Route.ListsRoute) } },
-        onTasks = { closeDrawer { select(Tab.Tasks) } }, onArchived = { closeDrawer { open(Route.ListRoute(SmartList.Archived.id)) } },
+        onTasks = { closeDrawer { select(Tab.Tasks) } }, onArchived = { id -> closeDrawer { open(Route.ListRoute(id)) } },
+        onFinance = { closeDrawer { financeAction(it, ::open) { s -> sheet = s } } },
     ) {
     Box(Modifier.fillMaxSize().background(KairoTheme.colors.bg).nestedScroll(hideOnScroll)) {
         NavDisplay(
@@ -240,11 +243,11 @@ fun KairoApp(action: String? = null, onActionHandled: () -> Unit = {}) {
                             app, onBack = ::back,
                             onOpenTask = { t -> open(Route.TaskRoute(t.id)) },
                             onOpenList = { open(Route.ListRoute(it)) },
-                            onOpenAccount = { open(Route.AccountRoute(it)) },
+                            onOpenAccount = { open(Route.AccountRoute(it)) }, onOpenHabit = { open(Route.HabitRoute(it)) },
                         )
                         Route.ListsRoute, is Route.HabitRoute, is Route.EventRoute, is Route.TxRoute, Route.ReportRoute -> V2Page(route, app, ::back)
                         Route.StatsRoute -> StatsScreen(app.repository)
-                        is Route.ListRoute -> {
+                        is Route.ListRoute -> if (route.listId == TRASH_ID) TrashScreen(onBack = ::back) else {
                             val vm: ListDetailViewModel = viewModel(
                                 key = "list-${route.listId}",
                                 factory = viewModelFactory { initializer { ListDetailViewModel(app.repository, route.listId) } },

@@ -28,6 +28,10 @@ class HabitRepository(private val app: KairoApplication, scope: CoroutineScope) 
         dao.insert(HabitEntity(name = name.trim(), shape = shape, color = color, reminderTime = reminder))
 
     suspend fun add(e: HabitEntity): Long = dao.insert(e)
+    fun notes(id: Long) = dao.notes(id)
+    /** Blank text removes the day's note. */
+    suspend fun setNote(id: Long, date: LocalDate, text: String) =
+        if (text.isBlank()) dao.clearNote(id, date) else dao.putNote(HabitNoteEntity(id, date, text.trim()))
     suspend fun update(e: HabitEntity) = dao.update(e)
     suspend fun reorder(ids: List<Long>, all: List<Habit>) =
         dao.updateAll(ids.mapIndexedNotNull { i, id -> all.firstOrNull { it.id == id }?.e?.copy(position = i) })

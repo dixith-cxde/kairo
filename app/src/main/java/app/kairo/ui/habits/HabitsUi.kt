@@ -118,64 +118,6 @@ internal fun LazyListScope.habitsSection(habits: List<Habit>, onAdd: () -> Unit,
     }
 }
 
-/** New habit (or edit [habit]): name and an optional daily reminder time. */
-@Composable
-fun HabitSheet(habit: Habit? = null, onDismiss: () -> Unit) {
-    val app = LocalKairoApp.current
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-    val haptic = LocalHapticFeedback.current
-    val askNotifications = rememberAskNotifications()
-    var name by remember { mutableStateOf(habit?.name.orEmpty()) }
-    var remind by remember { mutableStateOf(habit == null || habit.reminderTime != null) }
-    var hour by remember { mutableStateOf(habit?.reminderTime?.hour ?: 9) }
-    var minute by remember { mutableStateOf(habit?.reminderTime?.minute ?: 0) }
-    fun close() = scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Column(
-            Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 20.dp).imePadding(),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(if (habit == null) "New habit" else "Edit habit", style = MaterialTheme.typography.titleLargeEmphasized, modifier = Modifier.padding(start = 4.dp))
-            OutlinedTextField(name, { name = it }, label = { Text("e.g. Take medication") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            SegmentedListItem(
-                onClick = { if (!remind) askNotifications(); remind = !remind },
-                shapes = ListItemDefaults.segmentedShapes(0, 1),
-                colors = ListItemDefaults.segmentedColors(containerColor = KairoTheme.colors.item),
-                trailingContent = { Switch(remind, { if (it) askNotifications(); remind = it }) },
-                supportingContent = { Text("Every day at this time") },
-            ) { Text("Remind me") }
-            // The dial needs its full height: with the keyboard up the sheet shrinks and TimePicker
-            // squeezes its numbers but not its hand. So while typing, show the time as one line.
-            @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-            val typing = androidx.compose.foundation.layout.WindowInsets.isImeVisible
-            if (remind && !typing) ExpressiveTimePicker(hour, minute, { h, m -> hour = h; minute = m }, Modifier.align(Alignment.CenterHorizontally))
-            else if (remind) Text(
-                "At " + LocalTime.of(hour, minute).format(java.time.format.DateTimeFormatter.ofPattern("h:mm a")),
-                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp),
-            )
-            Row {
-                Spacer(Modifier.weight(1f))
-                Button(
-                    enabled = name.isNotBlank(),
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
-                        val t = if (remind) LocalTime.of(hour, minute) else null
-                        app.appScope.launch {
-                            if (habit == null) app.habits.add(HabitEntity(name = name.trim(), shape = ListShape.Square, color = ListColor.entries.random(), reminderTime = t, hshape = HabitLook.shapes.random()))
-                            else app.habits.update(habit.e.copy(name = name.trim(), reminderTime = t))
-                        }
-                        close()
-                    },
-                    shapes = ButtonDefaults.shapes(),
-                    contentPadding = PaddingValues(horizontal = 32.dp),
-                ) { Text("Save") }
-            }
-        }
-    }
-}
-
 /** Habit detail: streaks and a monthly heat map. Tap a day (up to today) to fix it. */
 @Composable
 fun HabitDetailSheet(habit: Habit, onEdit: () -> Unit, onDismiss: () -> Unit) {

@@ -13,7 +13,7 @@ import app.kairo.data.model.ListShape
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
-enum class AccountType { Bank, Cash, Card, Wallet }
+enum class AccountType { Bank, Cash, Card, Wallet, UPI } // UPI added in v2 (stored by name, no migration)
 enum class TxKind { Expense, Income, Transfer }
 enum class RecurringKind { Bill, Subscription, Income }
 

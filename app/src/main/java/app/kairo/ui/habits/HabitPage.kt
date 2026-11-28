@@ -165,11 +165,12 @@ fun HabitPage(id: Long, onBack: () -> Unit) {
                     }
                 }
             }
+            item(key = "notes") { HabitNotes(h.id, today) }
             item(key = "set") { SectionTitle("Settings") }
             item(key = "rows") {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    SettingRow(R.drawable.ic_notifications, "Reminder", h.reminderTime?.format(Clock) ?: "Off", top = true) { sheet = "edit" }
-                    SettingRow(R.drawable.ic_repeat, "Repeat on", schedule(h), top = false) { sheet = "edit" }
+                    SettingRow(R.drawable.ic_notifications, "Reminder", h.reminderTime?.format(Clock) ?: "Off", top = true) { sheet = "remind" }
+                    SettingRow(R.drawable.ic_repeat, "Repeat on", schedule(h), top = false) { sheet = "repeat" }
                 }
                 Text("Started ${h.createdAt.format(Started)} · ${h.total()} check-ins in all", style = MaterialTheme.typography.labelMedium,
                     color = c.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp, top = 16.dp))
@@ -210,7 +211,8 @@ fun HabitPage(id: Long, onBack: () -> Unit) {
             }
             onBack()
         }
-        "edit" -> HabitSheet(h, onDismiss = { sheet = null })
+        "edit" -> HabitSheet(h, onDelete = { sheet = "delete" }, onDismiss = { if (sheet == "edit") sheet = null })
+        "remind", "repeat" -> HabitSheet(h, part = sheet, onDismiss = { sheet = null })
     }
 }
 
@@ -275,12 +277,7 @@ private fun SettingRow(icon: Int, label: String, value: String, top: Boolean, on
     ) { Text(label) }
 }
 
-internal fun schedule(h: Habit): String = h.perWeek?.let { "$it time" + (if (it == 1) "" else "s") + " a week" } ?: when (val d = h.weekdays) {
-    null -> "Every day"
-    setOf(0, 1, 2, 3, 4) -> "Weekdays"
-    setOf(5, 6) -> "Weekends"
-    else -> d.sorted().joinToString(", ") { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")[it] }
-}
+internal fun schedule(h: Habit): String = scheduleText(h.perWeek, h.weekdays)
 
 private val Clock = DateTimeFormatter.ofPattern("h:mm a")
 private val DayFmt = DateTimeFormatter.ofPattern("EEE d MMM")

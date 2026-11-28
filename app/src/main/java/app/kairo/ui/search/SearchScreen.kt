@@ -48,13 +48,15 @@ import app.kairo.data.model.Task
 import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.lists.ListBadge
 import app.kairo.ui.money.TxRow
+import app.kairo.ui.habits.HabitBadge
+import app.kairo.ui.habits.schedule as habitSchedule
 import app.kairo.ui.theme.KairoTheme
 import app.kairo.ui.tasks.TaskRow
 import kotlinx.coroutines.launch
 
 /** One search for everything: tasks (title, notes), lists, and money (title, tags, category). */
 @Composable
-fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -> Unit, onOpenList: (Long) -> Unit, onOpenAccount: (Long) -> Unit) {
+fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -> Unit, onOpenList: (Long) -> Unit, onOpenAccount: (Long) -> Unit, onOpenHabit: (Long) -> Unit = {}) {
     val query = rememberTextFieldState()
     val bar = rememberSearchBarState(initialValue = SearchBarValue.Expanded)
     val focus = remember { FocusRequester() }
@@ -65,6 +67,7 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
     val txs by app.money.transactions.collectAsStateWithLifecycle(initialValue = emptyList())
     val cats by app.money.categories.collectAsStateWithLifecycle(initialValue = emptyList())
     val accounts by app.money.accounts.collectAsStateWithLifecycle(initialValue = emptyList())
+    val habits by app.habits.all.collectAsStateWithLifecycle(initialValue = emptyList())
     val entrance = rememberEntrance()
 
     val q = query.text.toString().trim()
@@ -74,6 +77,7 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
     val catMap = remember(cats) { cats.associateBy { it.id } }
     val accMap = remember(accounts) { accounts.associateBy { it.id } }
     val foundTasks = remember(q, tasks) { if (q.isEmpty()) emptyList() else tasks.filter { it.title.contains(q, true) || it.notes.contains(q, true) }.take(30) }
+    val foundHabits = remember(q, habits) { if (q.isEmpty()) emptyList() else habits.filter { it.name.contains(q, true) || it.e.notes.contains(q, true) } }
     val foundLists = remember(q, lists) { if (q.isEmpty()) emptyList() else lists.filter { it.name.contains(q, true) } }
     val foundTx = remember(q, txs, catMap) { if (q.isEmpty()) emptyList() else txs.filter { t ->
         t.note.contains(q, true) || t.tags.contains(q, true) || (t.categoryId?.let { catMap[it]?.name?.contains(q, true) } == true)
@@ -92,7 +96,7 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
                     textFieldState = query,
                     searchBarState = bar,
                     onSearch = {},
-                    placeholder = { Text("Search tasks, lists, money") },
+                    placeholder = { Text("Search tasks, habits, money") },
                     leadingIcon = {
                         IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_arrow_back), "Back") }
                     },
@@ -105,7 +109,7 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 48.dp)) {
-            if (q.isNotEmpty() && foundTasks.isEmpty() && foundLists.isEmpty() && foundTx.isEmpty()) item {
+            if (q.isNotEmpty() && foundTasks.isEmpty() && foundLists.isEmpty() && foundTx.isEmpty() && foundHabits.isEmpty()) item {
                 Text("Nothing matches “$q”.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(8.dp))
             }
@@ -131,6 +135,21 @@ fun SearchScreen(app: KairoApplication, onBack: () -> Unit, onOpenTask: (Task) -
                             TaskRow(t, l, i, foundTasks.size, onToggle = { scope.launch { app.repository.setDone(it, !it.done) } }, onOpen = onOpenTask, selection = taskSelection)
                         }
                         if (i < foundTasks.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+                    }
+                }
+            }
+            if (foundHabits.isNotEmpty()) {
+                item { Header("Habits") }
+                itemsIndexed(foundHabits, key = { _, h -> "h${h.id}" }) { i, h ->
+                    Column(with(entrance) { Modifier.enter("h${h.id}", i) }) {
+                        SegmentedListItem(
+                            onClick = { onOpenHabit(h.id) },
+                            shapes = ListItemDefaults.segmentedShapes(i, foundHabits.size),
+                            colors = ListItemDefaults.segmentedColors(containerColor = KairoTheme.colors.item),
+                            leadingContent = { HabitBadge(h) },
+                            supportingContent = { Text(habitSchedule(h)) },
+                        ) { Text(h.name) }
+                        if (i < foundHabits.lastIndex) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                     }
                 }
             }

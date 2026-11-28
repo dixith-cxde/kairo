@@ -37,12 +37,14 @@ import app.kairo.ui.theme.KairoTheme
  * Trash (deleted tasks kept 30 days) is designed but needs its own data step; not shown yet.
  */
 @Composable
-fun ListsDrawerContent(onNewList: () -> Unit, onEditLists: () -> Unit, onTasks: () -> Unit, onArchived: () -> Unit) {
+/** [onArchived] opens a smart list by id: Archived, or Trash ([TRASH_ID]). */
+fun ListsDrawerContent(onNewList: () -> Unit, onEditLists: () -> Unit, onTasks: () -> Unit, onArchived: (Long) -> Unit) {
     val app = LocalKairoApp.current
     val c = MaterialTheme.colorScheme
     val tasks by app.repository.tasks.collectAsStateWithLifecycle(initialValue = emptyList())
     val archived by app.repository.archived.collectAsStateWithLifecycle(initialValue = emptyList())
     val lists by app.repository.lists.collectAsStateWithLifecycle(initialValue = emptyList())
+    val trash by app.repository.trash.collectAsStateWithLifecycle(initialValue = emptyList())
     val open = tasks.count { !it.done }
     ModalDrawerSheet(drawerContainerColor = KairoTheme.colors.bg, drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)) {
         Column(Modifier.statusBarsPadding().padding(horizontal = 12.dp, vertical = 16.dp)) {
@@ -57,8 +59,9 @@ fun ListsDrawerContent(onNewList: () -> Unit, onEditLists: () -> Unit, onTasks: 
             }
             Spacer(Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                DrawerItem(R.drawable.ic_task_alt, "Tasks", 0, 2, count = open, selected = true, onClick = onTasks)
-                DrawerItem(R.drawable.ic_archive, "Archived", 1, 2, count = archived.size, onClick = onArchived)
+                DrawerItem(R.drawable.ic_task_alt, "Tasks", 0, 3, count = open, selected = true, onClick = onTasks)
+                DrawerItem(R.drawable.ic_archive, "Archived", 1, 3, count = archived.size, onClick = { onArchived(SmartList.Archived.id) })
+                DrawerItem(R.drawable.ic_delete, "Trash", 2, 3, count = trash.size, onClick = { onArchived(TRASH_ID) })
             }
         }
     }

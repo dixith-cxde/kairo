@@ -256,7 +256,7 @@ fun TaskSelectionToolbar(
             selection.clear()
             scope.launch {
                 val rows = repo.deleteAll(ids)
-                withUndo(if (rows.size == 1) "Deleted “${rows[0].title}”" else "Deleted ${rows.size} tasks") { repo.restore(rows) }
+                withUndo(if (rows.size == 1) "Moved to trash" else "${rows.size} tasks moved to trash") { repo.restore(rows) }
             }
         }
     }

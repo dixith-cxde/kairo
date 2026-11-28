@@ -9,7 +9,10 @@ import app.kairo.navigation.Tab
 import app.kairo.ui.calendar.CalendarFocus
 import app.kairo.ui.calendar.NewEventSheet
 import app.kairo.ui.common.LocalAppSnackbar
+import app.kairo.ui.finance.IvyExport
+import app.kairo.ui.finance.IvyImportSheet
 import app.kairo.ui.finance.TxSheet
+import app.kairo.ui.finance.NewAccountSheet
 import app.kairo.ui.lists.ListSheet
 import app.kairo.ui.lists.SmartList
 import app.kairo.ui.money.AddTransactionSheet
@@ -79,6 +82,10 @@ internal fun CreateSheets(
             initialDay = if (onTab && currentTab == Tab.Calendar) CalendarFocus.day ?: LocalDate.now() else LocalDate.now(),
             onDismiss = onClose,
         )
+        // Finance drawer: New account, Ivy import preview, Ivy export.
+        "account" -> NewAccountSheet(app.money, onDismiss = onClose) { msg -> onClose(); scope.launch { snackbar.showSnackbar(msg) } }
+        "ivy" -> IvyImportSheet(app.money, onDismiss = onClose) { msg -> onClose(); scope.launch { snackbar.showSnackbar(msg) } }
+        "export" -> IvyExport(app.money) { msg -> onClose(); if (msg != null) scope.launch { snackbar.showSnackbar(msg) } }
         else -> TxSheet(app.money, TxKind.valueOf(sh), onDismiss = onClose)
     }
 }

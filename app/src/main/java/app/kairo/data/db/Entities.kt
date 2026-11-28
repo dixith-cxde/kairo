@@ -41,4 +41,5 @@ data class TaskEntity(
     val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(defaultValue = "0") val archived: Boolean = false, // v3
     @ColumnInfo(defaultValue = "") val repeat: String = "", // v7: Repeat.encode(), "" = doesn't repeat
+    val deletedAt: Long? = null, // v12: in Trash since (epoch millis); purged after 30 days
 )
