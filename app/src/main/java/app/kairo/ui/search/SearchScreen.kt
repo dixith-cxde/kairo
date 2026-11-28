@@ -49,7 +49,7 @@ import app.kairo.ui.common.rememberEntrance
 import app.kairo.ui.lists.ListBadge
 import app.kairo.ui.money.TxRow
 import app.kairo.ui.theme.KairoTheme
-import app.kairo.ui.today.TaskRow
+import app.kairo.ui.tasks.TaskRow
 import kotlinx.coroutines.launch
 
 /** One search for everything: tasks (title, notes), lists, and money (title, tags, category). */

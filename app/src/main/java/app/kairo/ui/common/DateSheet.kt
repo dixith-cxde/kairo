@@ -212,15 +212,16 @@ fun DateSheet(
                 exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(),
             ) {
                 val init = pickedTime ?: LocalTime.of(9, 0)
-                val state = rememberTimePickerState(init.hour, init.minute, android.text.format.DateFormat.is24HourFormat(ctx))
+                var th by remember { mutableStateOf(init.hour) }
+                var tm by remember { mutableStateOf(init.minute) }
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.item).padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
-                    TimePicker(state)
+                    ExpressiveTimePicker(th, tm, { h, m -> th = h; tm = m }, is24 = android.text.format.DateFormat.is24HourFormat(ctx))
                     Row {
                         TextButton(onClick = { time = null; editingTime = false }, shapes = ButtonDefaults.shapes()) { Text("No time") }
                         Spacer(Modifier.weight(1f))
                         TextButton(onClick = {
-                            time = LocalTime.of(state.hour, state.minute).toString()
+                            time = LocalTime.of(th, tm).toString()
                             if (date == null) date = today.toString()
                             editingTime = false
                         }, shapes = ButtonDefaults.shapes()) { Text("Set time") }

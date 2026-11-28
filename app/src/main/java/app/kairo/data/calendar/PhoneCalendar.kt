@@ -36,6 +36,18 @@ data class CalEvent(
     val allDay: Boolean,
     val color: Int,
     val calendar: String,
+    val calendarId: Long = 0,
+)
+
+/** What the event page shows beyond the occurrence itself. */
+data class EventDetails(
+    val title: String,
+    val description: String,
+    val location: String,
+    val rrule: String?,
+    val calendar: String,
+    val color: Int,
+    val reminders: List<Int>, // minutes before
 )
 
 /** A calendar on the phone Kairo may add events to (Google account calendars, local ones). */
@@ -84,6 +96,17 @@ class PhoneCalendar(private val context: Context) {
     fun canWrite() =
         ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
 
+    /** Every calendar the phone shows (for the calendars drawer), primary ones first. */
+    suspend fun calendars(): List<PhoneCal> = withContext(Dispatchers.IO) {
+        if (!hasPermission()) return@withContext emptyList()
+        val out = mutableListOf<PhoneCal>()
+        context.contentResolver.query(
+            C.CONTENT_URI, arrayOf(C._ID, C.CALENDAR_DISPLAY_NAME, C.ACCOUNT_NAME, C.CALENDAR_COLOR, C.IS_PRIMARY),
+            "${C.VISIBLE} = 1", null, null,
+        )?.use { c -> while (c.moveToNext()) out += PhoneCal(c.getLong(0), c.getString(1) ?: "Calendar", c.getString(2) ?: "", c.getInt(3), c.getInt(4) == 1) }
+        out.sortedByDescending { it.primary }
+    }
+
     /** Calendars you can add events to (contributor access or better), primary ones first. */
     suspend fun writableCalendars(): List<PhoneCal> = withContext(Dispatchers.IO) {
         if (!hasPermission()) return@withContext emptyList()
@@ -102,7 +125,10 @@ class PhoneCalendar(private val context: Context) {
      * Adds one event through the Calendar Provider; Google Calendar uploads it on its next sync.
      * All-day events are stored at UTC midnight with an exclusive end, as the provider expects.
      */
-    suspend fun addEvent(calendarId: Long, title: String, start: LocalDateTime, end: LocalDateTime, allDay: Boolean): Long? =
+    suspend fun addEvent(
+        calendarId: Long, title: String, start: LocalDateTime, end: LocalDateTime, allDay: Boolean,
+        location: String = "", description: String = "", rrule: String? = null, reminderMinutes: Int? = if (allDay) 0 else 10,
+    ): Long? =
         withContext(Dispatchers.IO) {
             if (!canWrite()) return@withContext null
             val zone = if (allDay) ZoneOffset.UTC else ZoneId.systemDefault()
@@ -115,14 +141,18 @@ class PhoneCalendar(private val context: Context) {
                 put(E.DTEND, e.atZone(zone).toInstant().toEpochMilli())
                 put(E.ALL_DAY, if (allDay) 1 else 0)
                 put(E.EVENT_TIMEZONE, if (allDay) "UTC" else ZoneId.systemDefault().id)
+                if (location.isNotBlank()) put(E.EVENT_LOCATION, location.trim())
+                if (description.isNotBlank()) put(E.DESCRIPTION, description.trim())
+                // A repeating event stores its length as DURATION instead of DTEND (Calendar Provider rule).
+                if (rrule != null) { put(E.RRULE, rrule); remove(E.DTEND); put(E.DURATION, "P" + ((e.atZone(zone).toEpochSecond() - s.atZone(zone).toEpochSecond()).coerceAtLeast(60)) + "S") }
             }
             val id = context.contentResolver.insert(E.CONTENT_URI, values)?.let { ContentUris.parseId(it) }
             // Reminder on by default (owner, 2026-11-21): a notification 10 minutes before
             // (all-day: at the start of the day).
-            if (id != null) runCatching {
+            if (id != null && reminderMinutes != null) runCatching {
                 context.contentResolver.insert(android.provider.CalendarContract.Reminders.CONTENT_URI, android.content.ContentValues().apply {
                     put(android.provider.CalendarContract.Reminders.EVENT_ID, id)
-                    put(android.provider.CalendarContract.Reminders.MINUTES, if (allDay) 0 else 10)
+                    put(android.provider.CalendarContract.Reminders.MINUTES, reminderMinutes)
                     put(android.provider.CalendarContract.Reminders.METHOD, android.provider.CalendarContract.Reminders.METHOD_ALERT)
                 })
             }
@@ -139,7 +169,7 @@ class PhoneCalendar(private val context: Context) {
         }.build()
         val cols = arrayOf(
             Instances.EVENT_ID, Instances.TITLE, Instances.BEGIN, Instances.END,
-            Instances.ALL_DAY, Instances.DISPLAY_COLOR, Instances.CALENDAR_DISPLAY_NAME,
+            Instances.ALL_DAY, Instances.DISPLAY_COLOR, Instances.CALENDAR_DISPLAY_NAME, Instances.CALENDAR_ID,
         )
         val out = mutableListOf<CalEvent>()
         context.contentResolver.query(uri, cols, "${Instances.VISIBLE} = 1", null, "${Instances.BEGIN} ASC")?.use { c ->
@@ -155,9 +185,28 @@ class PhoneCalendar(private val context: Context) {
                     allDay = allDay,
                     color = c.getInt(5),
                     calendar = c.getString(6) ?: "",
+                    calendarId = c.getLong(7),
                 )
             }
         }
         out
+    }
+
+    /** One event's details from the Events and Reminders tables (read-only). */
+    suspend fun details(eventId: Long): EventDetails? = withContext(Dispatchers.IO) {
+        if (!hasPermission()) return@withContext null
+        val d = context.contentResolver.query(
+            ContentUris.withAppendedId(E.CONTENT_URI, eventId),
+            arrayOf(E.DESCRIPTION, E.EVENT_LOCATION, E.RRULE, E.CALENDAR_DISPLAY_NAME, E.DISPLAY_COLOR, E.TITLE), null, null, null,
+        )?.use { c ->
+            if (!c.moveToFirst()) null
+            else EventDetails(c.getString(5) ?: "(No title)", c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getString(2), c.getString(3).orEmpty(), c.getInt(4), emptyList())
+        } ?: return@withContext null
+        val mins = mutableListOf<Int>()
+        context.contentResolver.query(
+            android.provider.CalendarContract.Reminders.CONTENT_URI, arrayOf(android.provider.CalendarContract.Reminders.MINUTES),
+            "${android.provider.CalendarContract.Reminders.EVENT_ID} = ?", arrayOf(eventId.toString()), null,
+        )?.use { c -> while (c.moveToNext()) mins += c.getInt(0) }
+        d.copy(reminders = mins.distinct().sorted())
     }
 }

@@ -47,6 +47,24 @@ class MoneyRepository(db: KairoDatabase, scope: CoroutineScope) {
         dao.insertTx(TransactionEntity(accountId = accountId, kind = kind, amountPaise = amountPaise, categoryId = categoryId,
             date = date, note = note, tags = tags))
 
+    /**
+     * v2 add / edit drawer: saves one transaction (a transfer is two linked legs). Editing replaces
+     * the old row(s) with [replace], so a changed transfer can't leave a stale leg behind.
+     */
+    suspend fun save(
+        replace: Long?, kind: TxKind, amountPaise: Long, accountId: Long, toAccountId: Long?, categoryId: Long?,
+        date: LocalDate, time: java.time.LocalTime?, title: String, description: String, tags: String,
+    ) {
+        if (replace != null) dao.deleteTxs(listOf(replace))
+        if (kind == TxKind.Transfer && toAccountId != null) {
+            val base = TransactionEntity(accountId = accountId, kind = TxKind.Transfer, amountPaise = -amountPaise, date = date, note = title, time = time, description = description, tags = tags)
+            val out = dao.insertTx(base)
+            val inn = dao.insertTx(base.copy(accountId = toAccountId, amountPaise = amountPaise, transferPeerId = out))
+            dao.updateTx(base.copy(id = out, transferPeerId = inn))
+        } else dao.insertTx(TransactionEntity(accountId = accountId, kind = kind, amountPaise = amountPaise, categoryId = categoryId,
+            date = date, note = title, tags = tags, time = time, description = description))
+    }
+
     /** Two linked legs. */
     suspend fun transfer(amountPaise: Long, from: Long, to: Long, date: LocalDate, note: String) {
         val out = dao.insertTx(TransactionEntity(accountId = from, kind = TxKind.Transfer, amountPaise = -amountPaise, date = date, note = note))
@@ -89,6 +107,8 @@ class MoneyRepository(db: KairoDatabase, scope: CoroutineScope) {
             categoryId = categoryId, monthlyDay = nextDue.dayOfMonth, nextDue = nextDue, reminder = reminder))
     suspend fun updateRecurring(r: RecurringEntity) = dao.updateRecurring(r.copy(name = r.name.trim(), monthlyDay = r.nextDue.dayOfMonth))
     suspend fun deleteRecurring(id: Long) = dao.deleteRecurring(id)
+    /** Skip this time: the bill moves to next month without a transaction. */
+    suspend fun skip(r: RecurringEntity) = dao.updateRecurring(r.copy(nextDue = r.nextDue.plusMonths(1)))
     suspend fun restoreRecurring(r: RecurringEntity) = dao.insertRecurring(r)
 
     /** Mark a bill paid: record the expense and move the next due date a month on. */

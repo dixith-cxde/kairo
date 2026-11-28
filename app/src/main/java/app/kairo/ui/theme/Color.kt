@@ -4,79 +4,80 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// Accents: SchemeTonalSpot (2021) from seed #79D0FD (same as Stash).
-// Surfaces: neutral gray, chroma 0. Comment = M3 tone.
+// v2 default palette (owner, 2026-11-28): Google blue primary/secondary, Google green tertiary.
+// Values come from the v2 canvas tokens (.k.dark / .k.light in Main.dc.html). Roles the canvas
+// doesn't use (onSecondary, onTertiary, onError, outline, the Fixed roles) are filled from the same
+// Google blue/green tonal palettes; they are not on the canvas, so treat them as unconfirmed.
+// Surfaces: neutral gray, chroma 0 (rule 3).
 
 val KairoDarkColors = darkColorScheme(
-    primary = Color(0xFF8ECFF2), onPrimary = Color(0xFF003549),
-    primaryContainer = Color(0xFF004D68), onPrimaryContainer = Color(0xFFC2E8FF),
-    inversePrimary = Color(0xFF1A6585),
-    secondary = Color(0xFFB5C9D7), onSecondary = Color(0xFF20333D),
-    secondaryContainer = Color(0xFF364954), onSecondaryContainer = Color(0xFFD1E5F3),
-    tertiary = Color(0xFFC9C1EA), onTertiary = Color(0xFF312C4C),
-    tertiaryContainer = Color(0xFF484264), onTertiaryContainer = Color(0xFFE5DEFF),
-    error = Color(0xFFFFB4AB), onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A), onErrorContainer = Color(0xFFFFDAD6),
-    outline = Color(0xFF8A9297), outlineVariant = Color(0xFF41484D),
-    onBackground = Color(0xFFDFE3E7),
-    onSurface = Color(0xFFDFE3E7), onSurfaceVariant = Color(0xFFC0C7CD),
-    surfaceTint = Color(0xFF8ECFF2),
+    primary = Color(0xFFA8C7FA), onPrimary = Color(0xFF062E6F),
+    primaryContainer = Color(0xFF0842A0), onPrimaryContainer = Color(0xFFD3E3FD),
+    inversePrimary = Color(0xFF0B57D0),
+    secondary = Color(0xFF7FCFFF), onSecondary = Color(0xFF003355),
+    secondaryContainer = Color(0xFF004A77), onSecondaryContainer = Color(0xFFC2E7FF),
+    tertiary = Color(0xFF6DD58C), onTertiary = Color(0xFF0A3818),
+    tertiaryContainer = Color(0xFF0F5223), onTertiaryContainer = Color(0xFFC4EED0),
+    error = Color(0xFFFF9F99), onError = Color(0xFF690005),
+    errorContainer = Color(0xFFD7383B), onErrorContainer = Color(0xFFFFFFFF),
+    outline = Color(0xFF8E8E8E), outlineVariant = Color(0xFF474747),
+    onBackground = Color(0xFFFFFFFF),
+    onSurface = Color(0xFFFFFFFF), onSurfaceVariant = Color(0xFFC6C6C6),
+    surfaceTint = Color(0xFFA8C7FA),
     scrim = Color(0xFF000000),
     // Neutral grays
-    background = Color(0xFF0E0E0E),              // T4  · bg
-    surface = Color(0xFF131313),                 // T6
-    surfaceDim = Color(0xFF131313),              // T6
-    surfaceBright = Color(0xFF393939),           // T24
-    surfaceContainerLowest = Color(0xFF0E0E0E),  // T4
-    surfaceContainerLow = Color(0xFF1B1B1B),     // T10
-    surfaceContainer = Color(0xFF1F1F1F),        // T12 · item
-    surfaceContainerHigh = Color(0xFF2A2A2A),    // T17 · itemHigh, navBg
-    surfaceContainerHighest = Color(0xFF353535), // T22
-    surfaceVariant = Color(0xFF353535),          // T22
-    inverseSurface = Color(0xFFE2E2E2),          // T90
-    inverseOnSurface = Color(0xFF303030),        // T20
-    // Fixed roles (same in light and dark)
-    primaryFixed = Color(0xFFC2E8FF), primaryFixedDim = Color(0xFF8ECFF2),
-    onPrimaryFixed = Color(0xFF001E2C), onPrimaryFixedVariant = Color(0xFF004D68),
-    secondaryFixed = Color(0xFFD1E5F3), secondaryFixedDim = Color(0xFFB5C9D7),
-    onSecondaryFixed = Color(0xFF091E28), onSecondaryFixedVariant = Color(0xFF364954),
-    tertiaryFixed = Color(0xFFE5DEFF), tertiaryFixedDim = Color(0xFFC9C1EA),
-    onTertiaryFixed = Color(0xFF1C1736), onTertiaryFixedVariant = Color(0xFF484264),
+    background = Color(0xFF0E0E0E),              // bg
+    surface = Color(0xFF131313),
+    surfaceDim = Color(0xFF131313),
+    surfaceBright = Color(0xFF393939),
+    surfaceContainerLowest = Color(0xFF0E0E0E),
+    surfaceContainerLow = Color(0xFF1B1B1B),
+    surfaceContainer = Color(0xFF1F1F1F),        // item
+    surfaceContainerHigh = Color(0xFF2A2A2A),    // nav, chips
+    surfaceContainerHighest = Color(0xFF353535),
+    surfaceVariant = Color(0xFF353535),
+    inverseSurface = Color(0xFFE2E2E2),
+    inverseOnSurface = Color(0xFF1B1B1B),
+    primaryFixed = Color(0xFFD3E3FD), primaryFixedDim = Color(0xFFA8C7FA),
+    onPrimaryFixed = Color(0xFF041E49), onPrimaryFixedVariant = Color(0xFF0842A0),
+    secondaryFixed = Color(0xFFC2E7FF), secondaryFixedDim = Color(0xFF7FCFFF),
+    onSecondaryFixed = Color(0xFF001D35), onSecondaryFixedVariant = Color(0xFF004A77),
+    tertiaryFixed = Color(0xFFC4EED0), tertiaryFixedDim = Color(0xFF6DD58C),
+    onTertiaryFixed = Color(0xFF072711), onTertiaryFixedVariant = Color(0xFF0F5223),
 )
 
 val KairoLightColors = lightColorScheme(
-    primary = Color(0xFF1A6585), onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFC2E8FF), onPrimaryContainer = Color(0xFF004D68),
-    inversePrimary = Color(0xFF8ECFF2),
-    secondary = Color(0xFF4E616D), onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFD1E5F3), onSecondaryContainer = Color(0xFF364954),
-    tertiary = Color(0xFF605A7D), onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFE5DEFF), onTertiaryContainer = Color(0xFF484264),
-    error = Color(0xFFBA1A1A), onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6), onErrorContainer = Color(0xFF93000A),
-    outline = Color(0xFF71787D), outlineVariant = Color(0xFFC0C7CD),
-    onBackground = Color(0xFF171C1F),
-    onSurface = Color(0xFF171C1F), onSurfaceVariant = Color(0xFF41484D),
-    surfaceTint = Color(0xFF1A6585),
+    primary = Color(0xFF0B57D0), onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFD3E3FD), onPrimaryContainer = Color(0xFF041E49),
+    inversePrimary = Color(0xFFA8C7FA),
+    secondary = Color(0xFF00639B), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFC2E7FF), onSecondaryContainer = Color(0xFF001D35),
+    tertiary = Color(0xFF146C2E), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFC4EED0), onTertiaryContainer = Color(0xFF072711),
+    error = Color(0xFFB31B25), onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFD7383B), onErrorContainer = Color(0xFFFFFFFF),
+    outline = Color(0xFF747775), outlineVariant = Color(0xFFC6C6C6),
+    onBackground = Color(0xFF1B1B1B),
+    onSurface = Color(0xFF1B1B1B), onSurfaceVariant = Color(0xFF474747),
+    surfaceTint = Color(0xFF0B57D0),
     scrim = Color(0xFF000000),
     // Neutral grays
-    background = Color(0xFFEEEEEE),              // T94 · bg
-    surface = Color(0xFFF9F9F9),                 // T98
-    surfaceDim = Color(0xFFDADADA),              // T87
-    surfaceBright = Color(0xFFF9F9F9),           // T98
-    surfaceContainerLowest = Color(0xFFFFFFFF),  // T100 · item, navBg
-    surfaceContainerLow = Color(0xFFF3F3F3),     // T96 · itemHigh
-    surfaceContainer = Color(0xFFEEEEEE),        // T94
-    surfaceContainerHigh = Color(0xFFE8E8E8),    // T92
-    surfaceContainerHighest = Color(0xFFE2E2E2), // T90
-    surfaceVariant = Color(0xFFE2E2E2),          // T90
-    inverseSurface = Color(0xFF303030),          // T20
-    inverseOnSurface = Color(0xFFF1F1F1),        // T95
-    // Fixed roles (same in light and dark)
-    primaryFixed = Color(0xFFC2E8FF), primaryFixedDim = Color(0xFF8ECFF2),
-    onPrimaryFixed = Color(0xFF001E2C), onPrimaryFixedVariant = Color(0xFF004D68),
-    secondaryFixed = Color(0xFFD1E5F3), secondaryFixedDim = Color(0xFFB5C9D7),
-    onSecondaryFixed = Color(0xFF091E28), onSecondaryFixedVariant = Color(0xFF364954),
-    tertiaryFixed = Color(0xFFE5DEFF), tertiaryFixedDim = Color(0xFFC9C1EA),
-    onTertiaryFixed = Color(0xFF1C1736), onTertiaryFixedVariant = Color(0xFF484264),
+    background = Color(0xFFF1F1F1),              // bg
+    surface = Color(0xFFF9F9F9),
+    surfaceDim = Color(0xFFDADADA),
+    surfaceBright = Color(0xFFF9F9F9),
+    surfaceContainerLowest = Color(0xFFFFFFFF),  // item, nav
+    surfaceContainerLow = Color(0xFFF3F3F3),
+    surfaceContainer = Color(0xFFEEEEEE),
+    surfaceContainerHigh = Color(0xFFE8E8E8),
+    surfaceContainerHighest = Color(0xFFE2E2E2), // chips
+    surfaceVariant = Color(0xFFE2E2E2),
+    inverseSurface = Color(0xFF303030),
+    inverseOnSurface = Color(0xFFF1F1F1),
+    primaryFixed = Color(0xFFD3E3FD), primaryFixedDim = Color(0xFFA8C7FA),
+    onPrimaryFixed = Color(0xFF041E49), onPrimaryFixedVariant = Color(0xFF0842A0),
+    secondaryFixed = Color(0xFFC2E7FF), secondaryFixedDim = Color(0xFF7FCFFF),
+    onSecondaryFixed = Color(0xFF001D35), onSecondaryFixedVariant = Color(0xFF004A77),
+    tertiaryFixed = Color(0xFFC4EED0), tertiaryFixedDim = Color(0xFF6DD58C),
+    onTertiaryFixed = Color(0xFF072711), onTertiaryFixedVariant = Color(0xFF0F5223),
 )

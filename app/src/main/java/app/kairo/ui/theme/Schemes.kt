@@ -16,6 +16,9 @@ fun kairoScheme(context: Context, s: AppSettings, dark: Boolean): ColorScheme {
     val base = if (dark) KairoDarkColors else KairoLightColors
     val accents: ColorScheme = if (s.wallpaperColor) {
         if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else if (s.seed == Seed.Default) {
+        // v2 default: the Google blue/green palette from the canvas (one contrast level for now).
+        base
     } else {
         val v = SeedSchemes.data.getValue(s.seed.name)[if (dark) 1 else 0][s.contrast.ordinal]
         val r = SeedSchemes.ROLES.mapIndexed { i, name -> name to Color(v[i]) }.toMap()

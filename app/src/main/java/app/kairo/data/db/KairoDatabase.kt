@@ -14,7 +14,7 @@ import androidx.room.TypeConverters
         app.kairo.focus.FocusSessionEntity::class,
         app.kairo.habits.HabitEntity::class, app.kairo.habits.HabitCheckEntity::class,
     ],
-    version = 8,
+    version = 10,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // v2 adds the Money tables
@@ -24,6 +24,8 @@ import androidx.room.TypeConverters
         AutoMigration(from = 5, to = 6), // v6 makes tasks.listId optional
         AutoMigration(from = 6, to = 7), // v7 adds tasks.repeat
         AutoMigration(from = 7, to = 8), // v8 adds habits + habit_checks
+        AutoMigration(from = 8, to = 9), // v9 (Kairo v2) adds habit goals, schedules, pause, icon, shape and day values
+        AutoMigration(from = 9, to = 10), // v10 adds transactions.time and transactions.description
     ],
 )
 @TypeConverters(Converters::class)

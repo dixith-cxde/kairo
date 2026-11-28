@@ -29,6 +29,7 @@ interface TaskDao {
     @Query("SELECT id FROM tasks WHERE done = 0 AND title = :title AND listId IS :listId AND repeat = :repeat AND due IS :due LIMIT 1")
     suspend fun findOpen(title: String, listId: Long?, repeat: String, due: java.time.LocalDate?): Long?
     @Query("DELETE FROM tasks WHERE id IN (:ids)") suspend fun deleteAll(ids: List<Long>)
+    @Query("SELECT id FROM tasks WHERE listId = :listId") suspend fun idsInList(listId: Long): List<Long>
     @Query("UPDATE tasks SET archived = :archived WHERE id IN (:ids)") suspend fun setArchived(ids: List<Long>, archived: Boolean)
     @Query("UPDATE tasks SET listId = :listId WHERE id IN (:ids)") suspend fun move(ids: List<Long>, listId: Long?)
     @Query("UPDATE tasks SET due = :due, time = :time, reminder = :reminder WHERE id IN (:ids)")

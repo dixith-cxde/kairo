@@ -1,0 +1,589 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "AddDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Quick Add · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 1224
+    },
+    "AddLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Quick Add · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 1224
+    },
+    "ArchivedDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Archived · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 2448
+    },
+    "ArchivedLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Archived · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 2448
+    },
+    "Clock24Dark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "24-hour clock · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 4896
+    },
+    "Clock24Light.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "24-hour clock · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 4896
+    },
+    "DateDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Date sheet · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 1224
+    },
+    "DateLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Date sheet · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 1224
+    },
+    "DrawerDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Lists drawer · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 3672
+    },
+    "DrawerLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Lists drawer · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 3672
+    },
+    "EditListsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit lists · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 3672
+    },
+    "EditListsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit lists · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 3672
+    },
+    "EmptyDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Empty states · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 2448
+    },
+    "EmptyLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Empty states · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 2448
+    },
+    "HintsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Onboarding hints · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 4896
+    },
+    "HintsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Onboarding hints · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 4896
+    },
+    "Light.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Shell · Light",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Shell · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "MenuDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Row ⋮ menu · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 1224
+    },
+    "MenuLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Row ⋮ menu · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 1224
+    },
+    "NewListDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New list · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 3672
+    },
+    "NewListLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New list · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 3672
+    },
+    "NotifyDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reminder · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 2448
+    },
+    "NotifyLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reminder · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 2448
+    },
+    "OverdueDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reschedule overdue · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 1224
+    },
+    "OverdueLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reschedule overdue · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 1224
+    },
+    "PermDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Notifications off · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 3672
+    },
+    "PermLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Notifications off · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 3672
+    },
+    "RepeatDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Repeat sheet · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "RepeatLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Repeat sheet · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "SearchDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Search · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 2448
+    },
+    "SearchLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Search · Light",
+      "w": 390,
+      "x": 470,
+      "y": 2448
+    },
+    "SelectDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Multi-select · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 1224
+    },
+    "SelectLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Multi-select · Light",
+      "w": 390,
+      "x": 470,
+      "y": 1224
+    },
+    "TaskDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Task page · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "TaskLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Task page · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "TrashDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Trash · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 2448
+    },
+    "TrashLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Trash · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 2448
+    },
+    "VoiceDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Voice add · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 3672
+    },
+    "VoiceLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Voice add · Light",
+      "w": 390,
+      "x": 470,
+      "y": 3672
+    },
+    "Widgets.dc.html": {
+      "h": 1124,
+      "is_interactive": true,
+      "title": "Widgets · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 4896
+    },
+    "WidgetsLight.dc.html": {
+      "h": 1124,
+      "is_interactive": true,
+      "title": "Widgets · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 4896
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-24T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "shellTitle",
+    "taskTitle",
+    "repeatTitle",
+    "selectTitle",
+    "menuTitle",
+    "dateTitle",
+    "overdueTitle",
+    "addTitle",
+    "searchTitle",
+    "emptyTitle",
+    "archivedTitle",
+    "trashTitle",
+    "notifyTitle",
+    "voiceTitle",
+    "permTitle",
+    "drawerTitle",
+    "newListTitle",
+    "editListsTitle",
+    "hintsTitle",
+    "clockTitle",
+    "widgetsTitle"
+  ],
+  "notes": {
+    "addTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Quick Add",
+      "w": 240,
+      "x": 3760,
+      "y": 964
+    },
+    "archivedTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Archived",
+      "w": 240,
+      "x": 1880,
+      "y": 2188
+    },
+    "clockTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Time format: 24-hour",
+      "w": 240,
+      "x": 1880,
+      "y": 4636
+    },
+    "dateTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Date sheet and reschedule",
+      "w": 240,
+      "x": 1880,
+      "y": 964
+    },
+    "drawerTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Lists: navigation drawer",
+      "w": 240,
+      "x": 1880,
+      "y": 3412
+    },
+    "editListsTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Edit lists (drag to reorder)",
+      "w": 240,
+      "x": 3760,
+      "y": 3412
+    },
+    "emptyTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Empty states",
+      "w": 240,
+      "x": 940,
+      "y": 2188
+    },
+    "hintsTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Onboarding hints",
+      "w": 240,
+      "x": 940,
+      "y": 4636
+    },
+    "menuTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Row ⋮ quick actions",
+      "w": 240,
+      "x": 940,
+      "y": 964
+    },
+    "newListTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "New list",
+      "w": 240,
+      "x": 2820,
+      "y": 3412
+    },
+    "notifyTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Reminder notification",
+      "w": 240,
+      "x": 3760,
+      "y": 2188
+    },
+    "overdueTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Reschedule all overdue",
+      "w": 240,
+      "x": 2820,
+      "y": 964
+    },
+    "permTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Notifications off",
+      "w": 240,
+      "x": 940,
+      "y": 3412
+    },
+    "repeatTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Repeat and birthdays",
+      "w": 240,
+      "x": 1880,
+      "y": -260
+    },
+    "searchTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Search results",
+      "w": 240,
+      "x": 0,
+      "y": 2188
+    },
+    "selectTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Multi-select (long-press)",
+      "w": 240,
+      "x": 0,
+      "y": 964
+    },
+    "shellTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "App shell: nav and create",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "taskTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Task page, swipe and undo",
+      "w": 240,
+      "x": 940,
+      "y": -260
+    },
+    "trashTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Trash (30 days)",
+      "w": 240,
+      "x": 2820,
+      "y": 2188
+    },
+    "voiceTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Voice add",
+      "w": 240,
+      "x": 0,
+      "y": 3412
+    },
+    "widgetsTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Home-screen widgets",
+      "w": 240,
+      "x": 2820,
+      "y": 4636
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Light.dc.html",
+    "TaskDark.dc.html",
+    "TaskLight.dc.html",
+    "RepeatDark.dc.html",
+    "RepeatLight.dc.html",
+    "SelectDark.dc.html",
+    "SelectLight.dc.html",
+    "MenuDark.dc.html",
+    "MenuLight.dc.html",
+    "DateDark.dc.html",
+    "DateLight.dc.html",
+    "OverdueDark.dc.html",
+    "OverdueLight.dc.html",
+    "AddDark.dc.html",
+    "AddLight.dc.html",
+    "SearchDark.dc.html",
+    "SearchLight.dc.html",
+    "EmptyDark.dc.html",
+    "EmptyLight.dc.html",
+    "ArchivedDark.dc.html",
+    "ArchivedLight.dc.html",
+    "TrashDark.dc.html",
+    "TrashLight.dc.html",
+    "NotifyDark.dc.html",
+    "NotifyLight.dc.html",
+    "VoiceDark.dc.html",
+    "VoiceLight.dc.html",
+    "PermDark.dc.html",
+    "PermLight.dc.html",
+    "DrawerDark.dc.html",
+    "DrawerLight.dc.html",
+    "NewListDark.dc.html",
+    "NewListLight.dc.html",
+    "EditListsDark.dc.html",
+    "EditListsLight.dc.html",
+    "HintsDark.dc.html",
+    "HintsLight.dc.html",
+    "Clock24Dark.dc.html",
+    "Clock24Light.dc.html",
+    "Widgets.dc.html",
+    "WidgetsLight.dc.html"
+  ],
+  "pages": [],
+  "title": "Kairo v2 Design"
+}

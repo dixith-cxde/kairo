@@ -4,9 +4,9 @@ These are the working rules for Claude (or anyone) working on Kairo. They come f
 
 ## 1. Where we are
 
-- **Build phase (v1).** The owner approved the design and started building on 2026-11-20. Step guides live in `docs/build/`; the current step is the lowest-numbered one not marked done. Steps 1–15 are done and installed on the owner's phone (2026-11-21), plus Focus (phase 2, pulled forward). Step 16 (polish) is next.
+- **v2 build in progress (since 2026-11-28).** The v2 design is on the "Kairo v2 Design" canvas (https://claude.ai/artifact/XuXAdkKY8P3N7g4Ps5GiHa); the owner started building it screen by screen. Start from `research/build-handoff.md` (what's built, rules, what's next); design notes are in `research/redesign-handoff.md`. No commits until the owner says so. The old v1 build steps in `docs/build/` are superseded.
 - The Android project lives in this `kairo/` folder (Gradle files next to `docs/`).
-- The source of truth for the look is the canvas: https://claude.ai/artifact/RthtmHKkEsUMm2WUMRUE49. These docs are the source of truth for the *why* and the rules.
+- The source of truth for the look is the v2 canvas above (the v1 canvas `RthtmHKkEsUMm2WUMRUE49` was deleted). These docs are the source of truth for the *why* and the rules.
 - Keep all Kairo docs inside this `kairo/` folder.
 
 ## 2. The owner
@@ -27,10 +27,10 @@ These are the working rules for Claude (or anyone) working on Kairo. They come f
 ## 4. Design rules that must not drift
 
 1. **Dark theme is the default.** Light theme is fully designed too — every screen ships in both.
-2. **Default palette = Stash's**: SchemeTonalSpot (2021 spec) from seed `#79D0FD`. Users can choose wallpaper (dynamic) color or one of six seeds.
+2. **Default palette = Google blue/green** (owner, 2026-11-28): primary and secondary are Google blue (`#0B57D0` light / `#A8C7FA` dark), tertiary is Google green (`#146C2E` / `#6DD58C`), from the owner's reference image. Exact role values are in the canvas tokens and the handoff. Users can choose wallpaper (dynamic) color or other seeds.
 3. **Backgrounds are always neutral gray** (chroma 0), whatever the seed or wallpaper. Screen = gray, grouped containers = white (light) / dark gray (dark), like Android 16 Settings. Only accents take color.
 4. **The create (+) button is solid primary with a bold plus.** Never transparent, never tonal.
-5. **Floating nav copied from Stash** (`stash/src/ui/FloatingNavBar.tsx`): a floating, curved pill nav joined to the FAB as a connected group, 16dp from the sides, 20dp from the bottom. This is a deliberate departure from the docked M3 nav bar.
+5. **Floating nav pill + create button**: a grey pill sized to its tabs (Tasks · Habits · Calendar · Finance · Focus) and the + sit together, centred, 8dp apart, 40dp from the bottom. All tabs are icons only; the selected one sits on a solid primary pill (owner, 2026-11-28: the label crowded the edges on a 360dp phone). A deliberate departure from the docked M3 nav bar.
 6. **Never use the Puffy, Puffy Diamond or Heart shapes.** (Carried over from Stash.)
 7. **Shapes carry meaning, not decoration.** Each list owns a shape; selection morphs shape; hero moments use shape. Plain content rows stay rectangles with the segmented-list corners.
 8. **Tabular digits for every number** (amounts, times, counts). Google Clock's digits jittered without them.

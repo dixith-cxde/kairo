@@ -24,6 +24,10 @@ data class AppSettings(
     val blockScreenshots: Boolean = false,   // FLAG_SECURE: no screenshots, recordings or recents preview
     val onboarded: Boolean = false,          // welcome pages seen
     val tourDone: Boolean = false,           // spotlight tour seen
+    /** Calendar tab: what the calendars drawer hides ("tasks", "list:<id>", "phone:<calendarId>"). */
+    val calHidden: Set<String> = emptySet(),
+    /** Finance: account ids left out of the total (the tick on each account tile). */
+    val finExcluded: Set<String> = emptySet(),
 )
 
 private val Context.store by preferencesDataStore("settings")
@@ -39,6 +43,8 @@ class SettingsStore(private val context: Context) {
     private val secure = booleanPreferencesKey("blockScreenshots")
     private val onboardedKey = booleanPreferencesKey("onboarded")
     private val tourKey = booleanPreferencesKey("tourDone")
+    private val calHiddenKey = androidx.datastore.preferences.core.stringSetPreferencesKey("calHidden")
+    private val finExKey = androidx.datastore.preferences.core.stringSetPreferencesKey("finExcluded")
 
     val settings: Flow<AppSettings> = context.store.data.map { p: Preferences ->
         AppSettings(
@@ -51,6 +57,8 @@ class SettingsStore(private val context: Context) {
             blockScreenshots = p[secure] ?: false,
             onboarded = p[onboardedKey] ?: false,
             tourDone = p[tourKey] ?: false,
+            calHidden = p[calHiddenKey] ?: emptySet(),
+            finExcluded = p[finExKey] ?: emptySet(),
         )
     }
 
@@ -64,4 +72,14 @@ class SettingsStore(private val context: Context) {
     suspend fun setBlockScreenshots(v: Boolean) = context.store.edit { it[secure] = v }
     suspend fun setOnboarded(v: Boolean) = context.store.edit { it[onboardedKey] = v }
     suspend fun setTourDone(v: Boolean) = context.store.edit { it[tourKey] = v }
+    /** Counts one account in the Finance total, or leaves it out. */
+    suspend fun setCounted(accountId: Long, counted: Boolean) = context.store.edit {
+        val now = it[finExKey] ?: emptySet()
+        it[finExKey] = if (counted) now - accountId.toString() else now + accountId.toString()
+    }
+    /** Shows or hides one calendar or list on the Calendar tab. */
+    suspend fun setCalShown(key: String, shown: Boolean) = context.store.edit {
+        val now = it[calHiddenKey] ?: emptySet()
+        it[calHiddenKey] = if (shown) now - key else now + key
+    }
 }

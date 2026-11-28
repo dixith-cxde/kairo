@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kairo Widgets, dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;display=block">
+<style>
+body{margin:0}
+.k.dark{--primary:#A8C7FA;--on-primary:#062E6F;--primary-container:#0842A0;--on-primary-container:#D3E3FD;--secondary:#7FCFFF;--secondary-container:#004A77;--on-secondary-container:#C2E7FF;--tertiary:#6DD58C;--tertiary-container:#0F5223;--on-tertiary-container:#C4EED0;--error:#FF9F99;--error-container:#D7383B;--on-error-container:#FFFFFF;--inverse-surface:#E2E2E2;--inverse-on-surface:#1B1B1B;--inverse-primary:#0B57D0;--on-surface:#FFFFFF;--on-surface-variant:#C6C6C6;--outline-variant:#474747;--bg:#0E0E0E;--nav-bg:#2A2A2A;--chip:#2A2A2A;--search-bg:#262626;--item:#1F1F1F;--item-press:#2A2A2A}
+.k.light{--primary:#0B57D0;--on-primary:#FFFFFF;--primary-container:#D3E3FD;--on-primary-container:#041E49;--secondary:#00639B;--secondary-container:#C2E7FF;--on-secondary-container:#001D35;--tertiary:#146C2E;--tertiary-container:#C4EED0;--on-tertiary-container:#072711;--error:#B31B25;--error-container:#D7383B;--on-error-container:#FFFFFF;--inverse-surface:#303030;--inverse-on-surface:#F1F1F1;--inverse-primary:#A8C7FA;--on-surface:#1B1B1B;--on-surface-variant:#474747;--outline-variant:#C6C6C6;--bg:#F1F1F1;--nav-bg:#FFFFFF;--chip:#E2E2E2;--search-bg:#E2E2E2;--item:#FFFFFF;--item-press:#E8E8E8}
+.k{--fs:358ms linear(0,0.044,0.153,0.298,0.454,0.607,0.744,0.858,0.949,1.014,1.058,1.084,1.094,1.093,1.085,1.072,1.058,1.043,1.029,1.018,1.008,1.001,0.996,0.993,0.991,0.991,0.992,0.993,0.994,0.995,0.997,0.998,1);--ds:434ms linear(0,0.03,0.105,0.205,0.315,0.426,0.532,0.627,0.711,0.782,0.841,0.889,0.926,0.955,0.976,0.992,1.002,1.009,1.013,1.015,1.015,1.015,1.013,1.012,1.01,1.008,1.007,1.005,1.004,1.003,1.002,1.002,1);--fe:148ms linear(0,0.034,0.112,0.211,0.316,0.417,0.51,0.593,0.665,0.726,0.777,0.82,0.856,0.884,0.908,0.927,0.942,0.954,0.964,0.972,0.978,0.982,0.986,0.989,0.992,0.993,0.995,0.996,0.997,0.998,0.998,0.999,1);--de:230ms linear(0,0.034,0.114,0.214,0.319,0.421,0.514,0.597,0.669,0.73,0.781,0.824,0.859,0.887,0.91,0.929,0.944,0.956,0.965,0.973,0.979,0.983,0.987,0.99,0.992,0.994,0.995,0.996,0.997,0.998,0.998,0.999,1)}
+.k button{font:inherit;-webkit-tap-highlight-color:transparent}
+.k button:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Home-screen grid: 4 columns, 92dp rows, 12dp gaps. Widget corners 28dp (launcher-set system_app_widget_background_radius; 28dp is the upper bound) */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:92px;gap:12px}
+.w{background:var(--item);border-radius:28px;box-sizing:border-box;position:relative;overflow:hidden;animation:fadeUp var(--ds) both;color:var(--on-surface)}
+.c4{grid-column:span 4}.c2{grid-column:span 2}.c1{grid-column:span 1}.r2{grid-row:span 2}
+.ib{width:48px;height:48px;flex:none;border:0;padding:0;background:none;display:grid;place-items:center;cursor:pointer;color:var(--on-surface-variant)}
+.ib .face{width:40px;height:40px;display:grid;place-items:center;border-radius:20px;background:var(--chip);transition:border-radius var(--fs)}
+.ib:active .face{border-radius:8px}
+/* Quick add 4x1: Pill */
+.qa{display:flex;align-items:center;gap:0;padding:0 12px 0 18px;border-radius:46px}
+.qa .logo{width:40px;height:40px;flex:none;position:relative;display:grid;place-items:center}
+.qa .logo svg{position:absolute;inset:0;width:40px;height:40px}
+.qa .logo .ms{position:relative;font-size:22px;color:var(--on-primary);font-variation-settings:"FILL" 0,"wght" 700,"GRAD" 0,"opsz" 24}
+.qa .hint{flex:1;min-width:0;height:56px;border:0;border-radius:28px;background:var(--search-bg);color:var(--on-surface-variant);text-align:left;padding:0 20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px;letter-spacing:.15px;cursor:pointer;margin-right:4px;transition:border-radius var(--fs)}
+.qa .hint:active{border-radius:12px}
+/* Today 4x2 */
+.today{padding:14px 12px 12px 16px;display:flex;flex-direction:column;gap:8px}
+.thead{display:flex;align-items:center;gap:8px}
+.thead .tt{font-size:22px;line-height:28px;font-weight:500}
+.thead .tn{flex:1;font-size:14px;line-height:20px;color:var(--on-surface-variant);font-variant-numeric:tabular-nums}
+.addb{width:48px;height:48px;border:0;border-radius:16px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;cursor:pointer;transition:border-radius var(--fs)}
+.addb .ms{font-size:28px;font-variation-settings:"FILL" 0,"wght" 700,"GRAD" 0,"opsz" 24}
+.addb:active{border-radius:24px}
+.tlist{display:flex;flex-direction:column;gap:2px}
+.trow{height:38px;display:flex;align-items:center;gap:10px;background:var(--chip);border-radius:6px;padding:0 14px 0 6px;transition:opacity var(--fe)}
+.trow.first{border-radius:16px 16px 6px 6px}.trow.last{border-radius:6px 6px 16px 16px}
+.chk{width:32px;height:32px;flex:none;border:0;padding:0;background:none;display:grid;place-items:center;cursor:pointer}
+.chk i{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--ring);display:grid;place-items:center;transition:border-radius var(--fs),background-color var(--fe),box-shadow var(--fe)}
+.chk .ms{font-size:16px;color:var(--on-primary);opacity:0;font-variation-settings:"FILL" 0,"wght" 700,"GRAD" 0,"opsz" 20}
+.trow.done .chk i{background:var(--primary);box-shadow:none;border-radius:6px}
+.trow.done .chk .ms{opacity:1}
+.trow .tx{flex:1;min-width:0;font-size:14px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow.done .tx{text-decoration:line-through;color:var(--on-surface-variant)}
+.trow .tm{font-size:12px;line-height:16px;color:var(--on-surface-variant);font-variant-numeric:tabular-nums}
+/* Shaped widgets: the widget IS an official MaterialShapes outline (SemiCircle, Arch, Ghostish, Cookie-12, Sunny), stretched to its bounds like toShape() */
+.w.shp{background:none;overflow:visible}
+.wbg{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;overflow:visible}
+.wbg.spin{animation:spin 40s linear infinite}
+.shp > *:not(.wbg){position:relative;z-index:1}
+/* Progress 2x2: Cookie-12 */
+.prog{display:grid;place-items:center;color:var(--on-primary-container)}
+.ringwrap{width:120px;height:120px;position:relative;display:grid;place-items:center}
+.ringwrap svg{position:absolute;inset:0;width:120px;height:120px}
+.ring path{transition:d var(--ds)}
+.cnt{position:relative;display:flex;flex-direction:column;align-items:center;font-size:32px;line-height:36px;font-weight:700;font-variant-numeric:tabular-nums}
+.cnt small{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.4px;opacity:.8}
+/* Timer 2x2: Ghostish (round top, scalloped hem) */
+.timer{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:16px 18px 30px;color:var(--on-tertiary-container)}
+.timer .ft{font-size:36px;line-height:44px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:8px}
+.timer .task{max-width:100%;font-size:12px;line-height:16px;font-weight:600;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbtns{display:flex;gap:4px;width:100%;margin-top:8px}
+.tb{height:40px;border:0;border-radius:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-radius var(--fs)}
+.tb .ms{font-size:22px;font-variation-settings:"FILL" 1,"wght" 500,"GRAD" 0,"opsz" 24}
+.tb.stop{width:48px;flex:none;background:color-mix(in srgb,var(--on-tertiary-container) 14%,transparent);color:var(--on-tertiary-container)}
+.tb.go{flex:1;background:var(--primary);color:var(--on-primary)}
+.tb:active{border-radius:8px}
+/* Next up 2x1: plain widget, 28dp corners (owner: SemiCircle was a bad fit) */
+.next{display:flex;flex-direction:column;justify-content:center;padding:0 18px}
+.next .when{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.5px;color:var(--primary);font-variant-numeric:tabular-nums}
+.next .nt{max-width:100%;font-size:14px;line-height:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.next .nm{font-size:12px;line-height:16px;color:var(--on-surface-variant);display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+.ldot{width:8px;height:8px;border-radius:50%;flex:none}
+/* Streak 1x1: Sunny */
+.streak{display:grid;place-items:center}
+.streak .sh{width:80px;height:80px;position:relative;display:grid;place-items:center}
+.streak svg{position:absolute;inset:0;width:80px;height:80px;animation:spin 40s linear infinite}
+.streak .sn{position:relative;display:flex;flex-direction:column;align-items:center;color:var(--on-primary-container);font-variant-numeric:tabular-nums}
+.streak .sn b{font-size:24px;line-height:26px;font-weight:700}
+.streak .sn span{font-size:10px;line-height:12px;font-weight:600;letter-spacing:.4px}
+/* Money 2x2: Arch (round top, flat base) */
+.money{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 16px 14px}
+.money .ml{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.5px;color:var(--on-surface-variant)}
+.money .mv{font-size:26px;line-height:32px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.money .mbar{width:100%;height:12px;margin-top:8px;overflow:visible}
+.money .mb{font-size:12px;line-height:16px;color:var(--on-surface-variant);margin-top:4px;font-variant-numeric:tabular-nums}
+.money .eb{margin-top:auto;width:100%;height:40px;border:0;border-radius:20px;background:var(--chip);color:var(--on-surface);font-size:14px;font-weight:600;letter-spacing:.1px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:border-radius var(--fs)}
+.money .eb .ms{font-size:20px;color:var(--primary)}
+.money .eb:active{border-radius:8px}
+/* Quick actions 4x1 (owner: pill was too curvy): plain 28dp widget, connected button group with 20dp outer / 8dp inner corners */
+.qact{padding:8px;display:flex;gap:2px}
+.qb{flex:1;border:0;border-radius:8px;background:var(--chip);color:var(--on-surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.3px;cursor:pointer;transition:border-radius var(--fs),flex-grow var(--fs)}
+.qb:first-child{border-radius:20px 8px 8px 20px}.qb:last-child{border-radius:8px 20px 20px 8px}
+.qb:active{flex-grow:1.25;border-radius:12px}
+.qb .ms{font-size:24px}
+.qb.main{background:var(--primary);color:var(--on-primary)}
+.qb.main .ms{font-variation-settings:"FILL" 0,"wght" 700,"GRAD" 0,"opsz" 24}
+/* Stats 4x2 */
+.stats{padding:16px 16px 14px 18px;display:flex;gap:10px;overflow:hidden}
+.sl{flex:1;min-width:0;display:flex;flex-direction:column}
+.sl .ml{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.5px;color:var(--on-surface-variant)}
+.sl .big{font-size:32px;line-height:40px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.sl .big small{font-size:16px;font-weight:500;color:var(--on-surface-variant)}
+.sl .up{display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;font-weight:600;color:var(--primary);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:0}
+.sl .up .ms{font-size:18px}
+.chips{display:flex;flex-direction:column;gap:4px;margin-top:auto}
+.chip{display:flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 8px;border-radius:14px;background:var(--chip);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;align-self:flex-start;white-space:nowrap;max-width:100%;box-sizing:border-box}
+.chip .ms{font-size:16px;color:var(--primary);font-variation-settings:"FILL" 1,"wght" 500,"GRAD" 0,"opsz" 20}
+.bars{width:150px;flex:none;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));column-gap:6px;align-items:end;padding-bottom:20px;position:relative}
+.bar{width:100%;border-radius:8px;background:color-mix(in srgb,var(--primary) 30%,transparent);position:relative;animation:grow var(--ds) both;transform-origin:bottom}
+.bar.now{background:var(--primary)}
+.bar span{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:11px;line-height:16px;font-weight:600;color:var(--on-surface-variant)}
+@keyframes grow{from{transform:scaleY(0)}to{transform:none}}
+.ms{font-family:"Material Symbols Rounded";font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;user-select:none}
+</style>
+</helmet>
+<div class="k {{themeClass}}" style="width: 390px; height: 1124px; box-sizing: border-box; padding: 48px 16px; background: var(--bg); color: var(--on-surface); font-family: 'Google Sans Flex', 'Roboto Flex', system-ui, sans-serif; font-variant-numeric: tabular-nums">
+  <div class="grid">
+
+    <section class="w c4 qa" aria-label="Kairo quick add" style="animation-delay: 0ms">
+      <button class="hint" aria-label="Add a task">Add a task</button>
+      <button class="ib" aria-label="Add by voice"><span class="face"><span class="ms">mic</span></span></button>
+      <button class="ib" aria-label="Add expense"><span class="face"><span class="ms">receipt_long</span></span></button>
+      <button class="ib" aria-label="Start focus"><span class="face"><span class="ms">timer</span></span></button>
+    </section>
+
+    <section class="w c4 r2 today" aria-label="Today's tasks" style="animation-delay: 40ms">
+      <div class="thead">
+        <span class="tt">Today</span>
+        <span class="tn">{{doneN}} of {{totalN}} done</span>
+        <button class="addb" aria-label="Add a task"><span class="ms">add</span></button>
+      </div>
+      <div class="tlist" role="list">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+          <div class="trow {{r.cls}}" role="listitem" style="--ring: {{r.ring}}">
+            <button class="chk" role="checkbox" aria-checked="{{r.checked}}" aria-label="{{r.aria}}" onClick="{{r.toggle}}"><i><span class="ms">check</span></i></button>
+            <span class="tx">{{r.title}}</span>
+            <span class="tm">{{r.time}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section class="w c2 r2 prog shp" aria-label="{{progAria}}" style="animation-delay: 80ms">
+      <svg class="wbg spin" viewBox="0 0 100 100" aria-hidden="true" style="top: 11px; height: 173px"><path style="fill: var(--primary-container)" d="{{cookie12}}"></path></svg>
+      <div class="ringwrap" aria-hidden="true">
+        <svg class="ring" viewBox="0 0 120 120">
+          <path d="{{trackPath}}" style="fill: none; stroke: var(--on-primary-container); stroke-opacity: 0.24; stroke-width: 8; stroke-linecap: round"></path>
+          <path d="{{wavePath}}" style="fill: none; stroke: var(--on-primary-container); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round"></path>
+        </svg>
+        <span class="cnt">{{leftN}}<small>left</small></span>
+      </div>
+    </section>
+
+    <section class="{{timerCls}}" aria-label="Focus timer" style="animation-delay: 120ms">
+      <svg class="wbg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path style="fill: var(--tertiary-container)" d="{{ghost}}"></path></svg>
+      <span class="ft" role="timer">{{timeLeft}}</span>
+      <span class="task">{{timerTask}}</span>
+      <div class="tbtns">
+        <button class="tb stop" aria-label="Stop focus" onClick="{{stop}}"><span class="ms">stop</span></button>
+        <button class="tb go" aria-label="{{goAria}}" onClick="{{toggle}}"><span class="ms">{{goIcon}}</span></button>
+      </div>
+    </section>
+
+    <section class="w c2 r2 money shp" aria-label="Money this month" style="animation-delay: 160ms">
+      <svg class="wbg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path style="fill: var(--item)" d="{{arch}}"></path></svg>
+      <span class="ml">Spent in {{month}}</span>
+      <span class="mv">₹18,450</span>
+      <svg class="mbar" viewBox="0 0 141 12" preserveAspectRatio="none" aria-hidden="true">
+        <path d="{{moneyWave}}" style="fill: none; stroke: var(--primary); stroke-width: 4; stroke-linecap: round"></path>
+        <path d="M95 6 L139 6" style="fill: none; stroke: var(--primary); stroke-opacity: 0.24; stroke-width: 4; stroke-linecap: round"></path>
+      </svg>
+      <span class="mb">62% of ₹30,000</span>
+      <button class="eb"><span class="ms">add</span>Expense</button>
+    </section>
+
+    <section class="w c2 next" aria-label="Next up" style="animation-delay: 200ms">
+      <span class="when">{{nextWhen}}</span>
+      <span class="nt">{{nextTitle}}</span>
+      <span class="nm"><span class="ldot" style="background: {{nextColor}}"></span>{{nextMeta}}</span>
+    </section>
+
+    <section class="w c1 streak shp" aria-label="12-day streak" style="animation-delay: 240ms">
+      <div class="sh"><svg viewBox="0 0 100 100" aria-hidden="true"><path style="fill: var(--primary-container)" d="{{sunny}}"></path></svg><span class="sn"><b>12</b><span>DAYS</span></span></div>
+    </section>
+
+    <section class="w c4 qact" role="toolbar" aria-label="Quick actions" style="animation-delay: 280ms">
+      <button class="qb main"><span class="ms">add_task</span>Task</button>
+      <button class="qb"><span class="ms">receipt_long</span>Expense</button>
+      <button class="qb"><span class="ms">south_west</span>Income</button>
+      <button class="qb"><span class="ms">timer</span>Focus</button>
+    </section>
+
+    <section class="w c4 r2 stats" aria-label="This week" style="animation-delay: 320ms">
+      <div class="sl">
+        <span class="ml">This week</span>
+        <span class="big">34<small> done</small></span>
+        <span class="up"><span class="ms">trending_up</span>12% vs last week</span>
+        <div class="chips">
+          <span class="chip"><span class="ms">local_fire_department</span>12-day streak</span>
+          <span class="chip"><span class="ms">schedule</span>86% on time</span>
+        </div>
+      </div>
+      <div class="bars" role="img" aria-label="Tasks done each day this week">
+        <sc-for list="{{bars}}" as="b" hint-placeholder-count="7">
+          <div class="{{b.cls}}" style="height: {{b.h}}px; animation-delay: {{b.delay}}"><span>{{b.d}}</span></div>
+        </sc-for>
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"clock":{"editor":"enum","options":["12-hour","24-hour"],"default":"12-hour"},"$preview":{"width":390,"height":1124}}'>
+class Component extends DCLogic {
+  // Official Material 3 Expressive shapes (MaterialShapes), path data copied from the M3 "Shape Set" SVG in the repo root,
+  // scaled into a 0–100 box like RoundedPolygon.normalized(). '...Fill' = scaled to fill the box (a widget's bounds, like toShape()).
+  m3(name) {
+    return ({
+      Cookie9Sided: 'M39.14 4.76C39.68 4.31 39.95 4.09 40.20 3.91C46 -0.47 54 -0.47 59.80 3.91C60.05 4.09 60.32 4.31 60.85 4.76C61.09 4.95 61.22 5.05 61.34 5.14C64.06 7.29 67.41 8.50 70.88 8.61C71.03 8.61 71.19 8.62 71.50 8.62C72.19 8.63 72.54 8.63 72.85 8.65C80.11 9.01 86.24 14.15 87.87 21.22C87.93 21.52 88 21.86 88.13 22.54C88.19 22.85 88.21 23 88.25 23.15C88.96 26.54 90.74 29.62 93.33 31.92C93.44 32.02 93.55 32.13 93.79 32.33C94.32 32.78 94.58 33.01 94.81 33.22C100.14 38.15 101.53 46.02 98.21 52.48C98.07 52.75 97.90 53.05 97.56 53.66C97.41 53.93 97.33 54.07 97.26 54.20C95.62 57.25 95 60.75 95.50 64.18C95.52 64.33 95.54 64.48 95.59 64.79C95.71 65.47 95.76 65.82 95.80 66.12C96.70 73.32 92.70 80.24 86 83.06C85.72 83.18 85.39 83.30 84.74 83.55C84.45 83.66 84.30 83.71 84.16 83.77C80.94 85.05 78.21 87.34 76.38 90.28C76.30 90.41 76.22 90.54 76.06 90.81C75.71 91.41 75.53 91.71 75.36 91.97C71.42 98.06 63.89 100.79 56.94 98.66C56.65 98.57 56.32 98.45 55.66 98.22C55.37 98.12 55.22 98.07 55.08 98.02C51.78 96.94 48.22 96.94 44.92 98.02C44.78 98.07 44.63 98.12 44.34 98.22C43.68 98.45 43.35 98.57 43.05 98.66C36.11 100.79 28.58 98.06 24.64 91.97C24.47 91.71 24.29 91.41 23.93 90.81C23.78 90.54 23.70 90.41 23.62 90.28C21.79 87.34 19.06 85.05 15.84 83.77C15.69 83.71 15.55 83.66 15.26 83.55C14.61 83.30 14.28 83.18 14 83.06C7.30 80.24 3.30 73.32 4.20 66.12C4.23 65.82 4.29 65.47 4.40 64.79C4.45 64.48 4.48 64.33 4.50 64.18C5 60.75 4.38 57.25 2.74 54.20C2.67 54.07 2.59 53.93 2.44 53.66C2.10 53.05 1.93 52.75 1.78 52.48C-1.53 46.02 -0.14 38.15 5.19 33.22C5.42 33.01 5.68 32.78 6.21 32.33C6.44 32.13 6.56 32.02 6.67 31.92C9.26 29.62 11.04 26.54 11.75 23.15C11.78 23 11.81 22.85 11.87 22.54C12 21.86 12.06 21.52 12.13 21.22C13.76 14.15 19.89 9.01 27.15 8.65C27.46 8.63 27.81 8.63 28.50 8.62C28.81 8.62 28.97 8.61 29.12 8.61C32.59 8.50 35.93 7.29 38.66 5.14C38.78 5.05 38.90 4.95 39.14 4.76Z',
+      Cookie12Sided: 'M42.72 3.08C42.89 2.91 42.97 2.83 43.04 2.76C46.95 -0.92 53.05 -0.92 56.96 2.76C57.03 2.83 57.11 2.91 57.28 3.08C57.39 3.18 57.44 3.23 57.48 3.27C59.99 5.66 63.53 6.61 66.89 5.79C66.95 5.78 67.02 5.76 67.16 5.72C67.39 5.66 67.50 5.63 67.60 5.61C72.82 4.38 78.10 7.43 79.64 12.57C79.67 12.66 79.70 12.78 79.77 13C79.81 13.14 79.83 13.21 79.84 13.28C80.82 16.59 83.41 19.18 86.73 20.16C86.79 20.18 86.86 20.19 87 20.23C87.23 20.30 87.34 20.33 87.44 20.36C92.58 21.90 95.62 27.18 94.39 32.40C94.37 32.50 94.34 32.62 94.28 32.84C94.24 32.98 94.23 33.05 94.21 33.12C93.39 36.48 94.34 40.02 96.73 42.52C96.78 42.57 96.83 42.62 96.92 42.72C97.09 42.89 97.17 42.97 97.24 43.04C100.92 46.95 100.92 53.05 97.24 56.96C97.17 57.03 97.09 57.11 96.92 57.28C96.83 57.38 96.78 57.43 96.73 57.48C94.34 59.98 93.39 63.53 94.21 66.89C94.23 66.95 94.24 67.02 94.28 67.16C94.34 67.39 94.37 67.50 94.39 67.60C95.62 72.82 92.58 78.10 87.44 79.64C87.34 79.67 87.23 79.70 87 79.77C86.86 79.81 86.79 79.83 86.73 79.84C83.41 80.82 80.82 83.41 79.84 86.73C79.83 86.79 79.81 86.86 79.77 87C79.70 87.23 79.67 87.34 79.64 87.44C78.10 92.58 72.82 95.62 67.60 94.39C67.50 94.37 67.39 94.34 67.16 94.28C67.02 94.24 66.95 94.23 66.89 94.21C63.53 93.39 59.99 94.34 57.48 96.73C57.44 96.78 57.39 96.83 57.28 96.92C57.11 97.09 57.03 97.17 56.96 97.24C53.05 100.92 46.95 100.92 43.04 97.24C42.97 97.17 42.89 97.09 42.72 96.92C42.62 96.83 42.57 96.78 42.52 96.73C40.02 94.34 36.48 93.39 33.12 94.21C33.05 94.23 32.98 94.24 32.84 94.28C32.62 94.34 32.50 94.37 32.40 94.39C27.18 95.62 21.90 92.58 20.36 87.44C20.33 87.34 20.30 87.23 20.23 87C20.19 86.86 20.18 86.79 20.16 86.73C19.18 83.41 16.59 80.82 13.28 79.84C13.21 79.83 13.14 79.81 13 79.77C12.78 79.70 12.66 79.67 12.57 79.64C7.43 78.10 4.38 72.82 5.61 67.60C5.63 67.50 5.66 67.39 5.72 67.16C5.76 67.02 5.78 66.95 5.79 66.89C6.61 63.53 5.66 59.98 3.27 57.48C3.23 57.43 3.18 57.38 3.08 57.28C2.91 57.11 2.83 57.03 2.76 56.96C-0.92 53.05 -0.92 46.95 2.76 43.04C2.83 42.97 2.91 42.89 3.08 42.72C3.18 42.62 3.23 42.57 3.27 42.52C5.66 40.02 6.61 36.48 5.79 33.12C5.78 33.05 5.76 32.98 5.72 32.84C5.66 32.62 5.63 32.50 5.61 32.40C4.38 27.18 7.43 21.90 12.57 20.36C12.66 20.33 12.78 20.30 13 20.23C13.14 20.19 13.21 20.18 13.28 20.16C16.59 19.18 19.18 16.59 20.16 13.28C20.18 13.21 20.19 13.14 20.23 13C20.30 12.78 20.33 12.66 20.36 12.57C21.90 7.43 27.18 4.38 32.40 5.61C32.50 5.63 32.62 5.66 32.84 5.72C32.98 5.76 33.05 5.78 33.12 5.79C36.48 6.61 40.02 5.66 42.52 3.27C42.57 3.23 42.62 3.18 42.72 3.08Z',
+      Sunny: 'M77.02 12.13C80.13 12.34 81.68 12.45 82.94 13C84.76 13.79 86.21 15.24 87 17.06C87.55 18.32 87.66 19.87 87.87 22.98L88.35 30.08C88.44 31.34 88.48 31.97 88.62 32.57C88.82 33.44 89.16 34.27 89.63 35.02C89.96 35.54 90.38 36.02 91.20 36.97L95.88 42.33C97.93 44.67 98.96 45.85 99.46 47.12C100.18 48.97 100.18 51.03 99.46 52.88C98.96 54.15 97.93 55.33 95.88 57.67L91.20 63.03C90.38 63.98 89.96 64.46 89.63 64.98C89.16 65.73 88.82 66.56 88.62 67.43C88.48 68.03 88.44 68.66 88.35 69.92L87.87 77.02C87.66 80.13 87.55 81.68 87 82.94C86.21 84.76 84.76 86.21 82.94 87C81.68 87.55 80.13 87.66 77.02 87.87L69.92 88.35C68.66 88.44 68.03 88.48 67.43 88.62C66.56 88.82 65.73 89.16 64.98 89.63C64.46 89.96 63.98 90.38 63.03 91.21L57.68 95.88C55.33 97.93 54.15 98.96 52.88 99.46C51.03 100.18 48.97 100.18 47.12 99.46C45.85 98.96 44.67 97.93 42.32 95.88L36.97 91.21C36.02 90.38 35.54 89.96 35.02 89.63C34.27 89.16 33.44 88.82 32.57 88.62C31.97 88.48 31.34 88.44 30.08 88.35L22.98 87.87C19.87 87.66 18.32 87.55 17.06 87C15.24 86.21 13.79 84.76 13 82.94C12.45 81.68 12.34 80.13 12.13 77.02L11.65 69.92C11.56 68.66 11.52 68.03 11.38 67.43C11.18 66.56 10.84 65.73 10.37 64.98C10.04 64.46 9.62 63.98 8.80 63.03L4.12 57.67C2.07 55.33 1.04 54.15 0.54 52.88C-0.18 51.03 -0.18 48.97 0.54 47.12C1.04 45.85 2.07 44.67 4.12 42.33L8.80 36.97C9.62 36.02 10.04 35.54 10.37 35.02C10.84 34.27 11.18 33.44 11.38 32.57C11.52 31.97 11.56 31.34 11.65 30.08L12.13 22.98C12.34 19.87 12.45 18.32 13 17.06C13.79 15.24 15.24 13.79 17.06 13C18.32 12.45 19.87 12.34 22.98 12.13L30.08 11.65C31.34 11.56 31.97 11.52 32.57 11.38C33.44 11.18 34.27 10.84 35.02 10.37C35.54 10.04 36.02 9.62 36.97 8.79L42.32 4.12C44.67 2.07 45.85 1.04 47.12 0.54C48.97 -0.18 51.03 -0.18 52.88 0.54C54.15 1.04 55.33 2.07 57.68 4.12L63.03 8.79C63.98 9.62 64.46 10.04 64.98 10.37C65.73 10.84 66.56 11.18 67.43 11.38C68.03 11.52 68.66 11.56 69.92 11.65L77.02 12.13Z',
+      ArchFill: 'M100 83.46C100 85.47 100 86.48 99.90 87.32C99.12 93.92 93.92 99.12 87.32 99.90C86.48 100 85.47 100 83.46 100H16.54C14.53 100 13.52 100 12.68 99.90C6.08 99.12 0.88 93.92 0.10 87.32C0 86.48 0 85.47 0 83.46L0 50C0 22.39 22.39 0 50 0C77.61 0 100 22.39 100 50V83.46Z',
+      GhostishFill: 'M0 47.62C0 21.32 22.39 0 50 0C77.61 0 100 21.32 100 47.62L100 80.95C100 91.47 91.05 100 80 100C76.73 100 73.64 99.25 70.91 97.92C69.52 97.25 68.13 96.50 66.74 95.76C61.84 93.14 56.86 90.48 51.42 90.48H48.58C43.14 90.48 38.16 93.14 33.26 95.76C31.87 96.50 30.48 97.25 29.09 97.92C26.36 99.25 23.27 100 20 100C8.95 100 0 91.47 0 80.95L0 47.62Z'
+    })[name];
+  }
+  ring(p) {
+    const cx = 60, cy = 60, R = 48, A = 2.4, N = 16, steps = 96, gap = 14;
+    const pt = deg => { const a = deg * Math.PI / 180; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; };
+    const end = Math.max(p, 0.002) * 360;
+    let wave = '';
+    for (let i = 0; i <= steps; i++) {
+      const deg = -90 + end * i / steps, a = deg * Math.PI / 180, taper = Math.min(1, i / 8, (steps - i) / 8);
+      const r = R + A * taper * Math.sin(N * (a + Math.PI / 2));
+      wave += (i ? 'L' : 'M') + (cx + r * Math.cos(a)).toFixed(2) + ' ' + (cy + r * Math.sin(a)).toFixed(2);
+    }
+    let track = '';
+    if (p < 1) {
+      const s = -90 + end + (p > 0 ? gap : 0), e = 270 - (p > 0 ? gap : 0.01);
+      const [x1, y1] = pt(s), [x2, y2] = pt(Math.max(e, s + 0.01));
+      track = 'M' + x1.toFixed(2) + ' ' + y1.toFixed(2) + 'A' + R + ' ' + R + ' 0 ' + ((e - s) > 180 ? 1 : 0) + ' 1 ' + x2.toFixed(2) + ' ' + y2.toFixed(2);
+    }
+    return { wave: p > 0 ? wave : '', track };
+  }
+  componentDidMount() {
+    this._t = setInterval(() => { const f = (this.state || {}).paused; if (!f) this.setState({ tick: Date.now() }); }, 1000);
+  }
+  renderVals() {
+    const s = this.state || {};
+    const theme = this.props.theme ?? 'dark', dark = theme === 'dark';
+    const clock24 = (this.props.clock ?? '12-hour') === '24-hour';
+    const fT = t => { const [h, m] = t.split(':').map(Number); return clock24 ? String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') : ((h % 12) || 12) + ':' + String(m).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); };
+    const C = dark ? { Indigo: '#B9C3FF', Amber: '#FEBB2A', Teal: '#5DD9D8', Pink: '#FFB0CE', Violet: '#D7BAFF', Coral: '#FFB4A1' }
+      : { Indigo: '#3351D3', Amber: '#7C5800', Teal: '#006A6A', Pink: '#AE236D', Violet: '#753FC1', Coral: '#AB3514' };
+    // Same sample day as the Tasks boards: 10 tasks today (overdue counted), 3 already done
+    const open = [
+      { id: 2, title: 'Standup notes for design review', time: '9:30', prio: 'med', list: 'Work', color: 'Indigo' },
+      { id: 3, title: 'Pay electricity bill', time: '12:00', prio: 'high', list: 'Home', color: 'Amber' },
+      { id: 5, title: '30-min run', time: '18:00', prio: 'low', list: 'Health', color: 'Teal' },
+      { id: 6, title: 'Call Mom', time: '19:30', list: 'Family', color: 'Pink' },
+      { id: 7, title: 'Read 20 pages', time: '21:00', prio: 'low', list: 'Reading', color: 'Violet' }
+    ];
+    const done = s.done || {};
+    const doneN = 3 + Object.keys(done).filter(k => done[k]).length, totalN = 10;
+    const ring = { high: 'var(--error)', med: C.Amber, low: C.Indigo };
+    const shown = open.slice(0, 3);
+    const rows = shown.map((t, i) => ({ key: t.id, title: t.title, time: fT(t.time), ring: ring[t.prio] || 'var(--on-surface-variant)',
+      cls: (i === 0 ? 'first' : i === shown.length - 1 ? 'last' : '') + (done[t.id] ? ' done' : ''), checked: done[t.id] ? 'true' : 'false',
+      aria: (done[t.id] ? 'Mark not done: ' : 'Complete: ') + t.title, toggle: () => this.setState({ done: { ...done, [t.id]: !done[t.id] } }) }));
+    const r = this.ring(doneN / totalN), left = totalN - doneN;
+    // Next up: the next timed task after now
+    const now = new Date(), mins = now.getHours() * 60 + now.getMinutes();
+    // Next up includes today's events (owner, 2026-11-27): the next timed task or event after now
+    const evs = [{ id: 'e1', title: 'Team standup', time: '9:30', list: 'Work', color: 'Indigo' }, { id: 'e2', title: 'Design sync', time: '10:30', list: 'Work', color: 'Indigo' },
+      { id: 'e3', title: 'Lunch with Arjun', time: '13:00', list: 'Personal', color: 'Coral' }, { id: 'p1', title: 'Q4 review', time: '15:00', list: 'Google · Work', color: 'Teal' }];
+    const nx = open.concat(evs).filter(t => { const [h, m] = t.time.split(':').map(Number); return h * 60 + m > mins && !done[t.id]; })
+      .sort((a, b) => { const v = x => x.time.split(':').map(Number).reduce((h, m) => h * 60 + m); return v(a) - v(b); })[0];
+    let nextWhen = 'Tomorrow', nextTitle = 'Submit expense report', nextMeta = fT('10:00') + ' · Work', nextColor = C.Indigo;
+    if (nx) { const [h, m] = nx.time.split(':').map(Number), d = h * 60 + m - mins; nextWhen = d < 60 ? 'In ' + d + ' min' : 'In ' + Math.floor(d / 60) + ' h ' + (d % 60) + ' min'; nextTitle = nx.title; nextMeta = fT(nx.time) + ' · ' + nx.list; nextColor = C[nx.color]; }
+    // Focus timer: 25 min session, started 6 min 18 s ago
+    if (!this._end) this._end = Date.now() + 18 * 60000 + 42000;
+    const leftMs = s.stopped ? 25 * 60000 : Math.max(0, s.paused ? s.leftMs : this._end - Date.now());
+    const fm = Math.floor(leftMs / 60000), fs = Math.floor(leftMs % 60000 / 1000);
+    const idle = !!s.stopped;
+    let mw = ''; for (let x = 2; x <= 87; x += 1) mw += (x === 2 ? 'M' : 'L') + x + ' ' + (6 + 2.2 * Math.sin(x / 4.2)).toFixed(2);
+    const counts = [5, 7, 4, 6, 8, 3, doneN];
+    const day = (now.getDay() + 6) % 7;
+    return {
+      themeClass: theme,
+      cookie9: this.m3('Cookie9Sided'), cookie12: this.m3('Cookie12Sided'), sunny: this.m3('Sunny'),
+      doneN, totalN, leftN: left, rows, wavePath: r.wave, trackPath: r.track,
+      arch: this.m3('ArchFill'), ghost: this.m3('GhostishFill'),
+      progLabel: left === 0 ? 'All done' : left + ' left today', progAria: doneN + ' of ' + totalN + ' tasks done today',
+      timerCls: 'w c2 r2 timer shp' + (s.paused || idle ? ' paused' : ''), timeLeft: fm + ':' + String(fs).padStart(2, '0'),
+      timerTask: idle ? 'Ready · 25 min' : 'Pay electricity bill',
+      goIcon: s.paused || idle ? 'play_arrow' : 'pause', goAria: s.paused || idle ? 'Start focus' : 'Pause focus',
+      toggle: () => {
+        if (idle) { this._end = Date.now() + 25 * 60000; this.setState({ stopped: false, paused: false }); return; }
+        if (s.paused) { this._end = Date.now() + s.leftMs; this.setState({ paused: false }); }
+        else this.setState({ paused: true, leftMs });
+      },
+      stop: () => this.setState({ stopped: true, paused: false }),
+      month: now.toLocaleDateString('en-GB', { month: 'short' }), moneyWave: mw,
+      nextWhen, nextTitle, nextMeta, nextColor,
+      bars: counts.map((c, i) => ({ key: i, d: 'MTWTFSS'[i], h: Math.round(16 + c * 11), cls: 'bar' + (i === day ? ' now' : ''), delay: (360 + i * 40) + 'ms' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

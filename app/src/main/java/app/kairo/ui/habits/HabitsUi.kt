@@ -2,6 +2,12 @@
 
 package app.kairo.ui.habits
 
+import app.kairo.ui.common.ExpressiveTimePicker
+import app.kairo.habits.HabitEntity
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.isImeVisible
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +76,7 @@ import java.time.format.FormatStyle
  * Habits on the Today tab: one row per habit with its shape, streak and a check for today.
  * Tap a row for the monthly heat map. Habits are daily (owner, 2026-11-21).
  */
-fun LazyListScope.habitsSection(habits: List<Habit>, onAdd: () -> Unit, onOpen: (Habit) -> Unit, onToggle: (Habit) -> Unit) {
+internal fun LazyListScope.habitsSection(habits: List<Habit>, onAdd: () -> Unit, onOpen: (Habit) -> Unit, onToggle: (Habit) -> Unit) {
     item(key = "h-habits") {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             val done = habits.count { it.doneOn(LocalDate.now()) }
@@ -92,7 +98,7 @@ fun LazyListScope.habitsSection(habits: List<Habit>, onAdd: () -> Unit, onOpen: 
                 onClick = { onOpen(h) },
                 shapes = ListItemDefaults.segmentedShapes(i, habits.size),
                 colors = ListItemDefaults.segmentedColors(containerColor = k.item),
-                leadingContent = { Box(Modifier.size(32.dp).background(k.accent(h.color), h.shape.polygon.toShape())) },
+                leadingContent = { Box(Modifier.size(32.dp).background(k.accent(h.color), HabitLook.polygon(h.shapeName).toShape())) },
                 supportingContent = {
                     val s = h.streak()
                     Text(
@@ -122,11 +128,15 @@ fun HabitSheet(habit: Habit? = null, onDismiss: () -> Unit) {
     val askNotifications = rememberAskNotifications()
     var name by remember { mutableStateOf(habit?.name.orEmpty()) }
     var remind by remember { mutableStateOf(habit == null || habit.reminderTime != null) }
-    val time = rememberTimePickerState(habit?.reminderTime?.hour ?: 9, habit?.reminderTime?.minute ?: 0)
+    var hour by remember { mutableStateOf(habit?.reminderTime?.hour ?: 9) }
+    var minute by remember { mutableStateOf(habit?.reminderTime?.minute ?: 0) }
     fun close() = scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(
+            Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 20.dp).imePadding(),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             Text(if (habit == null) "New habit" else "Edit habit", style = MaterialTheme.typography.titleLargeEmphasized, modifier = Modifier.padding(start = 4.dp))
             OutlinedTextField(name, { name = it }, label = { Text("e.g. Take medication") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             SegmentedListItem(
@@ -136,17 +146,25 @@ fun HabitSheet(habit: Habit? = null, onDismiss: () -> Unit) {
                 trailingContent = { Switch(remind, { if (it) askNotifications(); remind = it }) },
                 supportingContent = { Text("Every day at this time") },
             ) { Text("Remind me") }
-            if (remind) TimePicker(time, Modifier.align(Alignment.CenterHorizontally))
+            // The dial needs its full height: with the keyboard up the sheet shrinks and TimePicker
+            // squeezes its numbers but not its hand. So while typing, show the time as one line.
+            @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+            val typing = androidx.compose.foundation.layout.WindowInsets.isImeVisible
+            if (remind && !typing) ExpressiveTimePicker(hour, minute, { h, m -> hour = h; minute = m }, Modifier.align(Alignment.CenterHorizontally))
+            else if (remind) Text(
+                "At " + LocalTime.of(hour, minute).format(java.time.format.DateTimeFormatter.ofPattern("h:mm a")),
+                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp),
+            )
             Row {
                 Spacer(Modifier.weight(1f))
                 Button(
                     enabled = name.isNotBlank(),
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.Confirm) // rule 9: save on a sheet
-                        val t = if (remind) LocalTime.of(time.hour, time.minute) else null
+                        val t = if (remind) LocalTime.of(hour, minute) else null
                         app.appScope.launch {
-                            if (habit == null) app.habits.add(name, ListShape.choices.random(), ListColor.entries.random(), t)
-                            else app.habits.update(habit.copy(name = name.trim(), reminderTime = t))
+                            if (habit == null) app.habits.add(HabitEntity(name = name.trim(), shape = ListShape.Square, color = ListColor.entries.random(), reminderTime = t, hshape = HabitLook.shapes.random()))
+                            else app.habits.update(habit.e.copy(name = name.trim(), reminderTime = t))
                         }
                         close()
                     },
@@ -173,7 +191,7 @@ fun HabitDetailSheet(habit: Habit, onEdit: () -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(28.dp).background(k.accent(h.color), h.shape.polygon.toShape()))
+                Box(Modifier.size(28.dp).background(k.accent(h.color), HabitLook.polygon(h.shapeName).toShape()))
                 Text(h.name, style = MaterialTheme.typography.titleLargeEmphasized, modifier = Modifier.padding(start = 12.dp).weight(1f))
                 IconButton(onClick = onEdit, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_edit), "Edit") }
                 IconButton(onClick = {
@@ -181,7 +199,7 @@ fun HabitDetailSheet(habit: Habit, onEdit: () -> Unit, onDismiss: () -> Unit) {
                     app.appScope.launch { app.habits.delete(h.id) }; onDismiss()
                 }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_delete), "Delete") }
             }
-            val inMonth = h.days.count { YearMonth.from(it) == month }
+            val inMonth = h.logs.keys.count { h.done(it) && YearMonth.from(it) == month }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Stat("${h.streak()}", "streak", Modifier.weight(1f))
                 Stat("${h.best()}", "best", Modifier.weight(1f))

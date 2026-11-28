@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -79,6 +80,12 @@ class TaskRepository(private val db: KairoDatabase, scope: CoroutineScope) {
     suspend fun reorderLists(lists: List<TaskList>) =
         db.lists().updateAll(lists.mapIndexed { i, l -> ListEntity(l.id, l.name, l.shape, l.color, i) })
     suspend fun deleteList(list: TaskList) = db.lists().delete(list.id)
+    /** Deletes a list but keeps its tasks: they move to Inbox first (canvas: a deleted list's tasks go to Inbox). */
+    suspend fun deleteListKeepTasks(list: TaskList) {
+        db.tasks().move(db.tasks().idsInList(list.id), null)
+        db.lists().delete(list.id)
+    }
+    suspend fun listsNow(): List<TaskList> = lists.first()
 
     /**
      * No default lists (owner, 2026-11-21): tasks start in the Inbox. Debug builds still get the

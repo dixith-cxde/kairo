@@ -15,6 +15,11 @@ data class KairoColors(
     val item: Color,        // grouped containers, cards, rows
     val itemHigh: Color,    // nested / raised items
     val navBg: Color,       // floating nav, toolbars
+    val chip: Color,        // connected groups, list chips (canvas --chip)
+    val searchBg: Color,    // search bar (canvas --search-bg)
+    val itemPress: Color,   // pressed row (canvas --item-press)
+    val chartBlue: Color,   // canvas --cb: chart bars, week busy bars
+    val chartGreen: Color,  // canvas --cg: the picked / goal-beating bar
     val floatShadow: Color, // shadow under floating nav, FAB, toolbars
     val prioHigh: Color,
     val prioMed: Color,
@@ -32,8 +37,11 @@ private fun m(vararg p: Pair<ListColor, Long>) = p.associate { it.first to Color
 
 val KairoDarkColorTokens = KairoColors(
     bg = Color(0xFF0E0E0E), item = Color(0xFF1F1F1F), itemHigh = Color(0xFF2A2A2A), navBg = Color(0xFF2A2A2A),
+    chip = Color(0xFF2A2A2A), searchBg = Color(0xFF262626), itemPress = Color(0xFF2A2A2A),
+    chartBlue = Color(0xFFA8C7FA), chartGreen = Color(0xFF6DD58C),
     floatShadow = Color(0x99000000),
-    prioHigh = Color(0xFFFFB4A9), prioMed = Color(0xFFFEBB2A), prioLow = Color(0xFFB9C3FF),
+    // Canvas prioRing: high = error, medium = Amber, low = Indigo.
+    prioHigh = Color(0xFFFF9F99), prioMed = Color(0xFFFEBB2A), prioLow = Color(0xFFB9C3FF),
     accents = m(
         ListColor.Indigo to 0xFFB9C3FF, ListColor.Coral to 0xFFFFB4A1, ListColor.Amber to 0xFFFEBB2A,
         ListColor.Green to 0xFF7EDB82, ListColor.Teal to 0xFF5DD9D8, ListColor.Pink to 0xFFFFB0CE,
@@ -52,9 +60,11 @@ val KairoDarkColorTokens = KairoColors(
 )
 
 val KairoLightColorTokens = KairoColors(
-    bg = Color(0xFFEEEEEE), item = Color(0xFFFFFFFF), itemHigh = Color(0xFFF3F3F3), navBg = Color(0xFFFFFFFF),
+    bg = Color(0xFFF1F1F1), item = Color(0xFFFFFFFF), itemHigh = Color(0xFFF3F3F3), navBg = Color(0xFFFFFFFF),
+    chip = Color(0xFFE2E2E2), searchBg = Color(0xFFE2E2E2), itemPress = Color(0xFFE8E8E8),
+    chartBlue = Color(0xFF0B57D0), chartGreen = Color(0xFF146C2E),
     floatShadow = Color(0x470A0D28),
-    prioHigh = Color(0xFFBB1713), prioMed = Color(0xFF7C5800), prioLow = Color(0xFF3351D3),
+    prioHigh = Color(0xFFB31B25), prioMed = Color(0xFF7C5800), prioLow = Color(0xFF3351D3),
     accents = m(
         ListColor.Indigo to 0xFF3351D3, ListColor.Coral to 0xFFAB3514, ListColor.Amber to 0xFF7C5800,
         ListColor.Green to 0xFF006E24, ListColor.Teal to 0xFF006A6A, ListColor.Pink to 0xFFAE236D,

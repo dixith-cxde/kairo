@@ -54,6 +54,9 @@ data class TransactionEntity(
     val tags: String = "",       // space-separated #tags
     val transferPeerId: Long? = null,
     val recurringId: Long? = null,
+    /** v10: time of day (null on rows from before v2) and a longer description; [note] is the title. */
+    val time: java.time.LocalTime? = null,
+    @androidx.room.ColumnInfo(defaultValue = "''") val description: String = "",
 )
 
 /** A monthly spending limit: overall (both ids null), for one category, or for one account (v5). */

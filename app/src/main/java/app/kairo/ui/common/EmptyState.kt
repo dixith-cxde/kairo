@@ -52,10 +52,12 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     size: Dp = 200.dp,
     color: Color = MaterialTheme.colorScheme.secondaryContainer,
+    /** v2 canvas empty state: a turning Cookie-12 with this icon on it (otherwise a random 1.3.1 shape). */
+    icon: Int? = null,
     action: (@Composable () -> Unit)? = null,
 ) {
     val visit = LocalTabVisit.current
-    val shape = remember(visit) { EmptyShapes.random() }
+    val shape = if (icon != null) MaterialShapes.Cookie12Sided else remember(visit) { EmptyShapes.random() }
     val spin by slowSpin(48_000)
     val pop = remember(visit) { Animatable(0.6f) }
     val spec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
@@ -65,12 +67,15 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(
-            Modifier.size(size)
-                .graphicsLayer { scaleX = pop.value; scaleY = pop.value; rotationZ = spin }
-                .background(color, shape.toShape()),
-        )
-        Text(title, style = MaterialTheme.typography.headlineSmallEmphasized, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+        Box(Modifier.size(size).graphicsLayer { scaleX = pop.value; scaleY = pop.value }, contentAlignment = Alignment.Center) {
+            Box(Modifier.matchParentSize().graphicsLayer { rotationZ = spin }.background(color, shape.toShape()))
+            if (icon != null) androidx.compose.material3.Icon(
+                androidx.compose.ui.res.painterResource(icon), null, Modifier.size(size * 0.4f),
+                tint = androidx.compose.material3.contentColorFor(color),
+            )
+        }
+        Text(title, style = MaterialTheme.typography.headlineSmallEmphasized, color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         if (action != null) Box(Modifier.padding(top = 4.dp)) { action() }
     }

@@ -12,6 +12,13 @@ sealed interface Route {
     data object RecurringRoute : Route
     data object FocusRoute : Route
     data object SearchRoute : Route
+    data object ListsRoute : Route
+    data object StatsRoute : Route
+    data class HabitRoute(val habitId: Long) : Route
+    /** One occurrence of a phone-calendar event (start/end as ISO local date-times). */
+    data class TxRoute(val txId: Long) : Route
+    data object ReportRoute : Route
+    data class EventRoute(val eventId: Long, val start: String, val end: String, val allDay: Boolean) : Route
 
     /** Saved as short strings ("tab:Today", "task:12") so the stack survives process death. */
     fun encode(): String = when (this) {
@@ -25,6 +32,12 @@ sealed interface Route {
         RecurringRoute -> "recurring:"
         FocusRoute -> "focus:"
         SearchRoute -> "search:"
+        ListsRoute -> "lists:"
+        StatsRoute -> "stats:"
+        is HabitRoute -> "habit:$habitId"
+        is TxRoute -> "tx:$txId"
+        ReportRoute -> "report:"
+        is EventRoute -> "event:$eventId|$start|$end|$allDay"
     }
 
     companion object {
@@ -40,7 +53,13 @@ sealed interface Route {
                 "recurring" -> RecurringRoute
                 "focus" -> FocusRoute
                 "search" -> SearchRoute
-                else -> TabRoute(Tab.valueOf(v))
+                "lists" -> ListsRoute
+                "stats" -> StatsRoute
+                "habit" -> HabitRoute(v.toLong())
+                "tx" -> TxRoute(v.toLong())
+                "report" -> ReportRoute
+                "event" -> v.split("|").let { p -> EventRoute(p[0].toLong(), p[1], p[2], p[3].toBoolean()) }
+                else -> TabRoute(Tab.fromSaved(v))
             }
         }
     }

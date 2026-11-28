@@ -1,0 +1,1480 @@
+{
+  "attachments": {},
+  "boards": {
+    "AddDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Quick Add · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 1224
+    },
+    "AddLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Quick Add · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 1224
+    },
+    "ArchivedDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Archived · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 2448
+    },
+    "ArchivedLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Archived · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 2448
+    },
+    "CalAccessDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar access · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 8828
+    },
+    "CalAccessLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar access · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 8828
+    },
+    "CalAskDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar permission · Dark",
+      "w": 390,
+      "x": 4700,
+      "y": 8828
+    },
+    "CalAskLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar permission · Light",
+      "w": 390,
+      "x": 5170,
+      "y": 8828
+    },
+    "CalDayDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar day · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 8828
+    },
+    "CalDayLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar day · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 8828
+    },
+    "CalDrawerDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar drawer · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 10052
+    },
+    "CalDrawerLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar drawer · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 10052
+    },
+    "CalSearchDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar search · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 10052
+    },
+    "CalSearchLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar search · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 10052
+    },
+    "CalSelectDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar multi-select · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 10052
+    },
+    "CalSelectLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar multi-select · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 10052
+    },
+    "CalWeekDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar week · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 8828
+    },
+    "CalWeekLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar week · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 8828
+    },
+    "CalendarDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar month · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 8828
+    },
+    "CalendarLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calendar month · Light",
+      "w": 390,
+      "x": 470,
+      "y": 8828
+    },
+    "Clock24Dark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "24-hour clock · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 4896
+    },
+    "Clock24Light.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "24-hour clock · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 4896
+    },
+    "DateDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Date sheet · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 1224
+    },
+    "DateLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Date sheet · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 1224
+    },
+    "DrawerDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Lists drawer · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 3672
+    },
+    "DrawerLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Lists drawer · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 3672
+    },
+    "EditEventDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit event · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 10052
+    },
+    "EditEventLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit event · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 10052
+    },
+    "EditHabitDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit habit · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 7604
+    },
+    "EditHabitLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit habit · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 7604
+    },
+    "EditListsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit lists · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 3672
+    },
+    "EditListsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Edit lists · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 3672
+    },
+    "EmptyDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Empty states · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 2448
+    },
+    "EmptyLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Empty states · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 2448
+    },
+    "EventNotifyDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Event reminder · Dark",
+      "w": 390,
+      "x": 4700,
+      "y": 10052
+    },
+    "EventNotifyLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Event reminder · Light",
+      "w": 390,
+      "x": 5170,
+      "y": 10052
+    },
+    "EventPageDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Event page · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 10052
+    },
+    "EventPageLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Event page · Light",
+      "w": 390,
+      "x": 470,
+      "y": 10052
+    },
+    "FinAccountsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Finance accounts · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 11276
+    },
+    "FinAccountsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Finance accounts · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 11276
+    },
+    "FinAddDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Add expense · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 11276
+    },
+    "FinAddLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Add expense · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 11276
+    },
+    "FinBillsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Bills · Dark",
+      "w": 390,
+      "x": 4700,
+      "y": 11276
+    },
+    "FinBillsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Bills · Light",
+      "w": 390,
+      "x": 5170,
+      "y": 11276
+    },
+    "FinImportDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Ivy Wallet import · Dark",
+      "w": 390,
+      "x": 5640,
+      "y": 11276
+    },
+    "FinImportLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Ivy Wallet import · Light",
+      "w": 390,
+      "x": 6110,
+      "y": 11276
+    },
+    "FinRepSetupDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New report · Dark",
+      "w": 390,
+      "x": 6580,
+      "y": 11276
+    },
+    "FinRepSetupLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New report · Light",
+      "w": 390,
+      "x": 7050,
+      "y": 11276
+    },
+    "FinReportsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reports · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 11276
+    },
+    "FinReportsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reports · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 11276
+    },
+    "FinTxnDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Transaction page · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 11276
+    },
+    "FinTxnLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Transaction page · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 11276
+    },
+    "FinanceDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Finance · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 11276
+    },
+    "FinanceLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Finance · Light",
+      "w": 390,
+      "x": 470,
+      "y": 11276
+    },
+    "FocusCustomDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Custom Pomodoro · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 12500
+    },
+    "FocusCustomLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Custom Pomodoro · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 12500
+    },
+    "FocusDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 12500
+    },
+    "FocusDoneDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus done · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 13724
+    },
+    "FocusDoneLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus done · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 13724
+    },
+    "FocusLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus · Light",
+      "w": 390,
+      "x": 470,
+      "y": 12500
+    },
+    "FocusLiquidDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus running, liquid · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 13724
+    },
+    "FocusLiquidLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus running, liquid · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 13724
+    },
+    "FocusMinimalDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus running, minimal · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 13724
+    },
+    "FocusMinimalLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus running, minimal · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 13724
+    },
+    "FocusPickDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus on · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 12500
+    },
+    "FocusPickLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus on · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 12500
+    },
+    "FocusRangeDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus, from–to · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 12500
+    },
+    "FocusRangeLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus, from–to · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 12500
+    },
+    "FocusRunDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus running, ring · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 13724
+    },
+    "FocusRunLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus running, ring · Light",
+      "w": 390,
+      "x": 470,
+      "y": 13724
+    },
+    "FocusSessionDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus session · Dark",
+      "w": 390,
+      "x": 5640,
+      "y": 13724
+    },
+    "FocusSessionLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus session · Light",
+      "w": 390,
+      "x": 6110,
+      "y": 13724
+    },
+    "FocusSettingsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus settings · Dark",
+      "w": 390,
+      "x": 4700,
+      "y": 12500
+    },
+    "FocusSettingsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus settings · Light",
+      "w": 390,
+      "x": 5170,
+      "y": 12500
+    },
+    "FocusStatsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus stats · Dark",
+      "w": 390,
+      "x": 4700,
+      "y": 13724
+    },
+    "FocusStatsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus stats · Light",
+      "w": 390,
+      "x": 5170,
+      "y": 13724
+    },
+    "FocusStopDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Stop or give up · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 13724
+    },
+    "FocusStopLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Stop or give up · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 13724
+    },
+    "FocusTimerDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus, timer · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 12500
+    },
+    "FocusTimerLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Focus, timer · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 12500
+    },
+    "HabitArchivedDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Archived habit · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 7604
+    },
+    "HabitArchivedLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Archived habit · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 7604
+    },
+    "HabitDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habit page · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 6380
+    },
+    "HabitLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habit page · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 6380
+    },
+    "HabitNotifyDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habit reminder · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 6380
+    },
+    "HabitNotifyLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habit reminder · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 6380
+    },
+    "HabitWidgets.dc.html": {
+      "h": 500,
+      "is_interactive": true,
+      "title": "Habit widgets · Dark",
+      "w": 390,
+      "x": 4700,
+      "y": 6380
+    },
+    "HabitWidgetsLight.dc.html": {
+      "h": 500,
+      "is_interactive": true,
+      "title": "Habit widgets · Light",
+      "w": 390,
+      "x": 5170,
+      "y": 6380
+    },
+    "HabitsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 6380
+    },
+    "HabitsEmptyDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "No habits · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 7604
+    },
+    "HabitsEmptyLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "No habits · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 7604
+    },
+    "HabitsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits · Light",
+      "w": 390,
+      "x": 470,
+      "y": 6380
+    },
+    "HabitsMapDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits heat map · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 6380
+    },
+    "HabitsMapLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits heat map · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 6380
+    },
+    "HabitsPastDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits, past day · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 7604
+    },
+    "HabitsPastLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits, past day · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 7604
+    },
+    "HabitsSelectDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits multi-select · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 7604
+    },
+    "HabitsSelectLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Habits multi-select · Light",
+      "w": 390,
+      "x": 470,
+      "y": 7604
+    },
+    "HintsDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Onboarding hints · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 4896
+    },
+    "HintsLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Onboarding hints · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 4896
+    },
+    "Light.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Shell · Light",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Shell · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "MenuDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Row ⋮ menu · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 1224
+    },
+    "MenuLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Row ⋮ menu · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 1224
+    },
+    "NewEventDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New event · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 8828
+    },
+    "NewEventLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New event · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 8828
+    },
+    "NewHabitDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New habit · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 6380
+    },
+    "NewHabitLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New habit · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 6380
+    },
+    "NewListDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New list · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 3672
+    },
+    "NewListLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New list · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 3672
+    },
+    "NotifyDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reminder · Dark",
+      "w": 390,
+      "x": 3760,
+      "y": 2448
+    },
+    "NotifyLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reminder · Light",
+      "w": 390,
+      "x": 4230,
+      "y": 2448
+    },
+    "OverdueDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reschedule overdue · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 1224
+    },
+    "OverdueLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Reschedule overdue · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 1224
+    },
+    "PermDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Notifications off · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 3672
+    },
+    "PermLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Notifications off · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 3672
+    },
+    "RepeatDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Repeat sheet · Dark",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "RepeatLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Repeat sheet · Light",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "SearchDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Search · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 2448
+    },
+    "SearchLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Search · Light",
+      "w": 390,
+      "x": 470,
+      "y": 2448
+    },
+    "SelectDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Multi-select · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 1224
+    },
+    "SelectLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Multi-select · Light",
+      "w": 390,
+      "x": 470,
+      "y": 1224
+    },
+    "TaskDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Task page · Dark",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "TaskLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Task page · Light",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "TrashDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Trash · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 2448
+    },
+    "TrashLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Trash · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 2448
+    },
+    "VoiceDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Voice add · Dark",
+      "w": 390,
+      "x": 0,
+      "y": 3672
+    },
+    "VoiceLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Voice add · Light",
+      "w": 390,
+      "x": 470,
+      "y": 3672
+    },
+    "Widgets.dc.html": {
+      "h": 1124,
+      "is_interactive": true,
+      "title": "Widgets · Dark",
+      "w": 390,
+      "x": 2820,
+      "y": 4896
+    },
+    "WidgetsLight.dc.html": {
+      "h": 1124,
+      "is_interactive": true,
+      "title": "Widgets · Light",
+      "w": 390,
+      "x": 3290,
+      "y": 4896
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-24T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "shellTitle",
+    "taskTitle",
+    "repeatTitle",
+    "selectTitle",
+    "menuTitle",
+    "dateTitle",
+    "overdueTitle",
+    "addTitle",
+    "searchTitle",
+    "emptyTitle",
+    "archivedTitle",
+    "trashTitle",
+    "notifyTitle",
+    "voiceTitle",
+    "permTitle",
+    "drawerTitle",
+    "newListTitle",
+    "editListsTitle",
+    "hintsTitle",
+    "clockTitle",
+    "widgetsTitle",
+    "habitsTitle",
+    "habitsMapTitle",
+    "habitTitle",
+    "newHabitTitle",
+    "habitNotifyTitle",
+    "habitStatesTitle",
+    "calTitle",
+    "calTitle2",
+    "finTitle",
+    "focusTitle",
+    "focusTitle2"
+  ],
+  "notes": {
+    "addTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Quick Add",
+      "w": 240,
+      "x": 3760,
+      "y": 964
+    },
+    "archivedTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Archived",
+      "w": 240,
+      "x": 1880,
+      "y": 2188
+    },
+    "calTitle": {
+      "kind": "title1",
+      "maxW": 5560,
+      "text": "Calendar tab: month, week and day",
+      "w": 240,
+      "x": 0,
+      "y": 8568
+    },
+    "calTitle2": {
+      "kind": "title1",
+      "maxW": 5560,
+      "text": "Calendar: event page, select, drawer, search",
+      "w": 240,
+      "x": 0,
+      "y": 9792
+    },
+    "clockTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Time format: 24-hour",
+      "w": 240,
+      "x": 1880,
+      "y": 4636
+    },
+    "dateTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Date sheet and reschedule",
+      "w": 240,
+      "x": 1880,
+      "y": 964
+    },
+    "drawerTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Lists: navigation drawer",
+      "w": 240,
+      "x": 1880,
+      "y": 3412
+    },
+    "editListsTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Edit lists (drag to reorder)",
+      "w": 240,
+      "x": 3760,
+      "y": 3412
+    },
+    "emptyTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Empty states",
+      "w": 240,
+      "x": 940,
+      "y": 2188
+    },
+    "finTitle": {
+      "kind": "title1",
+      "maxW": 7440,
+      "text": "Finance tab: activity, accounts, reports, bills, Ivy import",
+      "w": 240,
+      "x": 0,
+      "y": 11016
+    },
+    "focusTitle": {
+      "kind": "title1",
+      "maxW": 5560,
+      "text": "Focus tab: what to focus on, Pomodoro / Timer / From–To, settings",
+      "w": 240,
+      "x": 0,
+      "y": 12240
+    },
+    "focusTitle2": {
+      "kind": "title1",
+      "maxW": 6500,
+      "text": "Focus: ring, liquid and minimal clocks, stop or give up, done, stats",
+      "w": 240,
+      "x": 0,
+      "y": 13464
+    },
+    "habitNotifyTitle": {
+      "kind": "title1",
+      "maxW": 1800,
+      "text": "Habit reminder and widgets",
+      "w": 240,
+      "x": 3760,
+      "y": 6120
+    },
+    "habitStatesTitle": {
+      "kind": "title1",
+      "maxW": 4620,
+      "text": "Habits: select and reorder, other states",
+      "w": 240,
+      "x": 0,
+      "y": 7344
+    },
+    "habitTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Habit page and heat map",
+      "w": 240,
+      "x": 1880,
+      "y": 6120
+    },
+    "habitsMapTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Habits tab: week heat map",
+      "w": 240,
+      "x": 940,
+      "y": 6120
+    },
+    "habitsTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Habits tab: week rings",
+      "w": 240,
+      "x": 0,
+      "y": 6120
+    },
+    "hintsTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Onboarding hints",
+      "w": 240,
+      "x": 940,
+      "y": 4636
+    },
+    "menuTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Row ⋮ quick actions",
+      "w": 240,
+      "x": 940,
+      "y": 964
+    },
+    "newHabitTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "New / Edit habit",
+      "w": 240,
+      "x": 2820,
+      "y": 6120
+    },
+    "newListTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "New list",
+      "w": 240,
+      "x": 2820,
+      "y": 3412
+    },
+    "notifyTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Reminder notification",
+      "w": 240,
+      "x": 3760,
+      "y": 2188
+    },
+    "overdueTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Reschedule all overdue",
+      "w": 240,
+      "x": 2820,
+      "y": 964
+    },
+    "permTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Notifications off",
+      "w": 240,
+      "x": 940,
+      "y": 3412
+    },
+    "repeatTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Repeat and birthdays",
+      "w": 240,
+      "x": 1880,
+      "y": -260
+    },
+    "searchTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Search results",
+      "w": 240,
+      "x": 0,
+      "y": 2188
+    },
+    "selectTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Multi-select (long-press)",
+      "w": 240,
+      "x": 0,
+      "y": 964
+    },
+    "shellTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "App shell: nav and create",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "taskTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Task page, swipe and undo",
+      "w": 240,
+      "x": 940,
+      "y": -260
+    },
+    "trashTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Trash (30 days)",
+      "w": 240,
+      "x": 2820,
+      "y": 2188
+    },
+    "voiceTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Voice add",
+      "w": 240,
+      "x": 0,
+      "y": 3412
+    },
+    "widgetsTitle": {
+      "kind": "title1",
+      "maxW": 860,
+      "text": "Home-screen widgets",
+      "w": 240,
+      "x": 2820,
+      "y": 4636
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Light.dc.html",
+    "TaskDark.dc.html",
+    "TaskLight.dc.html",
+    "RepeatDark.dc.html",
+    "RepeatLight.dc.html",
+    "SelectDark.dc.html",
+    "SelectLight.dc.html",
+    "MenuDark.dc.html",
+    "MenuLight.dc.html",
+    "DateDark.dc.html",
+    "DateLight.dc.html",
+    "OverdueDark.dc.html",
+    "OverdueLight.dc.html",
+    "AddDark.dc.html",
+    "AddLight.dc.html",
+    "SearchDark.dc.html",
+    "SearchLight.dc.html",
+    "EmptyDark.dc.html",
+    "EmptyLight.dc.html",
+    "ArchivedDark.dc.html",
+    "ArchivedLight.dc.html",
+    "TrashDark.dc.html",
+    "TrashLight.dc.html",
+    "NotifyDark.dc.html",
+    "NotifyLight.dc.html",
+    "VoiceDark.dc.html",
+    "VoiceLight.dc.html",
+    "PermDark.dc.html",
+    "PermLight.dc.html",
+    "DrawerDark.dc.html",
+    "DrawerLight.dc.html",
+    "NewListDark.dc.html",
+    "NewListLight.dc.html",
+    "EditListsDark.dc.html",
+    "EditListsLight.dc.html",
+    "HintsDark.dc.html",
+    "HintsLight.dc.html",
+    "Clock24Dark.dc.html",
+    "Clock24Light.dc.html",
+    "Widgets.dc.html",
+    "WidgetsLight.dc.html",
+    "HabitsDark.dc.html",
+    "HabitsLight.dc.html",
+    "HabitsMapDark.dc.html",
+    "HabitsMapLight.dc.html",
+    "HabitDark.dc.html",
+    "HabitLight.dc.html",
+    "NewHabitDark.dc.html",
+    "NewHabitLight.dc.html",
+    "HabitNotifyDark.dc.html",
+    "HabitNotifyLight.dc.html",
+    "HabitWidgets.dc.html",
+    "HabitWidgetsLight.dc.html",
+    "HabitsSelectDark.dc.html",
+    "HabitsSelectLight.dc.html",
+    "HabitsEmptyDark.dc.html",
+    "HabitsEmptyLight.dc.html",
+    "EditHabitDark.dc.html",
+    "EditHabitLight.dc.html",
+    "HabitArchivedDark.dc.html",
+    "HabitArchivedLight.dc.html",
+    "HabitsPastDark.dc.html",
+    "HabitsPastLight.dc.html",
+    "CalendarDark.dc.html",
+    "CalendarLight.dc.html",
+    "CalWeekDark.dc.html",
+    "CalWeekLight.dc.html",
+    "CalDayDark.dc.html",
+    "CalDayLight.dc.html",
+    "NewEventDark.dc.html",
+    "NewEventLight.dc.html",
+    "CalAccessDark.dc.html",
+    "CalAccessLight.dc.html",
+    "CalAskDark.dc.html",
+    "CalAskLight.dc.html",
+    "EventPageDark.dc.html",
+    "EventPageLight.dc.html",
+    "EditEventDark.dc.html",
+    "EditEventLight.dc.html",
+    "CalSelectDark.dc.html",
+    "CalSelectLight.dc.html",
+    "CalDrawerDark.dc.html",
+    "CalDrawerLight.dc.html",
+    "CalSearchDark.dc.html",
+    "CalSearchLight.dc.html",
+    "EventNotifyDark.dc.html",
+    "EventNotifyLight.dc.html",
+    "FinanceDark.dc.html",
+    "FinanceLight.dc.html",
+    "FinAccountsDark.dc.html",
+    "FinAccountsLight.dc.html",
+    "FinAddDark.dc.html",
+    "FinAddLight.dc.html",
+    "FinTxnDark.dc.html",
+    "FinTxnLight.dc.html",
+    "FinReportsDark.dc.html",
+    "FinReportsLight.dc.html",
+    "FinBillsDark.dc.html",
+    "FinBillsLight.dc.html",
+    "FinImportDark.dc.html",
+    "FinImportLight.dc.html",
+    "FinRepSetupDark.dc.html",
+    "FinRepSetupLight.dc.html",
+    "FocusDark.dc.html",
+    "FocusLight.dc.html",
+    "FocusTimerDark.dc.html",
+    "FocusTimerLight.dc.html",
+    "FocusRangeDark.dc.html",
+    "FocusRangeLight.dc.html",
+    "FocusPickDark.dc.html",
+    "FocusPickLight.dc.html",
+    "FocusCustomDark.dc.html",
+    "FocusCustomLight.dc.html",
+    "FocusSettingsDark.dc.html",
+    "FocusSettingsLight.dc.html",
+    "FocusRunDark.dc.html",
+    "FocusRunLight.dc.html",
+    "FocusLiquidDark.dc.html",
+    "FocusLiquidLight.dc.html",
+    "FocusMinimalDark.dc.html",
+    "FocusMinimalLight.dc.html",
+    "FocusStopDark.dc.html",
+    "FocusStopLight.dc.html",
+    "FocusDoneDark.dc.html",
+    "FocusDoneLight.dc.html",
+    "FocusStatsDark.dc.html",
+    "FocusStatsLight.dc.html",
+    "FocusSessionDark.dc.html",
+    "FocusSessionLight.dc.html"
+  ],
+  "pages": [],
+  "title": "Kairo v2 Design",
+  "v": 3
+}
